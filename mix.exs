@@ -24,8 +24,7 @@ defmodule Drops.MixProject do
   defp package() do
     [
       name: "drops",
-      files: ~w(lib priv .formatter.exs mix.exs README* readme* LICENSE*
-                license* CHANGELOG* changelog* src),
+      files: ~w(lib .formatter.exs mix.exs README* LICENSE CHANGELOG.md),
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/solnic/drops"}
     ]
