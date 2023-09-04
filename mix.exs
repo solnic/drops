@@ -7,7 +7,10 @@ defmodule Drops.MixProject do
       version: "0.0.0",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      licenses: "MIT",
+      description: "Tools for working with data effectively",
+      package: package()
     ]
   end
 
@@ -15,6 +18,16 @@ defmodule Drops.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  defp package() do
+    [
+      name: "drops",
+      files: ~w(lib priv .formatter.exs mix.exs README* readme* LICENSE*
+                license* CHANGELOG* changelog* src),
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/solnic/drops"}
     ]
   end
 
