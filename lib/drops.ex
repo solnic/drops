@@ -25,11 +25,17 @@ defmodule Drops do
 
         def validate(data, {:required, name, type, predicates}) do
           if Map.has_key?(data, name) do
-            case Predicates.type?(type, data[name]) do
+            value = data[name]
+
+            case Predicates.type?(type, value) do
               {:ok, value} ->
-                Enum.reduce(predicates, {:ok, value}, fn predicate, {:ok, value} ->
-                  apply(Predicates, predicate, [value])
-                end)
+                case apply_predicates(value, predicates) do
+                  {:error, {predicate, value}} ->
+                    {:error, {predicate, name, value}}
+
+                  {:ok, value} ->
+                    {:ok, value}
+                end
 
               error ->
                 error
@@ -37,6 +43,14 @@ defmodule Drops do
           else
             {:error, {:has_key?, name}}
           end
+        end
+
+        def apply_predicates(value, predicates) do
+          Enum.reduce(
+            predicates,
+            {:ok, value},
+            fn predicate, {:ok, value} -> apply(Predicates, predicate, [value]) end
+          )
         end
       end
     end

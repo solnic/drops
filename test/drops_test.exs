@@ -32,7 +32,7 @@ defmodule DropsTest do
         end
       end
 
-      assert [{:error, {:filled?, ""}}] = TestContract.apply(%{name: "", age: 21})
+      assert [{:error, {:filled?, :name, ""}}] = TestContract.apply(%{name: "", age: 21})
     end
   end
 end
