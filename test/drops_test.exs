@@ -21,5 +21,18 @@ defmodule DropsTest do
       assert [{:error, {:string?, 312}}, {:error, {:integer?, "21"}}] =
                TestContract.apply(%{name: 312, age: "21"})
     end
+
+    test "defining required keys with types and extra predicates" do
+      defmodule TestContract do
+        use Drops.Contract
+
+        schema do
+          required(:name, :string, [:filled?])
+          required(:age, :integer)
+        end
+      end
+
+      assert [{:error, {:filled?, ""}}] = TestContract.apply(%{name: "", age: 21})
+    end
   end
 end

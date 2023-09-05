@@ -23,9 +23,17 @@ defmodule Drops do
         def is_ok({:ok, _}), do: true
         def is_ok({:error, _}), do: false
 
-        def validate(data, {:required, name, type}) do
+        def validate(data, {:required, name, type, predicates}) do
           if Map.has_key?(data, name) do
-            Predicates.type?(type, data[name])
+            case Predicates.type?(type, data[name]) do
+              {:ok, value} ->
+                Enum.reduce(predicates, {:ok, value}, fn predicate, {:ok, value} ->
+                  apply(Predicates, predicate, [value])
+                end)
+
+              error ->
+                error
+            end
           else
             {:error, {:has_key?, name}}
           end
@@ -40,6 +48,10 @@ defmodule Drops do
 
     def type?(:integer, value) when is_integer(value), do: {:ok, value}
     def type?(:integer, value), do: {:error, {:integer?, value}}
+
+    def filled?(value) when is_binary(value) do
+      if value == "", do: {:error, {:filled?, value}}, else: {:ok, value}
+    end
   end
 
   defmodule DSL do
@@ -51,12 +63,12 @@ defmodule Drops do
       end
     end
 
-    defmacro required(name, type) do
-      required(__CALLER__.module, name, type)
+    defmacro required(name, type, predicates \\ []) do
+      required(__CALLER__.module, name, type, predicates)
     end
 
-    defp required(source, name, type) do
-      Module.put_attribute(source, :schema, {:required, name, type})
+    defp required(source, name, type, predicates) do
+      Module.put_attribute(source, :schema, {:required, name, type, predicates})
     end
   end
 end
