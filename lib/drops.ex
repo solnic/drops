@@ -11,8 +11,17 @@ defmodule Drops do
         end
 
         def apply(data) do
-          Enum.map(Enum.reverse(@schema), &validate(data, &1))
+          results = Enum.map(Enum.reverse(@schema), &validate(data, &1))
+
+          if Enum.all?(results, &is_ok/1) do
+            data
+          else
+            Enum.reject(results, &is_ok/1)
+          end
         end
+
+        def is_ok({:ok, _}), do: true
+        def is_ok({:error, _}), do: false
 
         def validate(data, {:required, name, type}) do
           if Map.has_key?(data, name) do
