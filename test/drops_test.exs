@@ -2,7 +2,7 @@ defmodule DropsTest do
   use ExUnit.Case
 
   describe "schema" do
-    test "defining a required key" do
+    test "defining required keys with types" do
       defmodule TestContract do
         use Drops.Contract
 
