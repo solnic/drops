@@ -10,18 +10,31 @@ defmodule Drops.Contract do
 
       @before_compile Drops.Contract.Runtime
 
-      def apply(data) do
-        results = Enum.map(schema(), &validate(data, &1))
+      def conform(data) do
+        conform(data, schema())
+      end
+
+      def conform(data, schema) do
+        results = Enum.map(schema, &validate(data, &1))
 
         if Enum.all?(results, &is_ok/1) do
-          data
+          {:ok, data}
         else
-          Enum.reject(results, &is_ok/1)
+          {:error, Enum.reject(results, &is_ok/1)}
         end
       end
 
-      def is_ok({:ok, _}), do: true
-      def is_ok({:error, _}), do: false
+      def validate(data, {{:required, name}, schema}) when is_map(schema) do
+        case conform(data[name], schema) do
+          {:error, results} ->
+            {:error, Enum.map(results, fn {:error, {predicate, key, value}} ->
+              {predicate, [name, key], value}
+            end)}
+
+          {:ok, value} ->
+            {:ok, value}
+        end
+      end
 
       def validate(data, {{:required, name}, predicates}) do
         if Map.has_key?(data, name) do
@@ -54,6 +67,9 @@ defmodule Drops.Contract do
           end
         )
       end
+
+      def is_ok({:ok, _}), do: true
+      def is_ok({:error, _}), do: false
     end
   end
 

@@ -4,8 +4,8 @@ defmodule DropsTest do
   describe "schema" do
     setup(_) do
       on_exit(fn ->
-        :code.purge DropsTest.TestContract
-        :code.delete DropsTest.TestContract
+        :code.purge(DropsTest.TestContract)
+        :code.delete(DropsTest.TestContract)
       end)
     end
 
@@ -21,14 +21,16 @@ defmodule DropsTest do
         end
       end
 
-      assert [{:error, {:has_key?, :age}}] = TestContract.apply(%{name: "Jane"})
+      assert {:error, [{:error, {:has_key?, :age}}]} =
+               TestContract.conform(%{name: "Jane"})
 
-      assert %{name: "Jane", age: 21} = TestContract.apply(%{name: "Jane", age: 21})
+      assert {:ok, %{name: "Jane", age: 21}} =
+               TestContract.conform(%{name: "Jane", age: 21})
 
-      assert [{:error, {:string?, :name, 312}}] =
-               TestContract.apply(%{name: 312, age: 21})
+      assert {:error, [{:error, {:string?, :name, 312}}]} =
+               TestContract.conform(%{name: 312, age: 21})
 
-      result = TestContract.apply(%{name: 312, age: "21"})
+      {:error, result} = TestContract.conform(%{name: 312, age: "21"})
 
       assert Enum.member?(result, {:error, {:string?, :name, 312}})
       assert Enum.member?(result, {:error, {:integer?, :age, "21"}})
@@ -46,7 +48,26 @@ defmodule DropsTest do
         end
       end
 
-      assert [{:error, {:filled?, :name, ""}}] = TestContract.apply(%{name: "", age: 21})
+      assert {:error, [{:error, {:filled?, :name, ""}}]} =
+               TestContract.conform(%{name: "", age: 21})
+    end
+
+    test "defining a nested schema - 1 level" do
+      defmodule TestContract do
+        use Drops.Contract
+
+        schema do
+          %{
+            required(:user) => %{
+              required(:name) => type(:string, [:filled?]),
+              required(:age) => type(:integer)
+            }
+          }
+        end
+      end
+
+      assert {:error, [{:error, [{:filled?, [:user, :name], ""}]}]} =
+               TestContract.conform(%{user: %{name: "", age: 21}})
     end
   end
 end
