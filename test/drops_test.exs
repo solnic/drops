@@ -90,18 +90,50 @@ defmodule DropsTest do
       end
 
       assert {:ok, _} =
-               TestContract.conform(%{user: %{name: "John", age: 21, address: %{
-                  city: "New York",
-                  street: "Central Park",
-                  zipcode: "10001"
-               }}})
+               TestContract.conform(%{
+                 user: %{
+                   name: "John",
+                   age: 21,
+                   address: %{
+                     city: "New York",
+                     street: "Central Park",
+                     zipcode: "10001"
+                   }
+                 }
+               })
 
       assert {:error, [{:error, [[{:filled?, [:user, :address, :street], ""}]]}]} =
-               TestContract.conform(%{user: %{name: "John", age: 21, address: %{
-                  city: "New York",
-                  street: "",
-                  zipcode: "10001"
-               }}})
+               TestContract.conform(%{
+                 user: %{
+                   name: "John",
+                   age: 21,
+                   address: %{
+                     city: "New York",
+                     street: "",
+                     zipcode: "10001"
+                   }
+                 }
+               })
+
+      assert {:error,
+              [
+                {:error,
+                 [
+                   [{:filled?, [:user, :address, :street], ""}],
+                   {:filled?, [:user, :name], ""}
+                 ]}
+              ]} =
+               TestContract.conform(%{
+                 user: %{
+                   name: "",
+                   age: 21,
+                   address: %{
+                     city: "New York",
+                     street: "",
+                     zipcode: "10001"
+                   }
+                 }
+               })
     end
   end
 end
