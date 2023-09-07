@@ -24,39 +24,37 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(data, {{:required, name}, schema}) when is_map(schema) do
+      def validate(data, {{:required, name}, predicates}) do
         if Map.has_key?(data, name) do
-          case Predicates.type?(:map, data[name]) do
-            {:ok, value} ->
-              case conform(value, schema) do
-                {:error, results} ->
-                  {:error, Enum.map(results, &nest_error(name, &1))}
-
-                {:ok, value} ->
-                  {:ok, value}
-              end
-
-            {:error, {predicate, value}} ->
-              {:error, {predicate, name, value}}
-          end
+          validate(data[name], predicates, path: name)
         else
           {:error, {:has_key?, name}}
         end
       end
 
-      def validate(data, {{:required, name}, predicates}) do
-        if Map.has_key?(data, name) do
-          value = data[name]
+      def validate(value, schema, path: name) when is_map(schema) do
+        case Predicates.type?(:map, value) do
+          {:ok, value} ->
+            case conform(value, schema) do
+              {:error, results} ->
+                {:error, Enum.map(results, &nest_error(name, &1))}
 
-          case apply_predicates(value, predicates) do
-            {:error, {predicate, value}} ->
-              {:error, {predicate, name, value}}
+              {:ok, value} ->
+                {:ok, value}
+            end
 
-            {:ok, value} ->
-              {:ok, value}
-          end
-        else
-          {:error, {:has_key?, name}}
+          {:error, {predicate, value}} ->
+            {:error, {predicate, name, value}}
+        end
+      end
+
+      def validate(value, predicates, path: name) when is_list(predicates) do
+        case apply_predicates(value, predicates) do
+          {:error, {predicate, value}} ->
+            {:error, {predicate, name, value}}
+
+          {:ok, value} ->
+            {:ok, value}
         end
       end
 
