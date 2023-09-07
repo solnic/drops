@@ -66,6 +66,12 @@ defmodule DropsTest do
         end
       end
 
+      assert {:error, [{:error, {:has_key?, :user}}]} =
+               TestContract.conform(%{})
+
+      assert {:error, [{:error, {:map?, :user, nil}}]} =
+               TestContract.conform(%{user: nil})
+
       assert {:error, [{:error, [{:filled?, [:user, :name], ""}]}]} =
                TestContract.conform(%{user: %{name: "", age: 21}})
     end

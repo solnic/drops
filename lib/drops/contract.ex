@@ -25,12 +25,22 @@ defmodule Drops.Contract do
       end
 
       def validate(data, {{:required, name}, schema}) when is_map(schema) do
-        case conform(data[name], schema) do
-          {:error, results} ->
-            {:error, Enum.map(results, &nest_error(name, &1))}
+        if Map.has_key?(data, name) do
+          case Predicates.type?(:map, data[name]) do
+            {:ok, value} ->
+              case conform(value, schema) do
+                {:error, results} ->
+                  {:error, Enum.map(results, &nest_error(name, &1))}
 
-          {:ok, value} ->
-            {:ok, value}
+                {:ok, value} ->
+                  {:ok, value}
+              end
+
+            {:error, {predicate, value}} ->
+              {:error, {predicate, name, value}}
+          end
+        else
+          {:error, {:has_key?, name}}
         end
       end
 
