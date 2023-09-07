@@ -27,9 +27,7 @@ defmodule Drops.Contract do
       def validate(data, {{:required, name}, schema}) when is_map(schema) do
         case conform(data[name], schema) do
           {:error, results} ->
-            {:error, Enum.map(results, fn {:error, {predicate, key, value}} ->
-              {predicate, [name, key], value}
-            end)}
+            {:error, Enum.map(results, &nest_error(name, &1))}
 
           {:ok, value} ->
             {:ok, value}
@@ -70,6 +68,22 @@ defmodule Drops.Contract do
 
       def is_ok({:ok, _}), do: true
       def is_ok({:error, _}), do: false
+
+      def nest_error(name, errors) when is_list(errors) do
+        Enum.map(errors, &nest_error(name, &1))
+      end
+
+      def nest_error(name, {:error, errors}) do
+        nest_error(name, errors)
+      end
+
+      def nest_error(name, {predicate, path, value}) when is_list(path) do
+        {predicate, [name] ++ path, value}
+      end
+
+      def nest_error(name, {predicate, key, value}) when is_atom(key) do
+        {predicate, [name, key], value}
+      end
     end
   end
 

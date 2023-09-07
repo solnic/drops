@@ -69,5 +69,39 @@ defmodule DropsTest do
       assert {:error, [{:error, [{:filled?, [:user, :name], ""}]}]} =
                TestContract.conform(%{user: %{name: "", age: 21}})
     end
+
+    test "defining a nested schema - 2 levels" do
+      defmodule TestContract do
+        use Drops.Contract
+
+        schema do
+          %{
+            required(:user) => %{
+              required(:name) => type(:string, [:filled?]),
+              required(:age) => type(:integer),
+              required(:address) => %{
+                required(:city) => type(:string, [:filled?]),
+                required(:street) => type(:string, [:filled?]),
+                required(:zipcode) => type(:string, [:filled?])
+              }
+            }
+          }
+        end
+      end
+
+      assert {:ok, _} =
+               TestContract.conform(%{user: %{name: "John", age: 21, address: %{
+                  city: "New York",
+                  street: "Central Park",
+                  zipcode: "10001"
+               }}})
+
+      assert {:error, [{:error, [[{:filled?, [:user, :address, :street], ""}]]}]} =
+               TestContract.conform(%{user: %{name: "John", age: 21, address: %{
+                  city: "New York",
+                  street: "",
+                  zipcode: "10001"
+               }}})
+    end
   end
 end
