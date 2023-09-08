@@ -1,7 +1,7 @@
 defmodule Drops.Contract do
   defmacro __using__(_opts) do
     quote do
-      alias Drops.Predicates
+      alias Drops.{Coercions, Predicates}
 
       import Drops.Contract
       import Drops.Contract.Runtime
@@ -18,7 +18,7 @@ defmodule Drops.Contract do
         results = Enum.map(schema, &validate(data, &1))
 
         if Enum.all?(results, &is_ok/1) do
-          {:ok, data}
+          {:ok, to_output(results)}
         else
           {:error, Enum.reject(results, &is_ok/1)}
         end
@@ -32,29 +32,47 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(value, schema, path: name) when is_map(schema) do
-        case Predicates.type?(:map, value) do
-          {:ok, value} ->
-            case conform(value, schema) do
-              {:error, results} ->
-                {:error, Enum.map(results, &nest_error(name, &1))}
-
-              {:ok, value} ->
-                {:ok, value}
-            end
+      def validate(
+            value,
+            {:coerce, input_type, output_type, input_predicates, output_predicates},
+            path: name
+          ) do
+        case apply_predicates(value, input_predicates) do
+          {:ok, _} ->
+            validate(
+              Coercions.coerce(input_type, output_type, value),
+              output_predicates,
+              path: name
+            )
 
           {:error, {predicate, value}} ->
             {:error, {predicate, name, value}}
         end
       end
 
-      def validate(value, predicates, path: name) when is_list(predicates) do
+      def validate(value, schema, path: path) when is_map(schema) do
+        case Predicates.type?(:map, value) do
+          {:ok, value} ->
+            case conform(value, schema) do
+              {:error, results} ->
+                {:error, Enum.map(results, &nest_error(path, &1))}
+
+              {:ok, value} ->
+                {:ok, {path, value}}
+            end
+
+          {:error, {predicate, value}} ->
+            {:error, {predicate, path, value}}
+        end
+      end
+
+      def validate(value, predicates, path: path) when is_list(predicates) do
         case apply_predicates(value, predicates) do
           {:error, {predicate, value}} ->
-            {:error, {predicate, name, value}}
+            {:error, {predicate, path, value}}
 
           {:ok, value} ->
-            {:ok, value}
+            {:ok, {path, value}}
         end
       end
 
@@ -91,6 +109,12 @@ defmodule Drops.Contract do
 
       def nest_error(name, {predicate, key, value}) when is_atom(key) do
         {predicate, [name, key], value}
+      end
+
+      def to_output(results) do
+        Enum.reduce(results, %{}, fn {:ok, {path, value}}, acc ->
+          put_in(acc, List.flatten([path]), value)
+        end)
       end
     end
   end
