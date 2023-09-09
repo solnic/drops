@@ -7,6 +7,7 @@ defmodule Drops.Contract do
       import Drops.Contract.Runtime
 
       Module.register_attribute(__MODULE__, :schema, accumulate: false)
+      Module.register_attribute(__MODULE__, :rules, accumulate: true)
 
       @before_compile Drops.Contract.Runtime
 
@@ -15,7 +16,7 @@ defmodule Drops.Contract do
       end
 
       def conform(data, schema) do
-        results = Enum.map(schema, &validate(data, &1))
+        results = Enum.map(schema, &validate(data, &1)) |> apply_rules()
 
         if Enum.all?(results, &is_ok/1) do
           {:ok, to_output(results)}
@@ -92,6 +93,14 @@ defmodule Drops.Contract do
         )
       end
 
+      def apply_rules(results) do
+        results ++ Enum.map(rules(), fn name -> apply(__MODULE__, :rule, [name, results]) end)
+        |> Enum.filter(fn
+          :ok -> false
+          _ -> true
+        end)
+      end
+
       def is_ok({:ok, _}), do: true
       def is_ok({:error, _}), do: false
 
@@ -123,12 +132,24 @@ defmodule Drops.Contract do
     defmacro __before_compile__(_env) do
       quote do
         def schema, do: @schema
+
+        def rules, do: @rules
       end
     end
   end
 
   defmacro schema(do: block) do
     set_schema(__CALLER__, block)
+  end
+
+  defmacro rule(name, input, do: block) do
+    quote do
+      Module.put_attribute(__MODULE__, :rules, unquote(name))
+
+      def rule(unquote(name), unquote(input)), do: unquote(block)
+
+      def rule(unquote(name), %{}), do: :ok
+    end
   end
 
   defp set_schema(_caller, block) do
