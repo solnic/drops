@@ -3,6 +3,10 @@ defmodule Drops.Contract.DSL do
     {:required, name}
   end
 
+  def optional(name) do
+    {:optional, name}
+  end
+
   def from(type) do
     {:coerce, type}
   end
