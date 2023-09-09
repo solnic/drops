@@ -141,5 +141,29 @@ defmodule DropsTest do
                  }
                })
     end
+
+    test "defining a schema with rules" do
+      defmodule TestContract do
+        use Drops.Contract
+
+        schema do
+          %{
+            required(:name) => type(:string, [:filled?])
+          }
+        end
+
+        rule(:unique?, [{:ok, {:name, value}}]) do
+          case value do
+            "John" -> {:error, {:taken, :name, value}}
+            _ -> :ok
+          end
+        end
+      end
+
+      assert {:ok, %{name: "Jane"}} = TestContract.conform(%{name: "Jane"})
+
+      assert {:error, [{:error, {:taken, :name, "John"}}]} =
+               TestContract.conform(%{name: "John"})
+    end
   end
 end
