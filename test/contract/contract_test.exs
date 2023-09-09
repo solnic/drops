@@ -162,6 +162,9 @@ defmodule DropsTest do
 
       assert {:ok, %{name: "Jane"}} = TestContract.conform(%{name: "Jane"})
 
+      assert {:error, [{:error, {:filled?, :name, ""}}]} =
+               TestContract.conform(%{name: ""})
+
       assert {:error, [{:error, {:taken, :name, "John"}}]} =
                TestContract.conform(%{name: "John"})
     end

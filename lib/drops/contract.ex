@@ -148,7 +148,7 @@ defmodule Drops.Contract do
 
       def rule(unquote(name), unquote(input)), do: unquote(block)
 
-      def rule(unquote(name), %{}), do: :ok
+      def rule(unquote(name), _), do: :ok
     end
   end
 
