@@ -33,6 +33,14 @@ defmodule Drops.Contract do
         end
       end
 
+      def validate(data, {{:optional, name}, predicates}) do
+        if Map.has_key?(data, name) do
+          validate(data[name], predicates, path: name)
+        else
+          :ok
+        end
+      end
+
       def validate(
             value,
             {:coerce, input_type, output_type, input_predicates, output_predicates},
@@ -121,8 +129,11 @@ defmodule Drops.Contract do
       end
 
       def to_output(results) do
-        Enum.reduce(results, %{}, fn {:ok, {path, value}}, acc ->
-          put_in(acc, List.flatten([path]), value)
+        Enum.reduce(results, %{}, fn result, acc ->
+          case result do
+            {:ok, {path, value}} -> put_in(acc, List.flatten([path]), value)
+            :ok -> acc
+          end
         end)
       end
     end

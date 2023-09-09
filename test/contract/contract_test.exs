@@ -36,6 +36,30 @@ defmodule DropsTest do
       assert Enum.member?(result, {:error, {:integer?, :age, "21"}})
     end
 
+    test "defining required and optionals keys with types" do
+      defmodule TestContract do
+        use Drops.Contract
+
+        schema do
+          %{
+            required(:email) => type(:string, [:filled?]),
+            optional(:name) => type(:string, [:filled?])
+          }
+        end
+      end
+
+      assert {:error, [{:error, {:has_key?, :email}}]} = TestContract.conform(%{})
+
+      assert {:error, [{:error, {:filled?, :name, ""}}, {:error, {:filled?, :email, ""}}]} =
+               TestContract.conform(%{email: "", name: ""})
+
+      assert {:error, [{:error, {:filled?, :name, ""}}]} =
+               TestContract.conform(%{email: "jane@doe.org", name: ""})
+
+      assert {:ok, %{email: "jane@doe.org", name: "Jane"}} =
+               TestContract.conform(%{email: "jane@doe.org", name: "Jane"})
+    end
+
     test "defining required keys with types and extra predicates" do
       defmodule TestContract do
         use Drops.Contract
