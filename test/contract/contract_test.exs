@@ -1,126 +1,123 @@
-defmodule DropsTest do
-  use ExUnit.Case
+defmodule Drops.ContractTest do
+  use Drops.ContractCase
 
-  describe "schema" do
-    setup(_) do
-      on_exit(fn ->
-        :code.purge(DropsTest.TestContract)
-        :code.delete(DropsTest.TestContract)
-      end)
+  describe "required keys with types" do
+    contract do
+      schema do
+        %{
+          required(:name) => type(:string),
+          required(:age) => type(:integer)
+        }
+      end
     end
 
-    test "defining required keys with types" do
-      defmodule TestContract do
-        use Drops.Contract
+    test "defining required keys with types", %{contract: contract} do
+      assert {:error, [{:error, {:has_key?, :age}}]} = contract.conform(%{name: "Jane"})
+    end
 
-        schema do
-          %{
-            required(:name) => type(:string),
-            required(:age) => type(:integer)
-          }
-        end
-      end
+    test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{name: "Jane", age: 21}} = contract.conform(%{name: "Jane", age: 21})
+    end
 
-      assert {:error, [{:error, {:has_key?, :age}}]} =
-               TestContract.conform(%{name: "Jane"})
-
-      assert {:ok, %{name: "Jane", age: 21}} =
-               TestContract.conform(%{name: "Jane", age: 21})
-
+    test "returns error with invalid data", %{contract: contract} do
       assert {:error, [{:error, {:string?, :name, 312}}]} =
-               TestContract.conform(%{name: 312, age: 21})
+               contract.conform(%{name: 312, age: 21})
+    end
 
-      {:error, result} = TestContract.conform(%{name: 312, age: "21"})
+    test "returns multiple errors with invalid data", %{contract: contract} do
+      {:error, result} = contract.conform(%{name: 312, age: "21"})
 
       assert Enum.member?(result, {:error, {:string?, :name, 312}})
       assert Enum.member?(result, {:error, {:integer?, :age, "21"}})
     end
+  end
 
-    test "defining required and optionals keys with types" do
-      defmodule TestContract do
-        use Drops.Contract
-
-        schema do
-          %{
-            required(:email) => type(:string, [:filled?]),
-            optional(:name) => type(:string, [:filled?])
-          }
-        end
+  describe "required and optionals keys with types" do
+    contract do
+      schema do
+        %{
+          required(:email) => type(:string, [:filled?]),
+          optional(:name) => type(:string, [:filled?])
+        }
       end
-
-      assert {:error, [{:error, {:has_key?, :email}}]} = TestContract.conform(%{})
-
-      assert {:error, [{:error, {:filled?, :name, ""}}, {:error, {:filled?, :email, ""}}]} =
-               TestContract.conform(%{email: "", name: ""})
-
-      assert {:error, [{:error, {:filled?, :name, ""}}]} =
-               TestContract.conform(%{email: "jane@doe.org", name: ""})
-
-      assert {:ok, %{email: "jane@doe.org", name: "Jane"}} =
-               TestContract.conform(%{email: "jane@doe.org", name: "Jane"})
     end
 
-    test "defining required keys with types and extra predicates" do
-      defmodule TestContract do
-        use Drops.Contract
+    test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{email: "jane@doe.org", name: "Jane"}} =
+               contract.conform(%{email: "jane@doe.org", name: "Jane"})
+    end
 
-        schema do
-          %{
+    test "returns has_key? error when a required key is missing", %{contract: contract} do
+      assert {:error, [{:error, {:has_key?, :email}}]} = contract.conform(%{})
+    end
+
+    test "returns predicate errors", %{contract: contract} do
+      assert {:error, [{:error, {:filled?, :name, ""}}, {:error, {:filled?, :email, ""}}]} =
+               contract.conform(%{email: "", name: ""})
+
+      assert {:error, [{:error, {:filled?, :name, ""}}]} =
+               contract.conform(%{email: "jane@doe.org", name: ""})
+    end
+  end
+
+  describe "required keys with extra predicates" do
+    contract do
+      schema do
+        %{
+          required(:name) => type(:string, [:filled?]),
+          required(:age) => type(:integer)
+        }
+      end
+    end
+
+    test "returns predicate errors", %{contract: contract} do
+      assert {:error, [{:error, {:filled?, :name, ""}}]} =
+               contract.conform(%{name: "", age: 21})
+    end
+  end
+
+  describe "defining a nested schema - 1 level" do
+    contract do
+      schema do
+        %{
+          required(:user) => %{
             required(:name) => type(:string, [:filled?]),
             required(:age) => type(:integer)
           }
-        end
+        }
       end
-
-      assert {:error, [{:error, {:filled?, :name, ""}}]} =
-               TestContract.conform(%{name: "", age: 21})
     end
 
-    test "defining a nested schema - 1 level" do
-      defmodule TestContract do
-        use Drops.Contract
+    test "returns nested errors", %{contract: contract} do
+      assert {:error, [{:error, {:has_key?, :user}}]} = contract.conform(%{})
 
-        schema do
-          %{
-            required(:user) => %{
-              required(:name) => type(:string, [:filled?]),
-              required(:age) => type(:integer)
-            }
-          }
-        end
-      end
-
-      assert {:error, [{:error, {:has_key?, :user}}]} =
-               TestContract.conform(%{})
-
-      assert {:error, [{:error, {:map?, :user, nil}}]} =
-               TestContract.conform(%{user: nil})
+      assert {:error, [{:error, {:map?, :user, nil}}]} = contract.conform(%{user: nil})
 
       assert {:error, [{:error, [{:filled?, [:user, :name], ""}]}]} =
-               TestContract.conform(%{user: %{name: "", age: 21}})
+               contract.conform(%{user: %{name: "", age: 21}})
     end
+  end
 
-    test "defining a nested schema - 2 levels" do
-      defmodule TestContract do
-        use Drops.Contract
-
-        schema do
-          %{
-            required(:user) => %{
-              required(:name) => type(:string, [:filled?]),
-              required(:age) => type(:integer),
-              required(:address) => %{
-                required(:city) => type(:string, [:filled?]),
-                required(:street) => type(:string, [:filled?]),
-                required(:zipcode) => type(:string, [:filled?])
-              }
+  describe "defining a nested schema - 2 levels" do
+    contract do
+      schema do
+        %{
+          required(:user) => %{
+            required(:name) => type(:string, [:filled?]),
+            required(:age) => type(:integer),
+            required(:address) => %{
+              required(:city) => type(:string, [:filled?]),
+              required(:street) => type(:string, [:filled?]),
+              required(:zipcode) => type(:string, [:filled?])
             }
           }
-        end
+        }
       end
+    end
 
+    test "returns deeply nested errors", %{contract: contract} do
       assert {:ok, _} =
-               TestContract.conform(%{
+               contract.conform(%{
                  user: %{
                    name: "John",
                    age: 21,
@@ -133,7 +130,7 @@ defmodule DropsTest do
                })
 
       assert {:error, [{:error, [[{:filled?, [:user, :address, :street], ""}]]}]} =
-               TestContract.conform(%{
+               contract.conform(%{
                  user: %{
                    name: "John",
                    age: 21,
@@ -153,7 +150,7 @@ defmodule DropsTest do
                    {:filled?, [:user, :name], ""}
                  ]}
               ]} =
-               TestContract.conform(%{
+               contract.conform(%{
                  user: %{
                    name: "",
                    age: 21,
@@ -165,32 +162,34 @@ defmodule DropsTest do
                  }
                })
     end
+  end
 
-    test "defining a schema with rules" do
-      defmodule TestContract do
-        use Drops.Contract
-
-        schema do
-          %{
-            required(:name) => type(:string, [:filled?])
-          }
-        end
-
-        rule(:unique?, [{:ok, {:name, value}}]) do
-          case value do
-            "John" -> {:error, {:taken, :name, value}}
-            _ -> :ok
-          end
-        end
+  describe "schema with rules" do
+    contract do
+      schema do
+        %{
+          required(:name) => type(:string, [:filled?])
+        }
       end
 
-      assert {:ok, %{name: "Jane"}} = TestContract.conform(%{name: "Jane"})
+      rule(:unique?, [{:ok, {:name, value}}]) do
+        case value do
+          "John" -> {:error, {:taken, :name, value}}
+          _ -> :ok
+        end
+      end
+    end
 
-      assert {:error, [{:error, {:filled?, :name, ""}}]} =
-               TestContract.conform(%{name: ""})
+    test "returns success when schema and rules passed", %{contract: contract} do
+      assert {:ok, %{name: "Jane"}} = contract.conform(%{name: "Jane"})
+    end
 
-      assert {:error, [{:error, {:taken, :name, "John"}}]} =
-               TestContract.conform(%{name: "John"})
+    test "returns predicate errors and skips rules", %{contract: contract} do
+      assert {:error, [{:error, {:filled?, :name, ""}}]} = contract.conform(%{name: ""})
+    end
+
+    test "returns rule errors", %{contract: contract} do
+      assert {:error, [{:error, {:taken, :name, "John"}}]} = contract.conform(%{name: "John"})
     end
   end
 end

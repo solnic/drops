@@ -1,28 +1,18 @@
 defmodule Drops.CoercionTest do
-  use ExUnit.Case
+  use Drops.ContractCase
 
-  describe "schema" do
-    setup(_) do
-      on_exit(fn ->
-        :code.purge(Drops.CoercionTest.TestContract)
-        :code.delete(Drops.CoercionTest.TestContract)
-      end)
+  describe "coercions" do
+    contract do
+      schema do
+        %{
+          required(:code) => from(:integer) |> type(:string),
+          required(:price) => from(:string) |> type(:integer)
+        }
+      end
     end
 
-    test "defining a required key with coercion" do
-      defmodule TestContract do
-        use Drops.Contract
-
-        schema do
-          %{
-            required(:code) => from(:integer) |> type(:string),
-            required(:price) => from(:string) |> type(:integer)
-          }
-        end
-      end
-
-      assert {:ok, %{code: "12", price: 11}} =
-               TestContract.conform(%{code: 12, price: "11"})
+    test "defining a required key with coercion", %{contract: contract} do
+      assert {:ok, %{code: "12", price: 11}} = contract.conform(%{code: 12, price: "11"})
     end
   end
 end
