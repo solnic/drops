@@ -1,4 +1,7 @@
 defmodule Drops.Predicates do
+  def type?(:atom, value) when is_atom(value), do: {:ok, value}
+  def type?(:atom, value), do: {:error, {:atom?, value}}
+
   def type?(:string, value) when is_binary(value), do: {:ok, value}
   def type?(:string, value), do: {:error, {:string?, value}}
 
