@@ -1,7 +1,7 @@
 defmodule Drops.Contract.Schema do
   alias __MODULE__
 
-  defstruct [:keys, :plan]
+  defstruct [:keys, :plan, :atomize]
 
   defmodule Key do
     defstruct [:path, :presence, :predicates, children: []]
@@ -24,9 +24,29 @@ defmodule Drops.Contract.Schema do
   end
 
   def new(map, opts) do
+    atomize = opts[:atomize] || false
     keys = to_key_list(map)
 
-    %Schema{keys: keys, plan: build_plan(keys)}
+    %Schema{atomize: atomize, keys: keys, plan: build_plan(keys)}
+  end
+
+  def atomize(data, keys, initial \\ %{}) do
+    Enum.reduce(keys, initial, fn %{path: path} = key, acc ->
+      string_path = Enum.map(path, &Atom.to_string/1)
+      value = get_in(data, string_path)
+
+      updated = put_in(acc, path, value)
+
+      with_children = atomize(data, key.children, updated)
+      atom_part = List.delete(path, List.last(path))
+      string_part = List.last(string_path)
+
+      mixed_path = atom_part ++ [string_part]
+
+      {_, result} = pop_in(with_children, mixed_path)
+
+      result
+    end)
   end
 
   defp to_key_list(map, root \\ []) do

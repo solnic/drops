@@ -18,11 +18,15 @@ defmodule Drops.Contract do
       end
 
       def conform(data, %Schema{atomize: true} = schema) do
-        conform(Schema.atomize(data, schema), schema)
+        conform(Schema.atomize(data, schema.keys), schema.plan)
       end
 
-      def conform(data, schema) do
-        results = Enum.map(schema.plan, &step(data, &1)) |> List.flatten() |> apply_rules()
+      def conform(data, %Schema{} = schema) do
+        conform(data, schema.plan)
+      end
+
+      def conform(data, plan) do
+        results = Enum.map(plan, &step(data, &1)) |> List.flatten() |> apply_rules()
 
         if Enum.all?(results, &is_ok/1) do
           {:ok, to_output(results)}

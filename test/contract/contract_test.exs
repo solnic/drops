@@ -195,4 +195,68 @@ defmodule Drops.ContractTest do
                contract.conform(%{name: "John"})
     end
   end
+
+  describe "schema for string maps" do
+    contract do
+      schema(atomize: true) do
+        %{
+          required(:user) => %{
+            required(:name) => type(:string, [:filled?]),
+            required(:age) => type(:integer),
+            required(:address) => %{
+              required(:city) => type(:string, [:filled?]),
+              required(:street) => type(:string, [:filled?]),
+              required(:zipcode) => type(:string, [:filled?])
+            }
+          }
+        }
+      end
+    end
+
+    test "returns success when schema validation passed", %{contract: contract} do
+      expected_output = %{
+                user: %{
+                  name: "John",
+                  age: 21,
+                  address: %{
+                    city: "New York",
+                    street: "Central Park",
+                    zipcode: "10001"
+                  }
+                }
+              }
+
+      assert {:ok, output} =
+               contract.conform(%{
+                 "user" => %{
+                   "name" => "John",
+                   "age" => 21,
+                   "address" => %{
+                     "city" => "New York",
+                     "street" => "Central Park",
+                     "zipcode" => "10001"
+                   }
+                 }
+               })
+
+      assert expected_output == output
+
+      assert {:error,
+              [
+                {:error, {:filled?, [:user, :address, :street], ""}},
+                {:error, {:filled?, [:user, :name], ""}}
+              ]} =
+               contract.conform(%{
+                 "user" => %{
+                   "name" => "",
+                   "age" => 21,
+                   "address" => %{
+                     "city" => "New York",
+                     "street" => "",
+                     "zipcode" => "10001"
+                   }
+                 }
+               })
+    end
+  end
 end
