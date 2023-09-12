@@ -13,7 +13,8 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:string?, :test, 312}}]} = contract.conform(%{test: 312})
+      assert {:error, [{:error, {:string?, [:test], 312}}]} =
+               contract.conform(%{test: 312})
     end
   end
 
@@ -29,7 +30,8 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-integer value", %{contract: contract} do
-      assert {:error, [{:error, {:integer?, :test, "Hello"}}]} = contract.conform(%{test: "Hello"})
+      assert {:error, [{:error, {:integer?, [:test], "Hello"}}]} =
+               contract.conform(%{test: "Hello"})
     end
   end
 
@@ -45,7 +47,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error, [{:error, {:map?, :test, 312}}]} = contract.conform(%{test: 312})
+      assert {:error, [{:error, {:map?, [:test], 312}}]} = contract.conform(%{test: 312})
     end
   end
 
@@ -61,7 +63,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with an empty string", %{contract: contract} do
-      assert {:error, [{:error, {:filled?, :test, ""}}]} = contract.conform(%{test: ""})
+      assert {:error, [{:error, {:filled?, [:test], ""}}]} = contract.conform(%{test: ""})
     end
   end
 end
