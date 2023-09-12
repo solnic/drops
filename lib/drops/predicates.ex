@@ -11,6 +11,9 @@ defmodule Drops.Predicates do
   def type?(:date_time, %DateTime{} = value), do: {:ok, value}
   def type?(:date_time, value), do: {:error, {:date_time?, value}}
 
+  def type?(:time, %Time{} = value), do: {:ok, value}
+  def type?(:time, value), do: {:error, {:time?, value}}
+
   def filled?(value) when is_binary(value) do
     if value == "", do: {:error, {:filled?, value}}, else: {:ok, value}
   end
