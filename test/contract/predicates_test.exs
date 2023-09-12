@@ -52,6 +52,23 @@ defmodule Drops.PredicatesTest do
     end
   end
 
+  describe "type?/2 with :float" do
+    contract do
+      schema do
+        %{required(:test) => type(:float)}
+      end
+    end
+
+    test "returns success with an integer value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: 31.2})
+    end
+
+    test "returns error with a non-integer value", %{contract: contract} do
+      assert {:error, [{:error, {:float?, [:test], 312}}]} =
+               contract.conform(%{test: 312})
+    end
+  end
+
   describe "type?/2 with :map" do
     contract do
       schema do

@@ -8,6 +8,9 @@ defmodule Drops.Predicates do
   def type?(:integer, value) when is_integer(value), do: {:ok, value}
   def type?(:integer, value), do: {:error, {:integer?, value}}
 
+  def type?(:float, value) when is_float(value), do: {:ok, value}
+  def type?(:float, value), do: {:error, {:float?, value}}
+
   def type?(:map, value) when is_map(value), do: {:ok, value}
   def type?(:map, value), do: {:error, {:map?, value}}
 
