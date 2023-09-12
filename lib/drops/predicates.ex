@@ -8,6 +8,9 @@ defmodule Drops.Predicates do
   def type?(:map, value) when is_map(value), do: {:ok, value}
   def type?(:map, value), do: {:error, {:map?, value}}
 
+  def type?(:list, value) when is_list(value), do: {:ok, value}
+  def type?(:list, value), do: {:error, {:list?, value}}
+
   def type?(:date_time, %DateTime{} = value), do: {:ok, value}
   def type?(:date_time, value), do: {:error, {:date_time?, value}}
 

@@ -85,6 +85,23 @@ defmodule Drops.PredicatesTest do
     end
   end
 
+  describe "type?/2 with :list" do
+    contract do
+      schema do
+        %{required(:test) => type(:list)}
+      end
+    end
+
+    test "returns success with a string value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: [1, 2, 3]})
+    end
+
+    test "returns error with a non-string value", %{contract: contract} do
+      assert {:error, [{:error, {:list?, [:test], 312}}]} =
+               contract.conform(%{test: 312})
+    end
+  end
+
   describe "filled?/1" do
     contract do
       schema do
