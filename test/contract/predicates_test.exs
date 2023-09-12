@@ -51,6 +51,23 @@ defmodule Drops.PredicatesTest do
     end
   end
 
+  describe "type?/2 with :date" do
+    contract do
+      schema do
+        %{required(:test) => type(:date)}
+      end
+    end
+
+    test "returns success with a string value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: ~D[2023-09-12]})
+    end
+
+    test "returns error with a non-string value", %{contract: contract} do
+      assert {:error, [{:error, {:date?, [:test], 312}}]} =
+               contract.conform(%{test: 312})
+    end
+  end
+
   describe "type?/2 with :date_time" do
     contract do
       schema do

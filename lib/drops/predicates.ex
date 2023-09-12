@@ -11,6 +11,9 @@ defmodule Drops.Predicates do
   def type?(:list, value) when is_list(value), do: {:ok, value}
   def type?(:list, value), do: {:error, {:list?, value}}
 
+  def type?(:date, %Date{} = value), do: {:ok, value}
+  def type?(:date, value), do: {:error, {:date?, value}}
+
   def type?(:date_time, %DateTime{} = value), do: {:ok, value}
   def type?(:date_time, value), do: {:error, {:date_time?, value}}
 
