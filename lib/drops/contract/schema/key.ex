@@ -30,6 +30,10 @@ defmodule Drops.Contract.Schema.Key do
     type
   end
 
+  defp infer_type(spec) when is_list(spec) do
+    Enum.map(spec, &infer_type/1)
+  end
+
   defp infer_type({:coerce, {input_type, output_type}}) do
     {:coerce, {{infer_type(input_type), infer_predicates(input_type)}, infer_type(output_type)}}
   end
@@ -38,8 +42,16 @@ defmodule Drops.Contract.Schema.Key do
     infer_predicates(output_type)
   end
 
-  defp infer_predicates({:type, {type, predicates}}) do
-    [predicate(:type?, type) | Enum.map(predicates, &predicate/1)]
+  defp infer_predicates(spec) when is_list(spec) do
+    {:or, Enum.map(spec, &infer_predicates/1)}
+  end
+
+  defp infer_predicates({:type, {type, predicates}}) when length(predicates) > 0 do
+    {:and, [predicate(:type?, type) | Enum.map(predicates, &predicate/1)]}
+  end
+
+  defp infer_predicates({:type, {type, []}}) do
+    [predicate(:type?, type)]
   end
 
   defp predicate(name, args) do

@@ -95,17 +95,37 @@ defmodule Drops.Contract do
         end
       end
 
+      def validate(value, {:and, predicates}, path: path) do
+        validate(value, predicates, path: path)
+      end
+
+      def validate(value, {:or, [head | tail]}, path: path) do
+        case validate(value, head, path: path) do
+          {:ok, _} = success ->
+            success
+
+          {:error, _} = error ->
+            if length(tail) > 0, do: validate(value, {:or, tail}, path: path), else: error
+        end
+      end
+
       def apply_predicates(value, predicates) do
         Enum.reduce(
           predicates,
           {:ok, value},
-          fn {:predicate, {name, args}}, {:ok, value} ->
-            case args do
-              [] ->
-                apply(Predicates, name, [value])
+          fn {:predicate, {name, args}}, result ->
+            case result do
+              {:ok, _} ->
+                case args do
+                  [] ->
+                    apply(Predicates, name, [value])
 
-              arg ->
-                apply(Predicates, name, [arg, value])
+                  arg ->
+                    apply(Predicates, name, [arg, value])
+                end
+
+              {:error, _} = error ->
+                error
             end
           end
         )
