@@ -170,13 +170,14 @@ defmodule Drops.ContractTest do
     contract do
       schema do
         %{
-          required(:name) => type(:string, [:filled?])
+          required(:name) => type(:string, [:filled?]),
+          optional(:age) => type(:integer)
         }
       end
 
-      rule(:unique?, [{:ok, {[:name], value}}]) do
-        case value do
-          "John" -> {:error, {:taken, [:name], value}}
+      rule(:unique?, %{name: name}) do
+        case name do
+          "John" -> {:error, {:taken, [:name], name}}
           _ -> :ok
         end
       end
@@ -268,7 +269,7 @@ defmodule Drops.ContractTest do
                      "city" => "New York",
                      "street" => "Central Park",
                      "zipcode" => "10001"
-                   },
+                   }
                  },
                  "company" => %{
                    "name" => "Elixir Drops"

@@ -26,12 +26,21 @@ defmodule Drops.Contract do
       end
 
       def conform(data, plan) do
-        results = Enum.map(plan, &step(data, &1)) |> List.flatten() |> apply_rules()
+        results = Enum.map(plan, &step(data, &1)) |> List.flatten()
+        schema_errors = Enum.reject(results, &is_ok/1)
 
-        if Enum.all?(results, &is_ok/1) do
-          {:ok, to_output(results)}
+        if length(schema_errors) == 0 do
+          output = to_output(results)
+
+          case apply_rules(output) do
+            [] ->
+              {:ok, output}
+
+            rule_errors ->
+              {:error, schema_errors ++ rule_errors}
+          end
         else
-          {:error, Enum.reject(results, &is_ok/1)}
+          {:error, schema_errors}
         end
       end
 
@@ -131,16 +140,17 @@ defmodule Drops.Contract do
         )
       end
 
-      def apply_rules(results) do
-        (results ++
-           Enum.map(rules(), fn name -> apply(__MODULE__, :rule, [name, results]) end))
+      def apply_rules(output) do
+        Enum.map(rules(), fn name -> apply(__MODULE__, :rule, [name, output]) end)
         |> Enum.filter(fn
           :ok -> false
           _ -> true
         end)
       end
 
+      def is_ok(:ok), do: true
       def is_ok({:ok, _}), do: true
+      def is_ok(:error), do: false
       def is_ok({:error, _}), do: false
 
       def to_output(results) do
@@ -178,6 +188,8 @@ defmodule Drops.Contract do
       def rule(unquote(name), unquote(input)), do: unquote(block)
 
       def rule(unquote(name), _), do: :ok
+
+      defoverridable rule: 2
     end
   end
 
