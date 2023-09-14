@@ -45,6 +45,26 @@ defmodule Drops.Contract do
         end
       end
 
+      def step(
+            data,
+            {:validate,
+             %{type: {:coerce, {{input_type, input_predicates}, output_type}}} = key}
+          ) do
+        value = get_in(data, key.path)
+
+        case apply_predicates(value, input_predicates) do
+          {:ok, _} ->
+            validate(
+              Coercions.coerce(input_type, output_type, value),
+              key.predicates,
+              path: key.path
+            )
+
+          {:error, {predicate, value}} ->
+            {:error, {predicate, key.path, value}}
+        end
+      end
+
       def step(data, {:validate, key}) do
         validate(data, key)
       end
@@ -75,21 +95,17 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(
-            value,
-            {:coerce, input_type, output_type, input_predicates, output_predicates},
-            path: name
-          ) do
-        case apply_predicates(value, input_predicates) do
-          {:ok, _} ->
-            validate(
-              Coercions.coerce(input_type, output_type, value),
-              output_predicates,
-              path: name
-            )
+      def validate(value, {:and, predicates}, path: path) do
+        validate(value, predicates, path: path)
+      end
 
-          {:error, {predicate, value}} ->
-            {:error, {predicate, name, value}}
+      def validate(value, {:or, [head | tail]}, path: path) do
+        case validate(value, head, path: path) do
+          {:ok, _} = success ->
+            success
+
+          {:error, _} = error ->
+            if length(tail) > 0, do: validate(value, {:or, tail}, path: path), else: error
         end
       end
 
@@ -97,13 +113,19 @@ defmodule Drops.Contract do
         Enum.reduce(
           predicates,
           {:ok, value},
-          fn {:predicate, {name, args}}, {:ok, value} ->
-            case args do
-              [] ->
-                apply(Predicates, name, [value])
+          fn {:predicate, {name, args}}, result ->
+            case result do
+              {:ok, _} ->
+                case args do
+                  [] ->
+                    apply(Predicates, name, [value])
 
-              arg ->
-                apply(Predicates, name, [arg, value])
+                  arg ->
+                    apply(Predicates, name, [arg, value])
+                end
+
+              {:error, _} = error ->
+                error
             end
           end
         )
