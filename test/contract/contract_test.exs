@@ -208,6 +208,9 @@ defmodule Drops.ContractTest do
               required(:street) => type(:string, [:filled?]),
               required(:zipcode) => type(:string, [:filled?])
             }
+          },
+          optional(:company) => %{
+            required(:name) => type(:string)
           }
         }
       end
@@ -215,16 +218,16 @@ defmodule Drops.ContractTest do
 
     test "returns success when schema validation passed", %{contract: contract} do
       expected_output = %{
-                user: %{
-                  name: "John",
-                  age: 21,
-                  address: %{
-                    city: "New York",
-                    street: "Central Park",
-                    zipcode: "10001"
-                  }
-                }
-              }
+        user: %{
+          name: "John",
+          age: 21,
+          address: %{
+            city: "New York",
+            street: "Central Park",
+            zipcode: "10001"
+          }
+        }
+      }
 
       assert {:ok, output} =
                contract.conform(%{
@@ -236,6 +239,39 @@ defmodule Drops.ContractTest do
                      "street" => "Central Park",
                      "zipcode" => "10001"
                    }
+                 }
+               })
+
+      assert expected_output == output
+
+      expected_output = %{
+        user: %{
+          name: "John",
+          age: 21,
+          address: %{
+            city: "New York",
+            street: "Central Park",
+            zipcode: "10001"
+          }
+        },
+        company: %{
+          name: "Elixir Drops"
+        }
+      }
+
+      assert {:ok, output} =
+               contract.conform(%{
+                 "user" => %{
+                   "name" => "John",
+                   "age" => 21,
+                   "address" => %{
+                     "city" => "New York",
+                     "street" => "Central Park",
+                     "zipcode" => "10001"
+                   },
+                 },
+                 "company" => %{
+                   "name" => "Elixir Drops"
                  }
                })
 
