@@ -45,6 +45,26 @@ defmodule Drops.Contract do
         end
       end
 
+      def step(
+            data,
+            {:validate,
+             %{type: {:coerce, {{input_type, input_predicates}, output_type}}} = key}
+          ) do
+        value = get_in(data, key.path)
+
+        case apply_predicates(value, input_predicates) do
+          {:ok, _} ->
+            validate(
+              Coercions.coerce(input_type, output_type, value),
+              key.predicates,
+              path: key.path
+            )
+
+          {:error, {predicate, value}} ->
+            {:error, {predicate, key.path, value}}
+        end
+      end
+
       def step(data, {:validate, key}) do
         validate(data, key)
       end
@@ -72,24 +92,6 @@ defmodule Drops.Contract do
 
           {:ok, value} ->
             {:ok, {path, value}}
-        end
-      end
-
-      def validate(
-            value,
-            {:coerce, input_type, output_type, input_predicates, output_predicates},
-            path: name
-          ) do
-        case apply_predicates(value, input_predicates) do
-          {:ok, _} ->
-            validate(
-              Coercions.coerce(input_type, output_type, value),
-              output_predicates,
-              path: name
-            )
-
-          {:error, {predicate, value}} ->
-            {:error, {predicate, name, value}}
         end
       end
 

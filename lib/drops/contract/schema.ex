@@ -1,27 +1,8 @@
 defmodule Drops.Contract.Schema do
   alias __MODULE__
+  alias Drops.Contract.Schema.Key
 
   defstruct [:keys, :plan, :atomize]
-
-  defmodule Key do
-    defstruct [:path, :presence, :predicates, children: []]
-
-    def present?(map, _) when not is_map(map) do
-      true
-    end
-
-    def present?(_map, []) do
-      true
-    end
-
-    def present?(map, %Key{} = key) do
-      present?(map, key.path)
-    end
-
-    def present?(map, [key | tail]) do
-      Map.has_key?(map, key) and present?(map[key], tail)
-    end
-  end
 
   def new(map, opts) do
     atomize = opts[:atomize] || false
@@ -50,24 +31,21 @@ defmodule Drops.Contract.Schema do
   end
 
   defp to_key_list(map, root \\ []) do
-    Enum.map(map, fn {{presence, name}, value} ->
-      case value do
+    Enum.map(map, fn {{presence, name}, spec} ->
+      path = root ++ [name]
+
+      case spec do
         %{} ->
-          build_key(
-            presence,
-            root ++ [name],
-            [{:predicate, {:type?, :map}}],
-            to_key_list(value, root ++ [name])
+          Key.new({:type, {:map, []}},
+            presence: presence,
+            path: path,
+            children: to_key_list(spec, path)
           )
 
         _ ->
-          build_key(presence, root ++ [name], value)
+          Key.new(spec, presence: presence, path: path)
       end
     end)
-  end
-
-  defp build_key(presence, path, predicates, children \\ []) do
-    %Key{path: path, presence: presence, predicates: predicates, children: children}
   end
 
   defp build_plan(keys) do

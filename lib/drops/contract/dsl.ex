@@ -11,23 +11,15 @@ defmodule Drops.Contract.DSL do
     {:coerce, type}
   end
 
+  def type(type) do
+    {:type, {type, []}}
+  end
+
   def type(type, predicates) when is_list(predicates) do
-    [predicate(:type?, type) | Enum.map(predicates, &predicate/1)]
+    {:type, {type, predicates}}
   end
 
-  def type({:coerce, input_type}, output_type) when is_atom(output_type) do
-    {:coerce, input_type, output_type, type(input_type), type(output_type)}
-  end
-
-  def type({:coerce, input_type}, output_type, predicates) do
-    {:coerce, input_type, output_type, type(input_type), type(output_type, predicates)}
-  end
-
-  def type(type) when is_atom(type) do
-    [predicate(:type?, type)]
-  end
-
-  def predicate(name, args \\ []) do
-    {:predicate, {name, args}}
+  def type({:coerce, input_type}, output_type) do
+    {:coerce, {type(input_type), type(output_type)}}
   end
 end
