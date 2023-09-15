@@ -25,6 +25,19 @@ defmodule Drops.Contract do
         conform(data, schema.plan)
       end
 
+      def conform(data, %Schema{} = schema, path: root) do
+        case conform(data, schema.plan) do
+          {:ok, _result} = success ->
+            success
+
+          {:error, errors} ->
+            {:error,
+             Enum.map(errors, fn {:error, {predicate, path, value}} ->
+               {predicate, root ++ path, value}
+             end)}
+        end
+      end
+
       def conform(data, plan) do
         results = Enum.map(plan, &step(data, &1)) |> List.flatten()
         schema_errors = Enum.reject(results, &is_ok/1)
@@ -61,7 +74,7 @@ defmodule Drops.Contract do
           ) do
         value = get_in(data, key.path)
 
-        case apply_predicates(value, input_predicates) do
+        case apply_predicates(value, input_predicates, path: key.path) do
           {:ok, _} ->
             validate(
               Coercions.coerce(input_type, output_type, value),
@@ -95,13 +108,7 @@ defmodule Drops.Contract do
       end
 
       def validate(value, predicates, path: path) when is_list(predicates) do
-        case apply_predicates(value, predicates) do
-          {:error, {predicate, value}} ->
-            {:error, {predicate, path, value}}
-
-          {:ok, value} ->
-            {:ok, {path, value}}
-        end
+        apply_predicates(value, predicates, path: path)
       end
 
       def validate(value, {:and, predicates}, path: path) do
@@ -118,26 +125,57 @@ defmodule Drops.Contract do
         end
       end
 
-      def apply_predicates(value, predicates) do
-        Enum.reduce(
-          predicates,
-          {:ok, value},
-          fn {:predicate, {name, args}}, result ->
-            case result do
-              {:ok, _} ->
-                case args do
-                  [] ->
-                    apply(Predicates, name, [value])
+      def apply_predicates(value, {:and, [left, %Schema{} = schema]}, path: path) do
+        case apply_predicate(left, {:ok, {path, value}}) do
+          {:ok, _} ->
+            conform(value, schema, path: path)
 
-                  arg ->
-                    apply(Predicates, name, [arg, value])
-                end
+          {:error, error} ->
+            {:error, error}
+        end
+      end
 
-              {:error, _} = error ->
-                error
-            end
+      def apply_predicates(value, {:and, predicates}, path: path) do
+        apply_predicates(value, predicates, path: path)
+      end
+
+      def apply_predicates(value, predicates, path: path) do
+        Enum.reduce(predicates, {:ok, {path, value}}, &apply_predicate(&1, &2))
+      end
+
+      def apply_predicate({:each, predicates}, {:ok, {path, members}}) do
+        result =
+          Enum.with_index(
+            members,
+            &apply_predicates(&1, predicates, path: path ++ [&2])
+          )
+
+        errors = Enum.reject(result, &is_ok/1)
+
+        if length(errors) == 0,
+          do: {:ok, {path, result}},
+          else: errors
+      end
+
+      def apply_predicate({:predicate, {name, args}}, {:ok, {path, value}}) do
+        apply_args =
+          case args do
+            [arg] -> [arg, value]
+            [] -> [value]
+            arg -> [arg, value]
           end
-        )
+
+        case apply(Predicates, name, apply_args) do
+          {:ok, result} ->
+            {:ok, {path, result}}
+
+          {:error, {predicate, value}} ->
+            {:error, {predicate, path, value}}
+        end
+      end
+
+      def apply_predicate(_, {:error, _} = error) do
+        error
       end
 
       def apply_rules(output) do
@@ -157,10 +195,22 @@ defmodule Drops.Contract do
         Enum.reduce(results, %{}, fn result, acc ->
           case result do
             {:ok, {path, value}} ->
-              put_in(acc, path, value)
+              if is_list(value),
+                do: put_in(acc, path, map_list_results(value)),
+                else: put_in(acc, path, value)
 
             :ok ->
               acc
+          end
+        end)
+      end
+
+      defp map_list_results(members) do
+        Enum.map(members, fn member ->
+          case member do
+            {:ok, {_, value}} -> value
+            {:ok, value} -> value
+            value -> value
           end
         end)
       end

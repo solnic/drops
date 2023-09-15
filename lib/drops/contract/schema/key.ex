@@ -1,5 +1,6 @@
 defmodule Drops.Contract.Schema.Key do
   alias __MODULE__
+  alias Drops.Contract.Schema
 
   defstruct [:path, :presence, :type, :predicates, children: []]
 
@@ -35,15 +36,28 @@ defmodule Drops.Contract.Schema.Key do
   end
 
   defp infer_type({:coerce, {input_type, output_type}}) do
-    {:coerce, {{infer_type(input_type), infer_predicates(input_type)}, infer_type(output_type)}}
+    {:coerce,
+     {{infer_type(input_type), infer_predicates(input_type)}, infer_type(output_type)}}
   end
 
   defp infer_predicates({:coerce, {_input_type, output_type}}) do
     infer_predicates(output_type)
   end
 
+  defp infer_predicates(spec) when is_map(spec) do
+    {:and, [predicate(:type?, :map), Schema.new(spec, [])]}
+  end
+
   defp infer_predicates(spec) when is_list(spec) do
     {:or, Enum.map(spec, &infer_predicates/1)}
+  end
+
+  defp infer_predicates({:type, {:list, []}}) do
+    [predicate(:type?, :list)]
+  end
+
+  defp infer_predicates({:type, {:list, member_type}}) do
+    {:and, [predicate(:type?, :list), {:each, infer_predicates(member_type)}]}
   end
 
   defp infer_predicates({:type, {type, predicates}}) when length(predicates) > 0 do
