@@ -11,6 +11,14 @@ defmodule Drops.Contract.DSL do
     {:coerce, type}
   end
 
+  def type([list: members]) when is_map(members) do
+    {:type, {:list, members}}
+  end
+
+  def type([list: type]) do
+    {:type, {:list, type(type)}}
+  end
+
   def type({type, predicates}) when is_atom(type) do
     type(type, predicates)
   end
