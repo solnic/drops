@@ -15,8 +15,8 @@ defmodule Drops.Contract.DSL do
     {:type, {:list, members}}
   end
 
-  def type([list: type]) do
-    {:type, {:list, type(type)}}
+  def type([list: [type | predicates]]) do
+    {:type, {:list, type(type, predicates)}}
   end
 
   def type({type, predicates}) when is_atom(type) do

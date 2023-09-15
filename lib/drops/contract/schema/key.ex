@@ -36,7 +36,8 @@ defmodule Drops.Contract.Schema.Key do
   end
 
   defp infer_type({:coerce, {input_type, output_type}}) do
-    {:coerce, {{infer_type(input_type), infer_predicates(input_type)}, infer_type(output_type)}}
+    {:coerce,
+     {{infer_type(input_type), infer_predicates(input_type)}, infer_type(output_type)}}
   end
 
   defp infer_predicates({:coerce, {_input_type, output_type}}) do

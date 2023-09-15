@@ -135,6 +135,10 @@ defmodule Drops.Contract do
         end
       end
 
+      def apply_predicates(value, {:and, predicates}, path: path) do
+        apply_predicates(value, predicates, path: path)
+      end
+
       def apply_predicates(value, predicates, path: path) do
         Enum.reduce(predicates, {:ok, {path, value}}, &apply_predicate(&1, &2))
       end
