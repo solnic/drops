@@ -32,8 +32,8 @@ defmodule Drops.Contract do
 
           {:error, errors} ->
             {:error,
-             Enum.map(errors, fn {:error, {predicate, path, value}} ->
-               {predicate, root ++ path, value}
+             Enum.map(errors, fn {:error, {path, predicate, value}} ->
+               {root ++ path, predicate, value}
              end)}
         end
       end
@@ -168,7 +168,7 @@ defmodule Drops.Contract do
         if apply(Predicates, name, apply_args) do
           {:ok, {path, value}}
         else
-          {:error, {name, path, apply_args}}
+          {:error, {path, name, apply_args}}
         end
       end
 

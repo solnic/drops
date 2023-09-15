@@ -13,7 +13,7 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {:type?, [:test], [:string, 312]}}]} =
+      assert {:error, [{:error, {[:test], :type?, [:string, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -31,7 +31,7 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {:type?, [:test], [:string, :invalid]}}]} =
+      assert {:error, [{:error, {[:test], :type?, [:string, :invalid]}}]} =
                contract.conform(%{test: :invalid})
     end
   end
@@ -49,10 +49,10 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {:type?, [:test], [:string, :invalid]}}]} =
+      assert {:error, [{:error, {[:test], :type?, [:string, :invalid]}}]} =
                contract.conform(%{test: :invalid})
 
-      assert {:error, [{:error, {:filled?, [:test], [""]}}]} =
+      assert {:error, [{:error, {[:test], :filled?, [""]}}]} =
                contract.conform(%{test: ""})
     end
   end

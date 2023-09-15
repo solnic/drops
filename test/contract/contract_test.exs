@@ -20,15 +20,15 @@ defmodule Drops.ContractTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {:type?, [:name], [:string, 312]}}]} =
+      assert {:error, [{:error, {[:name], :type?, [:string, 312]}}]} =
                contract.conform(%{name: 312, age: 21})
     end
 
     test "returns multiple errors with invalid data", %{contract: contract} do
       {:error, result} = contract.conform(%{name: 312, age: "21"})
 
-      assert Enum.member?(result, {:error, {:type?, [:name], [:string, 312]}})
-      assert Enum.member?(result, {:error, {:type?, [:age], [:integer, "21"]}})
+      assert Enum.member?(result, {:error, {[:name], :type?, [:string, 312]}})
+      assert Enum.member?(result, {:error, {[:age], :type?, [:integer, "21"]}})
     end
   end
 
@@ -53,10 +53,10 @@ defmodule Drops.ContractTest do
 
     test "returns predicate errors", %{contract: contract} do
       assert {:error,
-              [{:error, {:filled?, [:name], [""]}}, {:error, {:filled?, [:email], [""]}}]} =
+              [{:error, {[:name], :filled?, [""]}}, {:error, {[:email], :filled?, [""]}}]} =
                contract.conform(%{email: "", name: ""})
 
-      assert {:error, [{:error, {:filled?, [:name], [""]}}]} =
+      assert {:error, [{:error, {[:name], :filled?, [""]}}]} =
                contract.conform(%{email: "jane@doe.org", name: ""})
     end
   end
@@ -72,7 +72,7 @@ defmodule Drops.ContractTest do
     end
 
     test "returns predicate errors", %{contract: contract} do
-      assert {:error, [{:error, {:filled?, [:name], [""]}}]} =
+      assert {:error, [{:error, {[:name], :filled?, [""]}}]} =
                contract.conform(%{name: "", age: 21})
     end
   end
@@ -96,10 +96,10 @@ defmodule Drops.ContractTest do
     test "returns nested errors", %{contract: contract} do
       assert {:error, [{:error, {:has_key?, [:user]}}]} = contract.conform(%{})
 
-      assert {:error, [{:error, {:type?, [:user], [:map, nil]}}]} =
+      assert {:error, [{:error, {[:user], :type?, [:map, nil]}}]} =
                contract.conform(%{user: nil})
 
-      assert {:error, [{:error, {:filled?, [:user, :name], [""]}}]} =
+      assert {:error, [{:error, {[:user, :name], :filled?, [""]}}]} =
                contract.conform(%{user: %{name: "", age: 21}})
     end
   end
@@ -135,7 +135,7 @@ defmodule Drops.ContractTest do
                  }
                })
 
-      assert {:error, [{:error, {:filled?, [:user, :address, :street], [""]}}]} =
+      assert {:error, [{:error, {[:user, :address, :street], :filled?, [""]}}]} =
                contract.conform(%{
                  user: %{
                    name: "John",
@@ -150,8 +150,8 @@ defmodule Drops.ContractTest do
 
       assert {:error,
               [
-                {:error, {:filled?, [:user, :address, :street], [""]}},
-                {:error, {:filled?, [:user, :name], [""]}}
+                {:error, {[:user, :address, :street], :filled?, [""]}},
+                {:error, {[:user, :name], :filled?, [""]}}
               ]} =
                contract.conform(%{
                  user: %{
@@ -189,7 +189,7 @@ defmodule Drops.ContractTest do
     end
 
     test "returns predicate errors and skips rules", %{contract: contract} do
-      assert {:error, [{:error, {:filled?, [:name], [""]}}]} =
+      assert {:error, [{:error, {[:name], :filled?, [""]}}]} =
                contract.conform(%{name: ""})
     end
 
@@ -282,8 +282,8 @@ defmodule Drops.ContractTest do
 
       assert {:error,
               [
-                {:error, {:filled?, [:user, :address, :street], [""]}},
-                {:error, {:filled?, [:user, :name], [""]}}
+                {:error, {[:user, :address, :street], :filled?, [""]}},
+                {:error, {[:user, :name], :filled?, [""]}}
               ]} =
                contract.conform(%{
                  "user" => %{
