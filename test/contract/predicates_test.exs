@@ -325,4 +325,21 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: 0})
     end
   end
+
+  describe "lt?/1" do
+    contract do
+      schema do
+        %{required(:test) => type(:integer, lt?: 1)}
+      end
+    end
+
+    test "returns success when the value is less than the arg", %{contract: contract} do
+      assert {:ok, %{test: 0}} = contract.conform(%{test: 0})
+    end
+
+    test "returns success when the value is not even", %{contract: contract} do
+      assert {:error, [{:error, {:lt?, [:test], [1, 2]}}]} =
+               contract.conform(%{test: 2})
+    end
+  end
 end
