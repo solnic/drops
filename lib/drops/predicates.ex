@@ -65,4 +65,7 @@ defmodule Drops.Predicates do
       false -> {:error, {:odd?, value}}
     end
   end
+
+  def gt?(left, right) when left < right, do: {:ok, right}
+  def gt?(left, right) when left >= right, do: {:error, {:gt?, [left, right]}}
 end
