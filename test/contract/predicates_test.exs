@@ -168,4 +168,55 @@ defmodule Drops.PredicatesTest do
       assert {:error, [{:error, {:filled?, [:test], ""}}]} = contract.conform(%{test: ""})
     end
   end
+
+  describe "empty?/1 with :string" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, [:empty?])}
+      end
+    end
+
+    test "returns success with an empty string", %{contract: contract} do
+      assert {:ok, %{test: ""}} = contract.conform(%{test: ""})
+    end
+
+    test "returns error with a non-empty string", %{contract: contract} do
+      assert {:error, [{:error, {:empty?, [:test], "Hello"}}]} =
+               contract.conform(%{test: "Hello"})
+    end
+  end
+
+  describe "empty?/1 with :list" do
+    contract do
+      schema do
+        %{required(:test) => type(:list, [:empty?])}
+      end
+    end
+
+    test "returns success with an empty list", %{contract: contract} do
+      assert {:ok, %{test: []}} = contract.conform(%{test: []})
+    end
+
+    test "returns error with a non-empty list", %{contract: contract} do
+      assert {:error, [{:error, {:empty?, [:test], [1, 2]}}]} =
+               contract.conform(%{test: [1, 2]})
+    end
+  end
+
+  describe "empty?/1 with :map" do
+    contract do
+      schema do
+        %{required(:test) => type(:map, [:empty?])}
+      end
+    end
+
+    test "returns success with an empty map", %{contract: contract} do
+      assert {:ok, %{test: %{}}} = contract.conform(%{test: %{}})
+    end
+
+    test "returns error with a non-empty map", %{contract: contract} do
+      assert {:error, [{:error, {:empty?, [:test], %{a: 1}}}]} =
+               contract.conform(%{test: %{a: 1}})
+    end
+  end
 end

@@ -60,7 +60,7 @@ defmodule Drops.Contract.Schema.Key do
     [predicate(:type?, :list)]
   end
 
-  defp infer_predicates({:type, {:list, member_type}}, opts) do
+  defp infer_predicates({:type, {:list, member_type}}, opts) when not is_list(member_type) do
     {:and, [predicate(:type?, :list), {:each, infer_predicates(member_type, opts)}]}
   end
 

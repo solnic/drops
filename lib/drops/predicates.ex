@@ -29,4 +29,10 @@ defmodule Drops.Predicates do
   def filled?(value) when is_binary(value) do
     if value == "", do: {:error, {:filled?, value}}, else: {:ok, value}
   end
+
+  def empty?("" = value), do: {:ok, value}
+  def empty?([] = value), do: {:ok, value}
+  def empty?(%{} = value) when map_size(value) == 0, do: {:ok, value}
+
+  def empty?(value), do: {:error, {:empty?, value}}
 end
