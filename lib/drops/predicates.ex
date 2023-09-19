@@ -1,4 +1,6 @@
 defmodule Drops.Predicates do
+  require Integer
+
   def type?(:atom, value) when is_atom(value), do: {:ok, value}
   def type?(:atom, value), do: {:error, {:atom?, value}}
 
@@ -47,6 +49,13 @@ defmodule Drops.Predicates do
     case eql?(left, right) do
       {:ok, _} -> {:error, {:not_eql?, [left, right]}}
       {:error, _} -> {:ok, right}
+    end
+  end
+
+  def even?(value) do
+    case Integer.is_even(value) do
+      true -> {:ok, value}
+      false -> {:error, {:even?, value}}
     end
   end
 end

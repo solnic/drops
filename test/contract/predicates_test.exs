@@ -223,7 +223,7 @@ defmodule Drops.PredicatesTest do
   describe "eql?/1" do
     contract do
       schema do
-        %{required(:test) => type(:string, [eql?: "Hello"])}
+        %{required(:test) => type(:string, eql?: "Hello")}
       end
     end
 
@@ -240,7 +240,7 @@ defmodule Drops.PredicatesTest do
   describe "not_eql?/1" do
     contract do
       schema do
-        %{required(:test) => type(:string, [not_eql?: "Hello"])}
+        %{required(:test) => type(:string, not_eql?: "Hello")}
       end
     end
 
@@ -251,6 +251,23 @@ defmodule Drops.PredicatesTest do
     test "returns error when the value is equal", %{contract: contract} do
       assert {:error, [{:error, {:not_eql?, [:test], ["Hello", "Hello"]}}]} =
                contract.conform(%{test: "Hello"})
+    end
+  end
+
+  describe "even?/1" do
+    contract do
+      schema do
+        %{required(:test) => type(:integer, [:even?])}
+      end
+    end
+
+    test "returns success when the value is even", %{contract: contract} do
+      assert {:ok, %{test: 12}} = contract.conform(%{test: 12})
+    end
+
+    test "returns success when the value is not even", %{contract: contract} do
+      assert {:error, [{:error, {:even?, [:test], 11}}]} =
+               contract.conform(%{test: 11})
     end
   end
 end
