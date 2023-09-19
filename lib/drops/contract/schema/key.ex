@@ -72,11 +72,15 @@ defmodule Drops.Contract.Schema.Key do
     [predicate(:type?, type)]
   end
 
-  defp predicate(name, args) do
-    {:predicate, {name, args}}
+  defp predicate({name, args}) do
+    predicate(name, args)
   end
 
   defp predicate(name) do
-    {:predicate, {name, []}}
+    predicate(name, [])
+  end
+
+  defp predicate(name, args) do
+    {:predicate, {name, args}}
   end
 end

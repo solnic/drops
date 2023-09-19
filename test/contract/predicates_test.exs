@@ -219,4 +219,21 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: %{a: 1}})
     end
   end
+
+  describe "eql?/1" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, [eql?: "Hello"])}
+      end
+    end
+
+    test "returns success when the value is equal", %{contract: contract} do
+      assert {:ok, %{test: "Hello"}} = contract.conform(%{test: "Hello"})
+    end
+
+    test "returns error when the value is not equal", %{contract: contract} do
+      assert {:error, [{:error, {:eql?, [:test], ["Hello", "World"]}}]} =
+               contract.conform(%{test: "World"})
+    end
+  end
 end

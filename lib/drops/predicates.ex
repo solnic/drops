@@ -38,4 +38,8 @@ defmodule Drops.Predicates do
   def empty?(%{} = value) when map_size(value) == 0, do: {:ok, value}
 
   def empty?(value), do: {:error, {:empty?, value}}
+
+  def eql?(left, right) when left == right, do: {:ok, right}
+
+  def eql?(left, right), do: {:error, {:eql?, [left, right]}}
 end
