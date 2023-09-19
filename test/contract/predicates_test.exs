@@ -363,4 +363,25 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: 2})
     end
   end
+
+  describe "size?/1" do
+    contract do
+      schema do
+        %{required(:test) => type(:list, size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: [1, 2]}} = contract.conform(%{test: [1, 2]})
+    end
+
+    test "returns success when the value's size is not equal to the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {:size?, [:test], [2, [1]]}}]} =
+               contract.conform(%{test: [1]})
+    end
+  end
 end

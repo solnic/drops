@@ -77,4 +77,14 @@ defmodule Drops.Predicates do
 
   def lteq?(left, right) when left >= right, do: {:ok, right}
   def lteq?(left, right) when left < right, do: {:error, {:lteq?, [left, right]}}
+
+  def size?(size, value) when is_map(value) and map_size(value) == size, do: {:ok, value}
+
+  def size?(size, value) when is_map(value) and map_size(value) != size,
+    do: {:error, {:size?, [size, value]}}
+
+  def size?(size, value) when is_list(value) and length(value) == size, do: {:ok, value}
+
+  def size?(size, value) when is_list(value) and length(value) != size,
+    do: {:error, {:size?, [size, value]}}
 end
