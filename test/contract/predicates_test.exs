@@ -304,4 +304,25 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: 0})
     end
   end
+
+  describe "gteq?/1" do
+    contract do
+      schema do
+        %{required(:test) => type(:integer, gteq?: 1)}
+      end
+    end
+
+    test "returns success when the value is greater than the arg", %{contract: contract} do
+      assert {:ok, %{test: 2}} = contract.conform(%{test: 2})
+    end
+
+    test "returns success when the value is equal to the arg", %{contract: contract} do
+      assert {:ok, %{test: 1}} = contract.conform(%{test: 1})
+    end
+
+    test "returns success when the value less than the arg", %{contract: contract} do
+      assert {:error, [{:error, {:gteq?, [:test], [1, 0]}}]} =
+               contract.conform(%{test: 0})
+    end
+  end
 end

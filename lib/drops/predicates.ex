@@ -68,4 +68,13 @@ defmodule Drops.Predicates do
 
   def gt?(left, right) when left < right, do: {:ok, right}
   def gt?(left, right) when left >= right, do: {:error, {:gt?, [left, right]}}
+
+  def gteq?(left, right) when left <= right, do: {:ok, right}
+  def gteq?(left, right) when left > right, do: {:error, {:gteq?, [left, right]}}
+
+  def lt?(left, right) when left > right, do: {:ok, right}
+  def lt?(left, right) when left <= right, do: {:error, {:lt?, [left, right]}}
+
+  def lteq?(left, right) when left >= right, do: {:ok, right}
+  def lteq?(left, right) when left < right, do: {:error, {:lteq?, [left, right]}}
 end
