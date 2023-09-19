@@ -97,4 +97,14 @@ defmodule Drops.Predicates do
 
   def max_size?(size, value) when is_list(value) and length(value) > size,
     do: {:error, {:size?, [size, value]}}
+
+  def min_size?(size, value) when is_map(value) and map_size(value) >= size, do: {:ok, value}
+
+  def min_size?(size, value) when is_map(value) and map_size(value) < size,
+    do: {:error, {:max_size?, [size, value]}}
+
+  def min_size?(size, value) when is_list(value) and length(value) >= size, do: {:ok, value}
+
+  def min_size?(size, value) when is_list(value) and length(value) < size,
+    do: {:error, {:size?, [size, value]}}
 end
