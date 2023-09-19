@@ -26,8 +26,11 @@ defmodule Drops.Predicates do
   def type?(:time, %Time{} = value), do: {:ok, value}
   def type?(:time, value), do: {:error, {:time?, value}}
 
-  def filled?(value) when is_binary(value) do
-    if value == "", do: {:error, {:filled?, value}}, else: {:ok, value}
+  def filled?(value) do
+    case empty?(value) do
+      {:ok, _} -> {:error, {:filled?, value}}
+      {:error, _} -> {:ok, value}
+    end
   end
 
   def empty?("" = value), do: {:ok, value}
