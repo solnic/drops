@@ -42,4 +42,11 @@ defmodule Drops.Predicates do
   def eql?(left, right) when left == right, do: {:ok, right}
 
   def eql?(left, right), do: {:error, {:eql?, [left, right]}}
+
+  def not_eql?(left, right) do
+    case eql?(left, right) do
+      {:ok, _} -> {:error, {:not_eql?, [left, right]}}
+      {:error, _} -> {:ok, right}
+    end
+  end
 end
