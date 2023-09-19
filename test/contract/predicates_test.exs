@@ -265,7 +265,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 12}} = contract.conform(%{test: 12})
     end
 
-    test "returns success when the value is not even", %{contract: contract} do
+    test "returns error when the value is not even", %{contract: contract} do
       assert {:error, [{:error, {:even?, [:test], 11}}]} =
                contract.conform(%{test: 11})
     end
@@ -282,7 +282,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 11}} = contract.conform(%{test: 11})
     end
 
-    test "returns success when the value is not even", %{contract: contract} do
+    test "returns error when the value is not even", %{contract: contract} do
       assert {:error, [{:error, {:odd?, [:test], 12}}]} =
                contract.conform(%{test: 12})
     end
@@ -299,7 +299,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 11}} = contract.conform(%{test: 11})
     end
 
-    test "returns success when the value is not even", %{contract: contract} do
+    test "returns error when the value is not even", %{contract: contract} do
       assert {:error, [{:error, {:gt?, [:test], [1, 0]}}]} =
                contract.conform(%{test: 0})
     end
@@ -320,7 +320,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 1}} = contract.conform(%{test: 1})
     end
 
-    test "returns success when the value less than the arg", %{contract: contract} do
+    test "returns error when the value less than the arg", %{contract: contract} do
       assert {:error, [{:error, {:gteq?, [:test], [1, 0]}}]} =
                contract.conform(%{test: 0})
     end
@@ -337,7 +337,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 0}} = contract.conform(%{test: 0})
     end
 
-    test "returns success when the value is not even", %{contract: contract} do
+    test "returns error when the value is not even", %{contract: contract} do
       assert {:error, [{:error, {:lt?, [:test], [1, 2]}}]} =
                contract.conform(%{test: 2})
     end
@@ -358,7 +358,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 1}} = contract.conform(%{test: 1})
     end
 
-    test "returns success when the value greater than the arg", %{contract: contract} do
+    test "returns error when the value greater than the arg", %{contract: contract} do
       assert {:error, [{:error, {:lteq?, [:test], [1, 2]}}]} =
                contract.conform(%{test: 2})
     end
@@ -377,7 +377,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: [1, 2]}} = contract.conform(%{test: [1, 2]})
     end
 
-    test "returns success when the value's size is not equal to the arg", %{
+    test "returns error when the value's size is not equal to the arg", %{
       contract: contract
     } do
       assert {:error, [{:error, {:size?, [:test], [2, [1]]}}]} =
