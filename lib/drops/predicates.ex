@@ -58,4 +58,11 @@ defmodule Drops.Predicates do
       false -> {:error, {:even?, value}}
     end
   end
+
+  def odd?(value) do
+    case Integer.is_odd(value) do
+      true -> {:ok, value}
+      false -> {:error, {:odd?, value}}
+    end
+  end
 end
