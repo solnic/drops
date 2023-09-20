@@ -115,4 +115,11 @@ defmodule Drops.Predicates do
   def includes?(element, value) when is_list(value) do
     if element in value, do: {:ok, value}, else: {:error, {:includes?, [element, value]}}
   end
+
+  def excludes?(element, value) when is_list(value) do
+    case includes?(element, value) do
+      {:ok, _} -> {:error, {:excludes?, [element, value]}}
+      {:error, _} -> {:ok, value}
+    end
+  end
 end

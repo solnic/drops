@@ -455,4 +455,21 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: [1, 3]})
     end
   end
+
+  describe "excludes?/2 with a list" do
+    contract do
+      schema do
+        %{required(:test) => type(:list, excludes?: 2)}
+      end
+    end
+
+    test "returns success when the arg is not included in the list", %{contract: contract} do
+      assert {:ok, %{test: [1, 3]}} = contract.conform(%{test: [1, 3]})
+    end
+
+    test "returns success when the arg is included in the list", %{contract: contract} do
+      assert {:error, [{:error, {:excludes?, [:test], [2, [1, 2]]}}]} =
+               contract.conform(%{test: [1, 2]})
+    end
+  end
 end
