@@ -1,4 +1,6 @@
 defmodule Drops.Predicates do
+  require Integer
+
   def type?(:atom, value) when is_atom(value), do: {:ok, value}
   def type?(:atom, value), do: {:error, {:atom?, value}}
 
@@ -26,7 +28,104 @@ defmodule Drops.Predicates do
   def type?(:time, %Time{} = value), do: {:ok, value}
   def type?(:time, value), do: {:error, {:time?, value}}
 
-  def filled?(value) when is_binary(value) do
-    if value == "", do: {:error, {:filled?, value}}, else: {:ok, value}
+  def filled?(value) do
+    case empty?(value) do
+      {:ok, _} -> {:error, {:filled?, value}}
+      {:error, _} -> {:ok, value}
+    end
+  end
+
+  def empty?("" = value), do: {:ok, value}
+  def empty?([] = value), do: {:ok, value}
+  def empty?(%{} = value) when map_size(value) == 0, do: {:ok, value}
+
+  def empty?(value), do: {:error, {:empty?, value}}
+
+  def eql?(left, right) when left == right, do: {:ok, right}
+
+  def eql?(left, right), do: {:error, {:eql?, [left, right]}}
+
+  def not_eql?(left, right) do
+    case eql?(left, right) do
+      {:ok, _} -> {:error, {:not_eql?, [left, right]}}
+      {:error, _} -> {:ok, right}
+    end
+  end
+
+  def even?(value) do
+    case Integer.is_even(value) do
+      true -> {:ok, value}
+      false -> {:error, {:even?, value}}
+    end
+  end
+
+  def odd?(value) do
+    case Integer.is_odd(value) do
+      true -> {:ok, value}
+      false -> {:error, {:odd?, value}}
+    end
+  end
+
+  def gt?(left, right) when left < right, do: {:ok, right}
+  def gt?(left, right) when left >= right, do: {:error, {:gt?, [left, right]}}
+
+  def gteq?(left, right) when left <= right, do: {:ok, right}
+  def gteq?(left, right) when left > right, do: {:error, {:gteq?, [left, right]}}
+
+  def lt?(left, right) when left > right, do: {:ok, right}
+  def lt?(left, right) when left <= right, do: {:error, {:lt?, [left, right]}}
+
+  def lteq?(left, right) when left >= right, do: {:ok, right}
+  def lteq?(left, right) when left < right, do: {:error, {:lteq?, [left, right]}}
+
+  def size?(size, value) when is_map(value) and map_size(value) == size, do: {:ok, value}
+
+  def size?(size, value) when is_map(value) and map_size(value) != size,
+    do: {:error, {:size?, [size, value]}}
+
+  def size?(size, value) when is_list(value) and length(value) == size, do: {:ok, value}
+
+  def size?(size, value) when is_list(value) and length(value) != size,
+    do: {:error, {:size?, [size, value]}}
+
+  def match?(regexp, value) do
+    if String.match?(value, regexp),
+      do: {:ok, value},
+      else: {:error, {:match?, [regexp, value]}}
+  end
+
+  def max_size?(size, value) when is_map(value) and map_size(value) <= size,
+    do: {:ok, value}
+
+  def max_size?(size, value) when is_map(value) and map_size(value) > size,
+    do: {:error, {:max_size?, [size, value]}}
+
+  def max_size?(size, value) when is_list(value) and length(value) <= size,
+    do: {:ok, value}
+
+  def max_size?(size, value) when is_list(value) and length(value) > size,
+    do: {:error, {:size?, [size, value]}}
+
+  def min_size?(size, value) when is_map(value) and map_size(value) >= size,
+    do: {:ok, value}
+
+  def min_size?(size, value) when is_map(value) and map_size(value) < size,
+    do: {:error, {:max_size?, [size, value]}}
+
+  def min_size?(size, value) when is_list(value) and length(value) >= size,
+    do: {:ok, value}
+
+  def min_size?(size, value) when is_list(value) and length(value) < size,
+    do: {:error, {:size?, [size, value]}}
+
+  def includes?(element, value) when is_list(value) do
+    if element in value, do: {:ok, value}, else: {:error, {:includes?, [element, value]}}
+  end
+
+  def excludes?(element, value) when is_list(value) do
+    case includes?(element, value) do
+      {:ok, _} -> {:error, {:excludes?, [element, value]}}
+      {:error, _} -> {:ok, value}
+    end
   end
 end
