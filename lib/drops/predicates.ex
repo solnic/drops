@@ -1,6 +1,9 @@
 defmodule Drops.Predicates do
   require Integer
 
+  def type?(:nil, nil), do: true
+  def type?(:nil, _), do: false
+
   def type?(:atom, value) when is_atom(value), do: true
   def type?(:atom, _), do: false
 

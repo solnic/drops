@@ -1,6 +1,23 @@
 defmodule Drops.PredicatesTest do
   use Drops.ContractCase
 
+  describe "type?/2 with :nil" do
+    contract do
+      schema do
+        %{required(:test) => type(:nil)}
+      end
+    end
+
+    test "returns success with a string value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: nil})
+    end
+
+    test "returns error with a non-string value", %{contract: contract} do
+      assert {:error, [{:error, {:type?, [:test], [:nil, 312]}}]} =
+               contract.conform(%{test: 312})
+    end
+  end
+
   describe "type?/2 with :atom" do
     contract do
       schema do
