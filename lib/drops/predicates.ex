@@ -88,6 +88,12 @@ defmodule Drops.Predicates do
   def size?(size, value) when is_list(value) and length(value) != size,
     do: {:error, {:size?, [size, value]}}
 
+  def match?(regexp, value) do
+    if String.match?(value, regexp),
+      do: {:ok, value},
+      else: {:error, {:match?, [regexp, value]}}
+  end
+
   def max_size?(size, value) when is_map(value) and map_size(value) <= size,
     do: {:ok, value}
 

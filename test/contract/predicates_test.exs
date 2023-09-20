@@ -472,4 +472,21 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: [1, 2]})
     end
   end
+
+  describe "match?/2" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, match?: ~r/\d+/)}
+      end
+    end
+
+    test "returns success when the value matches the regexp", %{contract: contract} do
+      assert {:ok, %{test: "312"}} = contract.conform(%{test: "312"})
+    end
+
+    test "returns success when the value doesn't match the regexp", %{contract: contract} do
+      assert {:error, [{:error, {:match?, [:test], [~r/\d+/, "Hello"]}}]} =
+               contract.conform(%{test: "Hello"})
+    end
+  end
 end
