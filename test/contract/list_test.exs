@@ -62,4 +62,26 @@ defmodule Drops.Contract.ListTest do
                contract.conform(%{tags: [%{name: "red"}, %{name: 312}, %{name: "blue"}]})
     end
   end
+
+  describe "defining an atomized typed list with a member schema" do
+    contract do
+      schema(atomize: true) do
+        %{
+          required(:tags) => type(list: %{
+            required(:name) => type(:string)
+          })
+        }
+      end
+    end
+
+    test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]}} =
+               contract.conform(%{"tags" => [%{"name" => "red"}, %{"name" => "green"}, %{"name" => "blue"}]})
+    end
+
+    test "defining required keys with types", %{contract: contract} do
+      assert {:error, [{:error, [{:string?, [:tags, 1, :name], 312}]}]} =
+               contract.conform(%{"tags" => [%{"name" => "red"}, %{"name" => 312}, %{"name" => "blue"}]})
+    end
+  end
 end

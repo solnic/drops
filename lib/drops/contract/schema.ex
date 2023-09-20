@@ -4,9 +4,9 @@ defmodule Drops.Contract.Schema do
 
   defstruct [:keys, :plan, :atomize]
 
-  def new(map, opts) do
+  def new(spec, opts) do
     atomize = opts[:atomize] || false
-    keys = to_key_list(map)
+    keys = to_key_list(spec, opts)
 
     %Schema{atomize: atomize, keys: keys, plan: build_plan(keys)}
   end
@@ -33,20 +33,21 @@ defmodule Drops.Contract.Schema do
     end)
   end
 
-  defp to_key_list(map, root \\ []) do
-    Enum.map(map, fn {{presence, name}, spec} ->
+  defp to_key_list(spec, opts, root \\ []) do
+    Enum.map(spec, fn {{presence, name}, spec} ->
       path = root ++ [name]
 
       case spec do
         %{} ->
           Key.new({:type, {:map, []}},
+            opts,
             presence: presence,
             path: path,
-            children: to_key_list(spec, path)
+            children: to_key_list(spec, opts, path)
           )
 
         _ ->
-          Key.new(spec, presence: presence, path: path)
+          Key.new(spec, opts, presence: presence, path: path)
       end
     end)
   end

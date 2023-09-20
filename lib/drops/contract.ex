@@ -26,7 +26,7 @@ defmodule Drops.Contract do
       end
 
       def conform(data, %Schema{} = schema, path: root) do
-        case conform(data, schema.plan) do
+        case conform(data, schema) do
           {:ok, _result} = success ->
             success
 
