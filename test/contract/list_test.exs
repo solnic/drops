@@ -16,7 +16,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, {:string?, [:tags, 1], 312}}]} =
+      assert {:error, [{:error, {:type?, [:tags, 1], [:string, 312]}}]} =
                contract.conform(%{tags: ["red", 312, "blue"]})
     end
   end
@@ -36,7 +36,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, {:filled?, [:tags, 1], ""}}]} =
+      assert {:error, [{:error, {:filled?, [:tags, 1], [""]}}]} =
                contract.conform(%{tags: ["red", "", "blue"]})
     end
   end
@@ -58,7 +58,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, [{:string?, [:tags, 1, :name], 312}]}]} =
+      assert {:error, [{:error, [{:type?, [:tags, 1, :name], [:string, 312]}]}]} =
                contract.conform(%{tags: [%{name: "red"}, %{name: 312}, %{name: "blue"}]})
     end
   end
@@ -80,7 +80,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, [{:string?, [:tags, 1, :name], 312}]}]} =
+      assert {:error, [{:error, [{:type?, [:tags, 1, :name], [:string, 312]}]}]} =
                contract.conform(%{"tags" => [%{"name" => "red"}, %{"name" => 312}, %{"name" => "blue"}]})
     end
   end

@@ -13,7 +13,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:atom?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:atom, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -30,7 +30,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:string?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:string, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -47,7 +47,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-integer value", %{contract: contract} do
-      assert {:error, [{:error, {:integer?, [:test], "Hello"}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:integer, "Hello"]}}]} =
                contract.conform(%{test: "Hello"})
     end
   end
@@ -64,7 +64,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-integer value", %{contract: contract} do
-      assert {:error, [{:error, {:float?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:float, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -81,7 +81,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error, [{:error, {:map?, [:test], 312}}]} = contract.conform(%{test: 312})
+      assert {:error, [{:error, {:type?, [:test], [:map, 312]}}]} = contract.conform(%{test: 312})
     end
   end
 
@@ -97,7 +97,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:date?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:date, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -114,7 +114,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:date_time?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:date_time, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -131,7 +131,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:time?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:time, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -148,7 +148,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {:list?, [:test], 312}}]} =
+      assert {:error, [{:error, {:type?, [:test], [:list, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -165,7 +165,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with an empty string", %{contract: contract} do
-      assert {:error, [{:error, {:filled?, [:test], ""}}]} = contract.conform(%{test: ""})
+      assert {:error, [{:error, {:filled?, [:test], [""]}}]} = contract.conform(%{test: ""})
     end
   end
 
@@ -181,7 +181,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-empty string", %{contract: contract} do
-      assert {:error, [{:error, {:empty?, [:test], "Hello"}}]} =
+      assert {:error, [{:error, {:empty?, [:test], ["Hello"]}}]} =
                contract.conform(%{test: "Hello"})
     end
   end
@@ -198,7 +198,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-empty list", %{contract: contract} do
-      assert {:error, [{:error, {:empty?, [:test], [1, 2]}}]} =
+      assert {:error, [{:error, {:empty?, [:test], [[1, 2]]}}]} =
                contract.conform(%{test: [1, 2]})
     end
   end
@@ -215,7 +215,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-empty map", %{contract: contract} do
-      assert {:error, [{:error, {:empty?, [:test], %{a: 1}}}]} =
+      assert {:error, [{:error, {:empty?, [:test], [%{a: 1}]}}]} =
                contract.conform(%{test: %{a: 1}})
     end
   end
@@ -266,7 +266,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error when the value is not even", %{contract: contract} do
-      assert {:error, [{:error, {:even?, [:test], 11}}]} =
+      assert {:error, [{:error, {:even?, [:test], [11]}}]} =
                contract.conform(%{test: 11})
     end
   end
@@ -283,7 +283,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error when the value is not even", %{contract: contract} do
-      assert {:error, [{:error, {:odd?, [:test], 12}}]} =
+      assert {:error, [{:error, {:odd?, [:test], [12]}}]} =
                contract.conform(%{test: 12})
     end
   end
@@ -299,7 +299,7 @@ defmodule Drops.PredicatesTest do
       assert {:ok, %{test: 11}} = contract.conform(%{test: 11})
     end
 
-    test "returns error when the value is not even", %{contract: contract} do
+    test "returns error when the value is not greater than the arg", %{contract: contract} do
       assert {:error, [{:error, {:gt?, [:test], [1, 0]}}]} =
                contract.conform(%{test: 0})
     end
@@ -407,7 +407,7 @@ defmodule Drops.PredicatesTest do
     test "returns error when the value's size is greater than the arg", %{
       contract: contract
     } do
-      assert {:error, [{:error, {:size?, [:test], [2, [1, 2, 3]]}}]} =
+      assert {:error, [{:error, {:max_size?, [:test], [2, [1, 2, 3]]}}]} =
                contract.conform(%{test: [1, 2, 3]})
     end
   end
@@ -434,7 +434,7 @@ defmodule Drops.PredicatesTest do
     test "returns error when the value's size is less than the arg", %{
       contract: contract
     } do
-      assert {:error, [{:error, {:size?, [:test], [2, [1]]}}]} =
+      assert {:error, [{:error, {:min_size?, [:test], [2, [1]]}}]} =
                contract.conform(%{test: [1]})
     end
   end

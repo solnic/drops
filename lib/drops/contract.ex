@@ -165,12 +165,10 @@ defmodule Drops.Contract do
             arg -> [arg, value]
           end
 
-        case apply(Predicates, name, apply_args) do
-          {:ok, result} ->
-            {:ok, {path, result}}
-
-          {:error, {predicate, value}} ->
-            {:error, {predicate, path, value}}
+        if apply(Predicates, name, apply_args) do
+          {:ok, {path, value}}
+        else
+          {:error, {name, path, apply_args}}
         end
       end
 
