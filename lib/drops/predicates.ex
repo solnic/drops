@@ -88,23 +88,31 @@ defmodule Drops.Predicates do
   def size?(size, value) when is_list(value) and length(value) != size,
     do: {:error, {:size?, [size, value]}}
 
-  def max_size?(size, value) when is_map(value) and map_size(value) <= size, do: {:ok, value}
+  def max_size?(size, value) when is_map(value) and map_size(value) <= size,
+    do: {:ok, value}
 
   def max_size?(size, value) when is_map(value) and map_size(value) > size,
     do: {:error, {:max_size?, [size, value]}}
 
-  def max_size?(size, value) when is_list(value) and length(value) <= size, do: {:ok, value}
+  def max_size?(size, value) when is_list(value) and length(value) <= size,
+    do: {:ok, value}
 
   def max_size?(size, value) when is_list(value) and length(value) > size,
     do: {:error, {:size?, [size, value]}}
 
-  def min_size?(size, value) when is_map(value) and map_size(value) >= size, do: {:ok, value}
+  def min_size?(size, value) when is_map(value) and map_size(value) >= size,
+    do: {:ok, value}
 
   def min_size?(size, value) when is_map(value) and map_size(value) < size,
     do: {:error, {:max_size?, [size, value]}}
 
-  def min_size?(size, value) when is_list(value) and length(value) >= size, do: {:ok, value}
+  def min_size?(size, value) when is_list(value) and length(value) >= size,
+    do: {:ok, value}
 
   def min_size?(size, value) when is_list(value) and length(value) < size,
     do: {:error, {:size?, [size, value]}}
+
+  def includes?(element, value) when is_list(value) do
+    if element in value, do: {:ok, value}, else: {:error, {:includes?, [element, value]}}
+  end
 end
