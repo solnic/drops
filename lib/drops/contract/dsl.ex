@@ -7,8 +7,8 @@ defmodule Drops.Contract.DSL do
     {:optional, name}
   end
 
-  def from(type) do
-    {:cast, type}
+  def from(type, cast_opts \\ []) do
+    {:cast, {type, cast_opts}}
   end
 
   def type([list: members]) when is_map(members) do
@@ -35,7 +35,7 @@ defmodule Drops.Contract.DSL do
     {:type, {type, predicates}}
   end
 
-  def type({:cast, input_type}, output_type) do
-    {:cast, {type(input_type), type(output_type)}}
+  def type({:cast, {input_type, cast_opts}}, output_type) do
+    {:cast, {type(input_type), type(output_type), cast_opts}}
   end
 end
