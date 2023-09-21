@@ -37,10 +37,40 @@ defmodule Drops.CastersTest do
     end
   end
 
+  describe ":integer => :date_time" do
+    contract do
+      schema do
+        %{required(:test) => from(:integer) |> type(:date_time)}
+      end
+    end
+
+    test "defining a required key with coercion", %{contract: contract} do
+      timestamp = 1695277470
+      date_time = DateTime.from_unix!(timestamp, :second)
+
+      assert {:ok, %{test: ^date_time}} = contract.conform(%{test: timestamp})
+    end
+  end
+
+  describe ":integer => :date_time with :milliseconds" do
+    contract do
+      schema do
+        %{required(:test) => from(:integer, [:millisecond]) |> type(:date_time)}
+      end
+    end
+
+    test "defining a required key with coercion", %{contract: contract} do
+      timestamp = 1695277723355
+      date_time = DateTime.from_unix!(timestamp, :millisecond)
+
+      assert {:ok, %{test: ^date_time}} = contract.conform(%{test: timestamp})
+    end
+  end
+
   describe "using a customer caster" do
     contract do
       defmodule CustomCaster do
-        def cast(:string, :string, value) do
+        def cast(:string, :string, value, _opts) do
           String.downcase(value)
         end
       end
