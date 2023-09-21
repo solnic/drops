@@ -36,4 +36,22 @@ defmodule Drops.CastersTest do
       assert {:ok, %{test: 31.2}} = contract.conform(%{test: "31.2"})
     end
   end
+
+  describe "using a customer caster" do
+    contract do
+      defmodule CustomCaster do
+        def cast(:string, :string, value) do
+          String.downcase(value)
+        end
+      end
+
+      schema do
+        %{required(:test) => from(:string, caster: CustomCaster) |> type(:string)}
+      end
+    end
+
+    test "defining a required key with coercion", %{contract: contract} do
+      assert {:ok, %{test: "hello"}} = contract.conform(%{test: "HELLO"})
+    end
+  end
 end

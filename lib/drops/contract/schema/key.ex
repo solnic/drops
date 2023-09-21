@@ -38,13 +38,13 @@ defmodule Drops.Contract.Schema.Key do
     Enum.map(spec, &infer_type(&1, opts))
   end
 
-  defp infer_type({:cast, {input_type, output_type}}, opts) do
+  defp infer_type({:cast, {input_type, output_type, cast_opts}}, opts) do
     {:cast,
-     {{infer_type(input_type, opts), infer_predicates(input_type, opts)},
+     {{infer_type(input_type, opts), infer_predicates(input_type, opts), cast_opts},
       infer_type(output_type, opts)}}
   end
 
-  defp infer_predicates({:cast, {_input_type, output_type}}, opts) do
+  defp infer_predicates({:cast, {_input_type, output_type, _cast_opts}}, opts) do
     infer_predicates(output_type, opts)
   end
 

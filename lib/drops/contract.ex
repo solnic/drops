@@ -70,14 +70,16 @@ defmodule Drops.Contract do
       def step(
             data,
             {:validate,
-             %{type: {:cast, {{input_type, input_predicates}, output_type}}} = key}
+             %{type: {:cast, {{input_type, input_predicates, cast_opts}, output_type}}} =
+               key}
           ) do
         value = get_in(data, key.path)
+        caster = cast_opts[:caster] || Casters
 
         case apply_predicates(value, input_predicates, path: key.path) do
           {:ok, _} ->
             validate(
-              Casters.cast(input_type, output_type, value),
+              caster.cast(input_type, output_type, value),
               key.predicates,
               path: key.path
             )
