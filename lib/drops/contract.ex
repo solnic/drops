@@ -1,7 +1,7 @@
 defmodule Drops.Contract do
   defmacro __using__(_opts) do
     quote do
-      alias Drops.{Coercions, Predicates}
+      alias Drops.{Casters, Predicates}
       alias Drops.Contract.Schema
       alias Drops.Contract.Schema.Key
 
@@ -70,14 +70,14 @@ defmodule Drops.Contract do
       def step(
             data,
             {:validate,
-             %{type: {:coerce, {{input_type, input_predicates}, output_type}}} = key}
+             %{type: {:cast, {{input_type, input_predicates}, output_type}}} = key}
           ) do
         value = get_in(data, key.path)
 
         case apply_predicates(value, input_predicates, path: key.path) do
           {:ok, _} ->
             validate(
-              Coercions.coerce(input_type, output_type, value),
+              Casters.cast(input_type, output_type, value),
               key.predicates,
               path: key.path
             )

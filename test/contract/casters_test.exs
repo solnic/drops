@@ -1,4 +1,4 @@
-defmodule Drops.CoercionTest do
+defmodule Drops.CastersTest do
   use Drops.ContractCase
 
   describe ":integer => :string" do
