@@ -42,4 +42,8 @@ defmodule Drops.Contract.DSL do
   def list(type, predicates \\ []) do
     type(list: [type | predicates])
   end
+
+  def maybe(type, predicates \\ []) do
+    type([:nil, [{type, predicates}]])
+  end
 end
