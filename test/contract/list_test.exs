@@ -5,7 +5,7 @@ defmodule Drops.Contract.ListTest do
     contract do
       schema do
         %{
-          required(:tags) => type(list: [:string])
+          required(:tags) => list(:string)
         }
       end
     end
@@ -25,7 +25,7 @@ defmodule Drops.Contract.ListTest do
     contract do
       schema do
         %{
-          required(:tags) => type(list: [:string, :filled?])
+          required(:tags) => list(:string, [:filled?])
         }
       end
     end

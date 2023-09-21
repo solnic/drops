@@ -38,4 +38,8 @@ defmodule Drops.Contract.DSL do
   def type({:cast, {input_type, cast_opts}}, output_type) do
     {:cast, {type(input_type), type(output_type), cast_opts}}
   end
+
+  def list(type, predicates \\ []) do
+    type(list: [type | predicates])
+  end
 end
