@@ -79,7 +79,7 @@ defmodule Drops.Contract do
         case apply_predicates(value, input_predicates, path: key.path) do
           {:ok, _} ->
             validate(
-              caster.cast(input_type, output_type, value),
+              apply(caster, :cast, [input_type, output_type, value] ++ cast_opts),
               key.predicates,
               path: key.path
             )
