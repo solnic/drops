@@ -11,7 +11,7 @@ defmodule Drops.Contract.DSL do
     {:cast, {type, cast_opts}}
   end
 
-  def type([list: members]) when is_map(members) do
+  def type([list: members]) when is_map(members) or is_tuple(members) do
     {:type, {:list, members}}
   end
 
@@ -39,7 +39,7 @@ defmodule Drops.Contract.DSL do
     {:cast, {type(input_type), type(output_type), cast_opts}}
   end
 
-  def list(members) when is_map(members) do
+  def list(members) when is_map(members) or is_tuple(members) do
     type(list: members)
   end
 

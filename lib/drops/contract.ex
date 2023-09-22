@@ -147,9 +147,11 @@ defmodule Drops.Contract do
 
       def apply_predicate({:each, predicates}, {:ok, {path, members}}) do
         result =
-          Enum.with_index(
-            members,
-            &apply_predicates(&1, predicates, path: path ++ [&2])
+          List.flatten(
+            Enum.with_index(
+              members,
+              &apply_predicates(&1, predicates, path: path ++ [&2])
+            )
           )
 
         errors = Enum.reject(result, &is_ok/1)
@@ -208,9 +210,14 @@ defmodule Drops.Contract do
       defp map_list_results(members) do
         Enum.map(members, fn member ->
           case member do
-            {:ok, {_, value}} -> value
-            {:ok, value} -> value
-            value -> value
+            {:ok, {_, value}} ->
+              if is_list(value), do: map_list_results(value), else: value
+
+            {:ok, value} ->
+              if is_list(value), do: map_list_results(value), else: value
+
+            value ->
+              value
           end
         end)
       end

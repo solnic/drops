@@ -45,16 +45,19 @@ defmodule Drops.Contract.ListTest do
     contract do
       schema do
         %{
-          required(:tags) => type(list: %{
-            required(:name) => type(:string)
-          })
+          required(:tags) =>
+            list(%{
+              required(:name) => type(:string)
+            })
         }
       end
     end
 
     test "returns success with valid data", %{contract: contract} do
       assert {:ok, %{tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]}} =
-               contract.conform(%{tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]})
+               contract.conform(%{
+                 tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]
+               })
     end
 
     test "defining required keys with types", %{contract: contract} do
@@ -67,21 +70,79 @@ defmodule Drops.Contract.ListTest do
     contract do
       schema(atomize: true) do
         %{
-          required(:tags) => list(%{
-            required(:name) => type(:string)
-          })
+          required(:tags) =>
+            list(%{
+              required(:name) => type(:string)
+            })
         }
       end
     end
 
     test "returns success with valid data", %{contract: contract} do
       assert {:ok, %{tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]}} =
-               contract.conform(%{"tags" => [%{"name" => "red"}, %{"name" => "green"}, %{"name" => "blue"}]})
+               contract.conform(%{
+                 "tags" => [%{"name" => "red"}, %{"name" => "green"}, %{"name" => "blue"}]
+               })
     end
 
     test "defining required keys with types", %{contract: contract} do
       assert {:error, [{:error, [{[:tags, 1, :name], :type?, [:string, 312]}]}]} =
-               contract.conform(%{"tags" => [%{"name" => "red"}, %{"name" => 312}, %{"name" => "blue"}]})
+               contract.conform(%{
+                 "tags" => [%{"name" => "red"}, %{"name" => 312}, %{"name" => "blue"}]
+               })
+    end
+  end
+
+  describe "defining a list of lists and a primitive member type" do
+    contract do
+      schema(atomize: true) do
+        %{
+          required(:tags) => list(list(:string))
+        }
+      end
+    end
+
+    test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{tags: [["red"], ["green"], ["blue"]]}} =
+               contract.conform(%{"tags" => [["red"], ["green"], ["blue"]]})
+    end
+
+    test "defining required keys with types", %{contract: contract} do
+      assert {:error, [{:error, {[:tags, 1, 0], :type?, [:string, 312]}}]} =
+               contract.conform(%{"tags" => [["red"], [312], ["blue"]]})
+    end
+  end
+
+  describe "defining a list of lists and a schema member type" do
+    contract do
+      schema(atomize: true) do
+        %{
+          required(:tags) =>
+            list(
+              list(%{
+                required(:name) => type(:string)
+              })
+            )
+        }
+      end
+    end
+
+    test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{tags: [[%{name: "red"}], [%{name: "green"}], [%{name: "blue"}]]}} =
+               contract.conform(%{
+                 "tags" => [
+                   [%{"name" => "red"}],
+                   [%{"name" => "green"}],
+                   [%{"name" => "blue"}]
+                 ]
+               })
+    end
+
+    test "defining required keys with types", %{contract: contract} do
+      assert {:error, [{:error, [{[:tags, 1, 0, :name], :type?, [:string, 312]}]}]} =
+               contract.conform(%{
+                 "tags" => [[%{"name" => "red"}], [%{"name" => 312}], [%{"name" => "blue"}]]
+               })
     end
   end
 end
