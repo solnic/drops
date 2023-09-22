@@ -74,4 +74,16 @@ defmodule Drops.Contract.DSL do
   def integer(predicates) when is_list(predicates) do
     type(:integer, predicates)
   end
+
+  def map() do
+    type(:map)
+  end
+
+  def map(predicate) when is_atom(predicate) do
+    map([predicate])
+  end
+
+  def map(predicates) when is_list(predicates) do
+    type(:map, predicates)
+  end
 end
