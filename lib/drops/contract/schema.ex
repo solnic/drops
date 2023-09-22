@@ -16,8 +16,11 @@ defmodule Drops.Contract.Schema do
       string_path = Enum.map(path, &Atom.to_string/1)
       value = get_in(data, string_path)
 
-      unless is_nil(value) do
+      if is_nil(value) and key.type == :map do
+        acc
+      else
         updated = put_in(acc, path, value)
+
         with_children = atomize(data, key.children, updated)
         atom_part = List.delete(path, List.last(path))
         string_part = List.last(string_path)
@@ -27,8 +30,6 @@ defmodule Drops.Contract.Schema do
         {_, result} = pop_in(with_children, mixed_path)
 
         result
-      else
-        acc
       end
     end)
   end

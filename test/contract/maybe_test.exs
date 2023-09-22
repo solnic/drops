@@ -47,4 +47,46 @@ defmodule Drops.MaybeTest do
                contract.conform(%{test: ""})
     end
   end
+
+  describe "maybe/1 with :map when atomized" do
+    contract do
+      schema(atomize: true) do
+        %{required(:test) => maybe(:map)}
+      end
+    end
+
+    test "returns success with nil", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{"test" => nil})
+    end
+
+    test "returns success with a map value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{"test" => %{}})
+    end
+
+    test "returns error with a non-map value", %{contract: contract} do
+      assert {:error, [{:error, {[:test], :type?, [:map, 312]}}]} =
+               contract.conform(%{"test" => 312})
+    end
+  end
+
+  describe "maybe/1 with :map" do
+    contract do
+      schema do
+        %{required(:test) => maybe(:map)}
+      end
+    end
+
+    test "returns success with nil", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: nil})
+    end
+
+    test "returns success with a map value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: %{}})
+    end
+
+    test "returns error with a non-map value", %{contract: contract} do
+      assert {:error, [{:error, {[:test], :type?, [:map, 312]}}]} =
+               contract.conform(%{test: 312})
+    end
+  end
 end
