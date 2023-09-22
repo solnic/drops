@@ -62,4 +62,16 @@ defmodule Drops.Contract.DSL do
   def string(predicates) when is_list(predicates) do
     type(:string, predicates)
   end
+
+  def integer() do
+    type(:integer)
+  end
+
+  def integer(predicate) when is_atom(predicate) do
+    integer([predicate])
+  end
+
+  def integer(predicates) when is_list(predicates) do
+    type(:integer, predicates)
+  end
 end
