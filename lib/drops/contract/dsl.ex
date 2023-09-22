@@ -50,4 +50,16 @@ defmodule Drops.Contract.DSL do
   def maybe(type, predicates \\ []) do
     type([:nil, [{type, predicates}]])
   end
+
+  def string() do
+    type(:string)
+  end
+
+  def string(predicate) when is_atom(predicate) do
+    string([predicate])
+  end
+
+  def string(predicates) when is_list(predicates) do
+    type(:string, predicates)
+  end
 end
