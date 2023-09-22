@@ -39,7 +39,11 @@ defmodule Drops.Contract.DSL do
     {:cast, {type(input_type), type(output_type), cast_opts}}
   end
 
-  def list(type, predicates \\ []) do
+  def list(members) when is_map(members) do
+    type(list: members)
+  end
+
+  def list(type, predicates \\ []) when is_list(predicates) do
     type(list: [type | predicates])
   end
 

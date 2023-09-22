@@ -67,7 +67,7 @@ defmodule Drops.Contract.ListTest do
     contract do
       schema(atomize: true) do
         %{
-          required(:tags) => type(list: %{
+          required(:tags) => list(%{
             required(:name) => type(:string)
           })
         }
