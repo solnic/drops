@@ -2,8 +2,8 @@ defmodule Drops.Contract do
   defmacro __using__(_opts) do
     quote do
       alias Drops.{Casters, Predicates}
+      alias Drops.Contract.Key
       alias Drops.Contract.Schema
-      alias Drops.Contract.Schema.Key
 
       import Drops.Contract
       import Drops.Contract.Runtime

@@ -1,4 +1,4 @@
-defmodule Drops.Contract.Schema.Key do
+defmodule Drops.Contract.Key do
   alias __MODULE__
   alias Drops.Contract.Schema
 

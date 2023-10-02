@@ -1,6 +1,6 @@
 defmodule Drops.Contract.Schema do
   alias __MODULE__
-  alias Drops.Contract.Schema.Key
+  alias Drops.Contract.Key
 
   defstruct [:keys, :plan, :atomize]
 
