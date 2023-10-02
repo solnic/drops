@@ -92,4 +92,30 @@ defmodule Drops.MaybeTest do
                contract.conform(%{test: 312})
     end
   end
+
+  describe "maybe/1 with a schema" do
+    contract do
+      schema do
+        %{
+          required(:test) =>
+            maybe(%{
+              required(:name) => string()
+            })
+        }
+      end
+    end
+
+    test "returns success with nil", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: nil})
+    end
+
+    test "returns success with a map value", %{contract: contract} do
+      assert {:ok, _} = contract.conform(%{test: %{name: "hello"}})
+    end
+
+    test "returns error with a non-map value", %{contract: contract} do
+      assert {:error, [{:error, {[:test], :type?, [:map, 312]}}]} =
+               contract.conform(%{test: 312})
+    end
+  end
 end
