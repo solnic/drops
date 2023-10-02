@@ -48,7 +48,7 @@ defmodule Drops.Contract.DSL do
   end
 
   def maybe(type, predicates \\ []) do
-    type([:nil, [{type, predicates}]])
+    type([:nil, {type, predicates}])
   end
 
   def string() do

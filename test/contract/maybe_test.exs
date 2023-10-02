@@ -51,12 +51,15 @@ defmodule Drops.MaybeTest do
   describe "maybe/1 with :map when atomized" do
     contract do
       schema(atomize: true) do
-        %{required(:test) => maybe(:map)}
+        %{
+          required(:test) => maybe(:map),
+          optional(:user) => %{required(:name) => type(:string)}
+        }
       end
     end
 
     test "returns success with nil", %{contract: contract} do
-      assert {:ok, _} = contract.conform(%{"test" => nil})
+      assert {:ok, _} = contract.conform(%{"test" => nil, "user" => %{"name" => "John"}})
     end
 
     test "returns success with a map value", %{contract: contract} do

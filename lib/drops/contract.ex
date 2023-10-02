@@ -4,6 +4,7 @@ defmodule Drops.Contract do
       alias Drops.{Casters, Predicates}
       alias Drops.Contract.Key
       alias Drops.Contract.Schema
+      alias Drops.Contract.Type
 
       import Drops.Contract
       import Drops.Contract.Runtime
@@ -27,14 +28,11 @@ defmodule Drops.Contract do
 
       def conform(data, %Schema{} = schema, path: root) do
         case conform(data, schema) do
-          {:ok, _result} = success ->
-            success
+          {:ok, value} ->
+            {:ok, {root, value}}
 
           {:error, errors} ->
-            {:error,
-             Enum.map(errors, fn {:error, {path, predicate, value}} ->
-               {root ++ path, predicate, value}
-             end)}
+            nest_errors(errors, root)
         end
       end
 
@@ -67,25 +65,24 @@ defmodule Drops.Contract do
         end
       end
 
-      def step(
-            data,
-            {:validate,
-             %{type: {:cast, {{input_type, input_predicates, cast_opts}, output_type}}} =
-               key}
-          ) do
-        value = get_in(data, key.path)
+      def validate(value, %Type.Cast{} = type, path: path) do
+        %{input_type: input_type, output_type: output_type, opts: cast_opts} = type
+
         caster = cast_opts[:caster] || Casters
 
-        case apply_predicates(value, input_predicates, path: key.path) do
+        case validate(value, input_type, path: path) do
           {:ok, _} ->
-            validate(
-              apply(caster, :cast, [input_type, output_type, value] ++ cast_opts),
-              key.predicates,
-              path: key.path
-            )
+            casted_value =
+              apply(
+                caster,
+                :cast,
+                [input_type.primitive, output_type.primitive, value] ++ cast_opts
+              )
+
+            validate(casted_value, output_type, path: path)
 
           {:error, {predicate, value}} ->
-            {:error, {predicate, key.path, value}}
+            {:error, {predicate, path, value}}
         end
       end
 
@@ -95,17 +92,31 @@ defmodule Drops.Contract do
 
       def validate(data, %Key{presence: :required, path: path} = key) do
         if Key.present?(data, key) do
-          validate(get_in(data, path), key.predicates, path: path)
+          validate(get_in(data, path), key.type, path: path)
         else
-          {:error, {:has_key?, path}}
+          {:error, {[], :has_key?, path}}
         end
       end
 
       def validate(data, %Key{presence: :optional, path: path} = key) do
         if Key.present?(data, key) do
-          validate(get_in(data, path), key.predicates, path: path)
+          validate(get_in(data, path), key.type, path: path)
         else
           :ok
+        end
+      end
+
+      def validate(value, %Type{constraints: constraints}, path: path) do
+        validate(value, constraints, path: path)
+      end
+
+      def validate(value, %Schema{} = schema, path: path) do
+        case validate(value, schema.constraints, path: path) do
+          {:ok, {_, validated_value}} ->
+            conform(validated_value, schema, path: path)
+
+          error ->
+            error
         end
       end
 
@@ -117,13 +128,31 @@ defmodule Drops.Contract do
         validate(value, predicates, path: path)
       end
 
-      def validate(value, {:or, [head | tail]}, path: path) do
-        case validate(value, head, path: path) do
+      def validate(value, %Type.Sum{} = type, path: path) do
+        case validate(value, type.left, path: path) do
           {:ok, _} = success ->
             success
 
-          {:error, _} = error ->
-            if length(tail) > 0, do: validate(value, {:or, tail}, path: path), else: error
+          {:error, _} ->
+            validate(value, type.right, path: path)
+        end
+      end
+
+      def validate(value, %Type.List{member_type: member_type} = type, path: path) do
+        case validate(value, type.constraints, path: path) do
+          {:ok, {_, members}} ->
+            result = List.flatten(
+              Enum.with_index(members, &validate(&1, member_type, path: path ++ [&2]))
+            )
+
+            errors = Enum.reject(result, &is_ok/1)
+
+            if length(errors) == 0,
+              do: {:ok, {path, result}},
+              else: errors
+
+          error ->
+            error
         end
       end
 
@@ -143,22 +172,6 @@ defmodule Drops.Contract do
 
       def apply_predicates(value, predicates, path: path) do
         Enum.reduce(predicates, {:ok, {path, value}}, &apply_predicate(&1, &2))
-      end
-
-      def apply_predicate({:each, predicates}, {:ok, {path, members}}) do
-        result =
-          List.flatten(
-            Enum.with_index(
-              members,
-              &apply_predicates(&1, predicates, path: path ++ [&2])
-            )
-          )
-
-        errors = Enum.reject(result, &is_ok/1)
-
-        if length(errors) == 0,
-          do: {:ok, {path, result}},
-          else: errors
       end
 
       def apply_predicate({:predicate, {name, args}}, {:ok, {path, value}}) do
@@ -201,6 +214,9 @@ defmodule Drops.Contract do
                 do: put_in(acc, path, map_list_results(value)),
                 else: put_in(acc, path, value)
 
+            {:ok, value} ->
+              value
+
             :ok ->
               acc
           end
@@ -219,6 +235,16 @@ defmodule Drops.Contract do
             value ->
               value
           end
+        end)
+      end
+
+      defp nest_errors(errors, root) do
+        Enum.map(errors, fn
+          {:error, {path, name, args}} ->
+            {:error, {root ++ path, name, args}}
+
+          {:error, [] = error_list} ->
+            {:error, nest_errors(error_list, root)}
         end)
       end
     end

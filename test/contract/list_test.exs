@@ -61,7 +61,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, [{[:tags, 1, :name], :type?, [:string, 312]}]}]} =
+      assert {:error, [{:error, {[:tags, 1, :name], :type?, [:string, 312]}}]} =
                contract.conform(%{tags: [%{name: "red"}, %{name: 312}, %{name: "blue"}]})
     end
   end
@@ -86,7 +86,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, [{[:tags, 1, :name], :type?, [:string, 312]}]}]} =
+      assert {:error, [{:error, {[:tags, 1, :name], :type?, [:string, 312]}}]} =
                contract.conform(%{
                  "tags" => [%{"name" => "red"}, %{"name" => 312}, %{"name" => "blue"}]
                })
@@ -139,7 +139,7 @@ defmodule Drops.Contract.ListTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, [{[:tags, 1, 0, :name], :type?, [:string, 312]}]}]} =
+      assert {:error, [{:error, {[:tags, 1, 0, :name], :type?, [:string, 312]}}]} =
                contract.conform(%{
                  "tags" => [[%{"name" => "red"}], [%{"name" => 312}], [%{"name" => "blue"}]]
                })

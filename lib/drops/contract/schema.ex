@@ -1,55 +1,40 @@
 defmodule Drops.Contract.Schema do
   alias __MODULE__
   alias Drops.Contract.Key
+  alias Drops.Contract.Type
 
-  defstruct [:keys, :plan, :atomize]
+  import Type, only: [infer_constraints: 2]
+
+  defstruct [:primitive, :constraints, :keys, :plan, :atomize]
 
   def new(spec, opts) do
     atomize = opts[:atomize] || false
     keys = to_key_list(spec, opts)
 
-    %Schema{atomize: atomize, keys: keys, plan: build_plan(keys)}
+    %Schema{
+      primitive: :map,
+      constraints: infer_constraints({:type, {:map, []}}, opts),
+      atomize: atomize,
+      keys: keys,
+      plan: build_plan(keys)
+    }
   end
 
   def atomize(data, keys, initial \\ %{}) do
     Enum.reduce(keys, initial, fn %{path: path} = key, acc ->
-      string_path = Enum.map(path, &Atom.to_string/1)
-      value = get_in(data, string_path)
+      stringified_key = Key.stringify(key)
 
-      if is_nil(value) and key.type == :map do
-        acc
+      if Key.present?(data, stringified_key) do
+        put_in(acc, path, get_in(data, stringified_key.path))
       else
-        updated = put_in(acc, path, value)
-
-        with_children = atomize(data, key.children, updated)
-        atom_part = List.delete(path, List.last(path))
-        string_part = List.last(string_path)
-
-        mixed_path = atom_part ++ [string_part]
-
-        {_, result} = pop_in(with_children, mixed_path)
-
-        result
+        acc
       end
     end)
   end
 
   defp to_key_list(spec, opts, root \\ []) do
     Enum.map(spec, fn {{presence, name}, spec} ->
-      path = root ++ [name]
-
-      case spec do
-        %{} ->
-          Key.new({:type, {:map, []}},
-            opts,
-            presence: presence,
-            path: path,
-            children: to_key_list(spec, opts, path)
-          )
-
-        _ ->
-          Key.new(spec, opts, presence: presence, path: path)
-      end
+      Key.new(spec, opts, presence: presence, path: root ++ [name])
     end)
   end
 
