@@ -47,6 +47,10 @@ defmodule Drops.Contract.DSL do
     type(list: [type | predicates])
   end
 
+  def maybe(schema) when is_map(schema) do
+    [type(:nil), schema]
+  end
+
   def maybe(type, predicates \\ []) do
     type([:nil, {type, predicates}])
   end
