@@ -5,7 +5,7 @@ defmodule Drops.Contract.Schema do
 
   import Type, only: [infer_constraints: 2]
 
-  defstruct [:primitive, :constraints, :keys, :plan, :atomize]
+  defstruct [:primitive, :constraints, :keys, :atomize]
 
   def new(spec, opts) do
     atomize = opts[:atomize] || false
@@ -15,8 +15,7 @@ defmodule Drops.Contract.Schema do
       primitive: :map,
       constraints: infer_constraints({:type, {:map, []}}, opts),
       atomize: atomize,
-      keys: keys,
-      plan: build_plan(keys)
+      keys: keys
     }
   end
 
@@ -36,17 +35,5 @@ defmodule Drops.Contract.Schema do
     Enum.map(spec, fn {{presence, name}, spec} ->
       Key.new(spec, opts, presence: presence, path: root ++ [name])
     end)
-  end
-
-  defp build_plan(keys) do
-    Enum.map(keys, &key_step/1)
-  end
-
-  defp key_step(%{children: children} = key) when length(children) > 0 do
-    {:and, [{:validate, key}, build_plan(children)]}
-  end
-
-  defp key_step(key) do
-    {:validate, key}
   end
 end

@@ -19,11 +19,11 @@ defmodule Drops.Contract do
       end
 
       def conform(data, %Schema{atomize: true} = schema) do
-        conform(Schema.atomize(data, schema.keys), schema.plan)
+        conform(Schema.atomize(data, schema.keys), schema.keys)
       end
 
       def conform(data, %Schema{} = schema) do
-        conform(data, schema.plan)
+        conform(data, schema.keys)
       end
 
       def conform(data, %Schema{} = schema, path: root) do
@@ -36,8 +36,8 @@ defmodule Drops.Contract do
         end
       end
 
-      def conform(data, plan) do
-        results = Enum.map(plan, &step(data, &1)) |> List.flatten()
+      def conform(data, keys) do
+        results = Enum.map(keys, &validate(data, &1)) |> List.flatten()
         schema_errors = Enum.reject(results, &is_ok/1)
 
         if length(schema_errors) == 0 do
@@ -52,16 +52,6 @@ defmodule Drops.Contract do
           end
         else
           {:error, schema_errors}
-        end
-      end
-
-      def step(data, {:and, [left, right]}) do
-        case step(data, left) do
-          {:ok, result} ->
-            [{:ok, result}] ++ Enum.map(right, &step(data, &1))
-
-          error ->
-            error
         end
       end
 
@@ -84,10 +74,6 @@ defmodule Drops.Contract do
           {:error, {predicate, value}} ->
             {:error, {predicate, path, value}}
         end
-      end
-
-      def step(data, {:validate, key}) do
-        validate(data, key)
       end
 
       def validate(data, %Key{presence: :required, path: path} = key) do
