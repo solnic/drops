@@ -16,7 +16,7 @@ defmodule Drops.ContractTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, {:has_key?, [:age]}}]} = contract.conform(%{name: "Jane"})
+      assert {:error, [{:error, {[], :has_key?, [:age]}}]} = contract.conform(%{name: "Jane"})
     end
 
     test "returns error with invalid data", %{contract: contract} do
@@ -48,7 +48,7 @@ defmodule Drops.ContractTest do
     end
 
     test "returns has_key? error when a required key is missing", %{contract: contract} do
-      assert {:error, [{:error, {:has_key?, [:email]}}]} = contract.conform(%{})
+      assert {:error, [{:error, {[], :has_key?, [:email]}}]} = contract.conform(%{})
     end
 
     test "returns predicate errors", %{contract: contract} do
@@ -94,7 +94,7 @@ defmodule Drops.ContractTest do
     end
 
     test "returns nested errors", %{contract: contract} do
-      assert {:error, [{:error, {:has_key?, [:user]}}]} = contract.conform(%{})
+      assert {:error, [{:error, {[], :has_key?, [:user]}}]} = contract.conform(%{})
 
       assert {:error, [{:error, {[:user], :type?, [:map, nil]}}]} =
                contract.conform(%{user: nil})
@@ -121,7 +121,7 @@ defmodule Drops.ContractTest do
       end
     end
 
-    test "returns deeply nested errors", %{contract: contract} do
+    test "returns success when valid", %{contract: contract} do
       assert {:ok, _} =
                contract.conform(%{
                  user: %{
@@ -134,7 +134,9 @@ defmodule Drops.ContractTest do
                    }
                  }
                })
+    end
 
+    test "returns deeply nested errors", %{contract: contract} do
       assert {:error, [{:error, {[:user, :address, :street], :filled?, [""]}}]} =
                contract.conform(%{
                  user: %{

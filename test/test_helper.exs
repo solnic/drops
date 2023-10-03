@@ -4,6 +4,8 @@ defmodule Drops.ContractCase do
   using do
     quote do
       import Drops.ContractCase
+
+      alias Drops.Contract.Schema
     end
   end
 
