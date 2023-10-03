@@ -1,6 +1,6 @@
-defmodule Drops.Contract.Key do
+defmodule Drops.Type.Schema.Key do
   alias __MODULE__
-  alias Drops.Contract.Type
+  alias Drops.Type
 
   defstruct [:path, :presence, :type]
 

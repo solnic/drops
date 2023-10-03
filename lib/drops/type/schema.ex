@@ -1,7 +1,7 @@
-defmodule Drops.Contract.Schema do
+defmodule Drops.Type.Schema do
   alias __MODULE__
-  alias Drops.Contract.Key
-  alias Drops.Contract.Type
+  alias Drops.Type
+  alias Schema.Key
 
   import Type, only: [infer_constraints: 2]
 

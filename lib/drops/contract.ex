@@ -2,9 +2,9 @@ defmodule Drops.Contract do
   defmacro __using__(_opts) do
     quote do
       alias Drops.{Casters, Predicates}
-      alias Drops.Contract.Key
-      alias Drops.Contract.Schema
-      alias Drops.Contract.Type
+      alias Drops.Type
+      alias Drops.Type.Schema
+      alias Drops.Type.Schema.Key
 
       import Drops.Contract
       import Drops.Contract.Runtime
@@ -264,7 +264,7 @@ defmodule Drops.Contract do
 
   defp set_schema(_caller, opts, block) do
     quote do
-      alias Drops.Contract.Schema
+      alias Drops.Type.Schema
 
       mod = __MODULE__
 

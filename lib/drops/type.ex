@@ -1,6 +1,6 @@
-defmodule Drops.Contract.Type do
+defmodule Drops.Type do
   alias __MODULE__
-  alias Drops.Contract.Schema
+  alias Drops.Type.Schema
 
   defstruct [:primitive, :constraints]
 
