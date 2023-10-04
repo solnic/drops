@@ -1,47 +1,51 @@
-defmodule Drops.Type do
-  alias __MODULE__
-  alias Drops.Type.Schema
+defmodule Drops.Types do
+  alias Drops.Types.{
+    Type,
+    Sum,
+    List,
+    Cast,
+    Map,
+    Map.Key
+  }
 
-  defstruct [:primitive, :constraints]
+  def from_spec(%{} = spec, opts) do
+    atomize = opts[:atomize] || false
 
-  defmodule Cast do
-    defstruct [:input_type, :output_type, :opts]
+    keys =
+      Enum.map(spec, fn {{presence, name}, type_spec} ->
+        %Key{path: [name], presence: presence, type: from_spec(type_spec, opts)}
+      end)
+
+    %Map{
+      primitive: :map,
+      constraints: infer_constraints({:type, {:map, []}}, opts),
+      atomize: atomize,
+      keys: keys
+    }
   end
 
-  defmodule Sum do
-    defstruct [:left, :right, :opts]
+  def from_spec([left, right], opts) do
+    %Sum{left: from_spec(left, opts), right: from_spec(right, opts), opts: opts}
   end
 
-  defmodule List do
-    defstruct [:primitive, :constraints, :member_type]
-  end
-
-  def new(%{} = spec, opts) do
-    Schema.new(spec, opts)
-  end
-
-  def new([left, right], opts) do
-    %Sum{left: new(left, opts), right: new(right, opts), opts: opts}
-  end
-
-  def new({:type, {:list, member_type}} = spec, opts)
+  def from_spec({:type, {:list, member_type}} = spec, opts)
       when is_tuple(member_type) or is_map(member_type) do
     %List{
       primitive: :list,
       constraints: infer_constraints(spec, opts),
-      member_type: new(member_type, opts)
+      member_type: from_spec(member_type, opts)
     }
   end
 
-  def new({:cast, {input_type, output_type, cast_opts}}, opts) do
+  def from_spec({:cast, {input_type, output_type, cast_opts}}, opts) do
     %Cast{
-      input_type: new(input_type, opts),
-      output_type: new(output_type, opts),
+      input_type: from_spec(input_type, opts),
+      output_type: from_spec(output_type, opts),
       opts: cast_opts
     }
   end
 
-  def new(spec, opts) do
+  def from_spec(spec, opts) do
     %Type{
       primitive: infer_primitive(spec, opts),
       constraints: infer_constraints(spec, opts)

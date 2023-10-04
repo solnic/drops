@@ -1,10 +1,9 @@
 defmodule Drops.Contract do
   defmacro __using__(_opts) do
     quote do
-      alias Drops.{Casters, Predicates}
-      alias Drops.Type
-      alias Drops.Type.Schema
-      alias Drops.Type.Schema.Key
+      use Drops.Validator
+
+      alias Drops.Types
 
       import Drops.Contract
       import Drops.Contract.Runtime
@@ -18,15 +17,15 @@ defmodule Drops.Contract do
         conform(data, schema())
       end
 
-      def conform(data, %Schema{atomize: true} = schema) do
-        conform(Schema.atomize(data, schema.keys), schema.keys)
+      def conform(data, %Types.Map{atomize: true} = schema) do
+        conform(Types.Map.atomize(data, schema.keys), schema.keys)
       end
 
-      def conform(data, %Schema{} = schema) do
+      def conform(data, %Types.Map{} = schema) do
         conform(data, schema.keys)
       end
 
-      def conform(data, %Schema{} = schema, path: root) do
+      def conform(data, %Types.Map{} = schema, path: root) do
         case conform(data, schema) do
           {:ok, value} ->
             {:ok, {root, value}}
@@ -55,48 +54,7 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(value, %Type.Cast{} = type, path: path) do
-        %{input_type: input_type, output_type: output_type, opts: cast_opts} = type
-
-        caster = cast_opts[:caster] || Casters
-
-        case validate(value, input_type, path: path) do
-          {:ok, _} ->
-            casted_value =
-              apply(
-                caster,
-                :cast,
-                [input_type.primitive, output_type.primitive, value] ++ cast_opts
-              )
-
-            validate(casted_value, output_type, path: path)
-
-          {:error, {predicate, value}} ->
-            {:error, {predicate, path, value}}
-        end
-      end
-
-      def validate(data, %Key{presence: :required, path: path} = key) do
-        if Key.present?(data, key) do
-          validate(get_in(data, path), key.type, path: path)
-        else
-          {:error, {[], :has_key?, path}}
-        end
-      end
-
-      def validate(data, %Key{presence: :optional, path: path} = key) do
-        if Key.present?(data, key) do
-          validate(get_in(data, path), key.type, path: path)
-        else
-          :ok
-        end
-      end
-
-      def validate(value, %Type{constraints: constraints}, path: path) do
-        validate(value, constraints, path: path)
-      end
-
-      def validate(value, %Schema{} = schema, path: path) do
+      def validate(value, %Types.Map{} = schema, path: path) do
         case validate(value, schema.constraints, path: path) do
           {:ok, {_, validated_value}} ->
             conform(validated_value, schema, path: path)
@@ -106,43 +64,7 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(value, predicates, path: path) when is_list(predicates) do
-        apply_predicates(value, predicates, path: path)
-      end
-
-      def validate(value, {:and, predicates}, path: path) do
-        validate(value, predicates, path: path)
-      end
-
-      def validate(value, %Type.Sum{} = type, path: path) do
-        case validate(value, type.left, path: path) do
-          {:ok, _} = success ->
-            success
-
-          {:error, _} ->
-            validate(value, type.right, path: path)
-        end
-      end
-
-      def validate(value, %Type.List{member_type: member_type} = type, path: path) do
-        case validate(value, type.constraints, path: path) do
-          {:ok, {_, members}} ->
-            result = List.flatten(
-              Enum.with_index(members, &validate(&1, member_type, path: path ++ [&2]))
-            )
-
-            errors = Enum.reject(result, &is_ok/1)
-
-            if length(errors) == 0,
-              do: {:ok, {path, result}},
-              else: errors
-
-          error ->
-            error
-        end
-      end
-
-      def apply_predicates(value, {:and, [left, %Schema{} = schema]}, path: path) do
+      defp apply_predicates(value, {:and, [left, %Types.Map{} = schema]}, path: path) do
         case apply_predicate(left, {:ok, {path, value}}) do
           {:ok, _} ->
             conform(value, schema, path: path)
@@ -152,34 +74,7 @@ defmodule Drops.Contract do
         end
       end
 
-      def apply_predicates(value, {:and, predicates}, path: path) do
-        apply_predicates(value, predicates, path: path)
-      end
-
-      def apply_predicates(value, predicates, path: path) do
-        Enum.reduce(predicates, {:ok, {path, value}}, &apply_predicate(&1, &2))
-      end
-
-      def apply_predicate({:predicate, {name, args}}, {:ok, {path, value}}) do
-        apply_args =
-          case args do
-            [arg] -> [arg, value]
-            [] -> [value]
-            arg -> [arg, value]
-          end
-
-        if apply(Predicates, name, apply_args) do
-          {:ok, {path, value}}
-        else
-          {:error, {path, name, apply_args}}
-        end
-      end
-
-      def apply_predicate(_, {:error, _} = error) do
-        error
-      end
-
-      def apply_rules(output) do
+      defp apply_rules(output) do
         Enum.map(rules(), fn name -> apply(__MODULE__, :rule, [name, output]) end)
         |> Enum.filter(fn
           :ok -> false
@@ -187,12 +82,7 @@ defmodule Drops.Contract do
         end)
       end
 
-      def is_ok(:ok), do: true
-      def is_ok({:ok, _}), do: true
-      def is_ok(:error), do: false
-      def is_ok({:error, _}), do: false
-
-      def to_output(results) do
+      defp to_output(results) do
         Enum.reduce(results, %{}, fn result, acc ->
           case result do
             {:ok, {path, value}} ->
@@ -221,16 +111,6 @@ defmodule Drops.Contract do
             value ->
               value
           end
-        end)
-      end
-
-      defp nest_errors(errors, root) do
-        Enum.map(errors, fn
-          {:error, {path, name, args}} ->
-            {:error, {root ++ path, name, args}}
-
-          {:error, [] = error_list} ->
-            {:error, nest_errors(error_list, root)}
         end)
       end
     end
@@ -264,13 +144,13 @@ defmodule Drops.Contract do
 
   defp set_schema(_caller, opts, block) do
     quote do
-      alias Drops.Type.Schema
+      alias Drops.Types
 
       mod = __MODULE__
 
       import Drops.Contract.DSL
 
-      Module.put_attribute(mod, :schema, Schema.new(unquote(block), unquote(opts)))
+      Module.put_attribute(mod, :schema, Types.from_spec(unquote(block), unquote(opts)))
 
       import Drops.Contract.Runtime
     end
