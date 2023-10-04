@@ -151,7 +151,7 @@ defmodule Drops.Contract do
 
       import Drops.Contract.DSL
 
-      Module.put_attribute(mod, :schema, Types.new(unquote(block), unquote(opts)))
+      Module.put_attribute(mod, :schema, Types.from_spec(unquote(block), unquote(opts)))
 
       import Drops.Contract.Runtime
     end
