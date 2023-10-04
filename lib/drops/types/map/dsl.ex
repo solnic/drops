@@ -1,4 +1,4 @@
-defmodule Drops.Contract.DSL do
+defmodule Drops.Types.Map.DSL do
   def required(name) do
     {:required, name}
   end

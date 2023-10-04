@@ -148,7 +148,7 @@ defmodule Drops.Contract do
 
       mod = __MODULE__
 
-      import Drops.Contract.DSL
+      import Drops.Types.Map.DSL
 
       Module.put_attribute(mod, :schema, Types.from_spec(unquote(block), unquote(opts)))
 
