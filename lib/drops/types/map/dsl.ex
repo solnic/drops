@@ -7,7 +7,7 @@ defmodule Drops.Types.Map.DSL do
     {:optional, name}
   end
 
-  def from(type, cast_opts \\ []) do
+  def cast(type, cast_opts \\ []) do
     {:cast, {type, cast_opts}}
   end
 

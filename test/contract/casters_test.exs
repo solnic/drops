@@ -4,7 +4,7 @@ defmodule Drops.CastersTest do
   describe ":integer => :string" do
     contract do
       schema do
-        %{required(:test) => from(:integer) |> type(:string)}
+        %{required(:test) => cast(:integer) |> type(:string)}
       end
     end
 
@@ -16,7 +16,7 @@ defmodule Drops.CastersTest do
   describe ":string => :integer" do
     contract do
       schema do
-        %{required(:test) => from(:string) |> type(:integer)}
+        %{required(:test) => cast(:string) |> type(:integer)}
       end
     end
 
@@ -28,7 +28,7 @@ defmodule Drops.CastersTest do
   describe ":string => :float" do
     contract do
       schema do
-        %{required(:test) => from(:string) |> type(:float)}
+        %{required(:test) => cast(:string) |> type(:float)}
       end
     end
 
@@ -40,7 +40,7 @@ defmodule Drops.CastersTest do
   describe ":integer => :date_time" do
     contract do
       schema do
-        %{required(:test) => from(:integer) |> type(:date_time)}
+        %{required(:test) => cast(:integer) |> type(:date_time)}
       end
     end
 
@@ -55,7 +55,7 @@ defmodule Drops.CastersTest do
   describe ":integer => :date_time with :milliseconds" do
     contract do
       schema do
-        %{required(:test) => from(:integer, [:millisecond]) |> type(:date_time)}
+        %{required(:test) => cast(:integer, [:millisecond]) |> type(:date_time)}
       end
     end
 
@@ -76,7 +76,7 @@ defmodule Drops.CastersTest do
       end
 
       schema do
-        %{required(:test) => from(:string, caster: CustomCaster) |> type(:string)}
+        %{required(:test) => cast(:string, caster: CustomCaster) |> type(:string)}
       end
     end
 
