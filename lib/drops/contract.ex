@@ -3,8 +3,7 @@ defmodule Drops.Contract do
     quote do
       use Drops.Validator
 
-      alias Drops.Types.Schema
-      alias Drops.Types.Schema.Key
+      alias Drops.Types
 
       import Drops.Contract
       import Drops.Contract.Runtime
@@ -18,15 +17,15 @@ defmodule Drops.Contract do
         conform(data, schema())
       end
 
-      def conform(data, %Schema{atomize: true} = schema) do
-        conform(Schema.atomize(data, schema.keys), schema.keys)
+      def conform(data, %Types.Map{atomize: true} = schema) do
+        conform(Types.Map.atomize(data, schema.keys), schema.keys)
       end
 
-      def conform(data, %Schema{} = schema) do
+      def conform(data, %Types.Map{} = schema) do
         conform(data, schema.keys)
       end
 
-      def conform(data, %Schema{} = schema, path: root) do
+      def conform(data, %Types.Map{} = schema, path: root) do
         case conform(data, schema) do
           {:ok, value} ->
             {:ok, {root, value}}
@@ -55,7 +54,7 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(value, %Schema{} = schema, path: path) do
+      def validate(value, %Types.Map{} = schema, path: path) do
         case validate(value, schema.constraints, path: path) do
           {:ok, {_, validated_value}} ->
             conform(validated_value, schema, path: path)
@@ -65,7 +64,7 @@ defmodule Drops.Contract do
         end
       end
 
-      defp apply_predicates(value, {:and, [left, %Schema{} = schema]}, path: path) do
+      defp apply_predicates(value, {:and, [left, %Types.Map{} = schema]}, path: path) do
         case apply_predicate(left, {:ok, {path, value}}) do
           {:ok, _} ->
             conform(value, schema, path: path)

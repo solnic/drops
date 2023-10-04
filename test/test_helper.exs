@@ -5,7 +5,7 @@ defmodule Drops.ContractCase do
     quote do
       import Drops.ContractCase
 
-      alias Drops.Contract.Schema
+      alias Drops.Contract.Map
     end
   end
 

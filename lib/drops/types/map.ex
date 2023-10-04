@@ -1,5 +1,5 @@
-defmodule Drops.Types.Schema do
-  alias Drops.Types.Schema.Key
+defmodule Drops.Types.Map do
+  alias Drops.Types.Map.Key
 
   defstruct [:primitive, :constraints, :keys, :atomize]
 

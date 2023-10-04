@@ -3,7 +3,7 @@ defmodule Drops.Validator do
     quote do
       alias Drops.{Casters, Predicates}
       alias Drops.Types
-      alias Drops.Types.Schema.Key
+      alias Drops.Types.Map.Key
 
       def validate(value, %Types.Cast{} = type, path: path) do
         %{input_type: input_type, output_type: output_type, opts: cast_opts} = type

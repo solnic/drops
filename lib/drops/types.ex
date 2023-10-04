@@ -4,8 +4,8 @@ defmodule Drops.Types do
     Sum,
     List,
     Cast,
-    Schema,
-    Schema.Key
+    Map,
+    Map.Key
   }
 
   def from_spec(%{} = spec, opts) do
@@ -16,7 +16,7 @@ defmodule Drops.Types do
         %Key{path: [name], presence: presence, type: from_spec(type_spec, opts)}
       end)
 
-    %Schema{
+    %Map{
       primitive: :map,
       constraints: infer_constraints({:type, {:map, []}}, opts),
       atomize: atomize,

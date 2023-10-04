@@ -1,4 +1,4 @@
-defmodule Drops.Types.Schema.Key do
+defmodule Drops.Types.Map.Key do
   alias __MODULE__
 
   defstruct [:path, :presence, :type]
