@@ -2,11 +2,10 @@ defmodule Drops.Validator do
   defmacro __using__(_opts) do
     quote do
       alias Drops.{Casters, Predicates}
-      alias Drops.Type
-      alias Drops.Type.Schema
-      alias Drops.Type.Schema.Key
+      alias Drops.Types
+      alias Drops.Types.Schema.Key
 
-      def validate(value, %Type.Cast{} = type, path: path) do
+      def validate(value, %Types.Cast{} = type, path: path) do
         %{input_type: input_type, output_type: output_type, opts: cast_opts} = type
 
         caster = cast_opts[:caster] || Casters
@@ -43,7 +42,7 @@ defmodule Drops.Validator do
         end
       end
 
-      def validate(value, %Type{constraints: constraints}, path: path) do
+      def validate(value, %Types.Type{constraints: constraints}, path: path) do
         validate(value, constraints, path: path)
       end
 
@@ -55,7 +54,7 @@ defmodule Drops.Validator do
         validate(value, predicates, path: path)
       end
 
-      def validate(value, %Type.Sum{} = type, path: path) do
+      def validate(value, %Types.Sum{} = type, path: path) do
         case validate(value, type.left, path: path) do
           {:ok, _} = success ->
             success
@@ -65,7 +64,7 @@ defmodule Drops.Validator do
         end
       end
 
-      def validate(value, %Type.List{member_type: member_type} = type, path: path) do
+      def validate(value, %Types.List{member_type: member_type} = type, path: path) do
         case validate(value, type.constraints, path: path) do
           {:ok, {_, members}} ->
             result = List.flatten(

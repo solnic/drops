@@ -1,15 +1,10 @@
-defmodule Drops.Type.Schema.Key do
+defmodule Drops.Types.Schema.Key do
   alias __MODULE__
-  alias Drops.Type
 
   defstruct [:path, :presence, :type]
 
   def stringify(key) do
     %Key{path: Enum.map(key.path, &to_string/1), presence: key.presence, type: key.type}
-  end
-
-  def new(spec, opts, attrs) do
-    Map.merge(%Key{}, Enum.into(attrs, %{type: Type.new(spec, opts)}))
   end
 
   def present?(map, _) when not is_map(map) do

@@ -1,23 +1,27 @@
-defmodule Drops.Type do
-  alias __MODULE__
-  alias Drops.Type.Schema
-
-  defstruct [:primitive, :constraints]
-
-  defmodule Cast do
-    defstruct [:input_type, :output_type, :opts]
-  end
-
-  defmodule Sum do
-    defstruct [:left, :right, :opts]
-  end
-
-  defmodule List do
-    defstruct [:primitive, :constraints, :member_type]
-  end
+defmodule Drops.Types do
+  alias Drops.Types.{
+    Type,
+    Sum,
+    List,
+    Cast,
+    Schema,
+    Schema.Key
+  }
 
   def new(%{} = spec, opts) do
-    Schema.new(spec, opts)
+    atomize = opts[:atomize] || false
+
+    keys =
+      Enum.map(spec, fn {{presence, name}, type_spec} ->
+        %Key{path: [name], presence: presence, type: new(type_spec, opts)}
+      end)
+
+    %Schema{
+      primitive: :map,
+      constraints: infer_constraints({:type, {:map, []}}, opts),
+      atomize: atomize,
+      keys: keys
+    }
   end
 
   def new([left, right], opts) do

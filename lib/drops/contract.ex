@@ -3,6 +3,9 @@ defmodule Drops.Contract do
     quote do
       use Drops.Validator
 
+      alias Drops.Types.Schema
+      alias Drops.Types.Schema.Key
+
       import Drops.Contract
       import Drops.Contract.Runtime
 
@@ -142,13 +145,13 @@ defmodule Drops.Contract do
 
   defp set_schema(_caller, opts, block) do
     quote do
-      alias Drops.Type.Schema
+      alias Drops.Types
 
       mod = __MODULE__
 
       import Drops.Contract.DSL
 
-      Module.put_attribute(mod, :schema, Schema.new(unquote(block), unquote(opts)))
+      Module.put_attribute(mod, :schema, Types.new(unquote(block), unquote(opts)))
 
       import Drops.Contract.Runtime
     end
