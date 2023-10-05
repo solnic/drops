@@ -157,10 +157,80 @@ defmodule Drops.Contract do
     end
   end
 
+  @doc ~S"""
+  Define a schema for the contract.
+
+  ## Examples
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:name) => type(:string),
+      ...>       required(:age) => type(:integer)
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.schema()
+      %Drops.Types.Map{
+        primitive: :map,
+        constraints: [predicate: {:type?, :map}],
+        keys: [
+          %Drops.Types.Map.Key{
+            path: [:age],
+            presence: :required,
+            type: %Drops.Types.Type{
+              primitive: :integer,
+              constraints: [predicate: {:type?, :integer}]
+            }
+          },
+          %Drops.Types.Map.Key{
+            path: [:name],
+            presence: :required,
+            type: %Drops.Types.Type{
+              primitive: :string,
+              constraints: [predicate: {:type?, :string}]
+            }
+          }
+        ],
+        atomize: false
+      }
+  """
   defmacro schema(opts \\ [], do: block) do
     set_schema(__CALLER__, opts, block)
   end
 
+  @doc ~S"""
+  Define validation rules that are applied to the data validated by the schema.
+
+  Rules are *not* applied if schema validation failed.
+
+  ## Examples
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:email) => maybe(:string),
+      ...>       required(:login) => maybe(:string)
+      ...>     }
+      ...>   end
+      ...>
+      ...>   rule(:either_login_or_email, %{email: email, login: login}) do
+      ...>     if email == nil and login == nil do
+      ...>       {:error, "email or login must be present"}
+      ...>     else
+      ...>       :ok
+      ...>     end
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{email: "jane@doe.org", login: nil})
+      {:ok, %{email: "jane@doe.org", login: nil}}
+      iex> UserContract.conform(%{email: nil, login: "jane"})
+      {:ok, %{email: nil, login: "jane"}}
+      iex> UserContract.conform(%{email: nil, login: nil})
+      {:error, [error: "email or login must be present"]}
+  """
   defmacro rule(name, input, do: block) do
     quote do
       Module.put_attribute(__MODULE__, :rules, unquote(name))
