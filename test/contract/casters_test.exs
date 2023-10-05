@@ -1,6 +1,8 @@
 defmodule Drops.CastersTest do
   use Drops.ContractCase
 
+  doctest Drops.Casters
+
   describe ":integer => :string" do
     contract do
       schema do
