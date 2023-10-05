@@ -1,6 +1,8 @@
 defmodule Drops.ContractTest do
   use Drops.ContractCase
 
+  doctest Drops.Contract
+
   describe "required keys with types" do
     contract do
       schema do

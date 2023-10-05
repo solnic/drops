@@ -1,4 +1,33 @@
 defmodule Drops.Contract do
+  @moduledoc """
+  Drops.Contract can be used to extend your module with data validation capabilities.
+  """
+  @moduledoc since: "0.1.0"
+
+  @doc ~S"""
+  Validates the given `data` against the schema defined in the module.
+
+  Returns `{:ok, validated_data}`.
+
+  ## Examples
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:name) => type(:string),
+      ...>       required(:age) => type(:integer)
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{name: "Jane", age: 48})
+      {:ok, %{name: "Jane", age: 48}}
+      iex> UserContract.conform(%{name: "Jane", age: "not an integer"})
+      {:error, [error: {[:age], :type?, [:integer, "not an integer"]}]}
+  """
+  @doc since: "0.1.0"
+  @callback conform(data :: map()) :: {:ok, map()} | {:error, list()}
+
   defmacro __using__(_opts) do
     quote do
       use Drops.Validator
@@ -7,6 +36,8 @@ defmodule Drops.Contract do
 
       import Drops.Contract
       import Drops.Contract.Runtime
+
+      @behaviour Drops.Contract
 
       Module.register_attribute(__MODULE__, :schema, accumulate: false)
       Module.register_attribute(__MODULE__, :rules, accumulate: true)
