@@ -1,4 +1,5 @@
 defmodule Drops.Types do
+  @moduledoc false
   alias Drops.Types.{
     Type,
     Sum,
