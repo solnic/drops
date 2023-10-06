@@ -162,6 +162,7 @@ defmodule Drops.Contract do
   end
 
   defmodule Runtime do
+    @moduledoc false
     defmacro __before_compile__(_env) do
       quote do
         def schema, do: @schema
