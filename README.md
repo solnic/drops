@@ -1,14 +1,24 @@
-# 🚧 this is a new project that's still under heavy development 🚧
-
-See [Milestone 0.1.0](https://github.com/solnic/drops/milestone/1) for a list of features that are planned for the first release.
-
 # Drops
 
 Elixir `Drops` is a collection of small modules that provide useful extensions and functions that can be used to work with data effectively.
 
+## Installation
+
+If [available in Hex](https://hex.pm/docs/publish), the package can be installed by adding `drops` to your list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:drops, "~> 0.1.0"}
+  ]
+end
+```
+
+Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and published on [HexDocs](https://hexdocs.pm). Once published, the docs can be found at <https://hexdocs.pm/drops>.
+
 ## Drops.Contract
 
-You can use contracts to define data coercion and validation schemas with arbitrary validation rules. Here's a simple example:
+You can use Drops.Contract to define data coercion and validation schemas with arbitrary validation rules. Here's a simple example:
 
 ```elixir
 defmodule UserContract do
@@ -62,21 +72,4 @@ UserContract.conform(%{
 #    }
 #  }}
 ```
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `drops` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:drops, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/drops>.
 
