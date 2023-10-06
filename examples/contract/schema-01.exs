@@ -9,4 +9,4 @@ defmodule UserContract do
   end
 end
 
-UserContract.schema()
+UserContract.conform(%{name: "John", age: 21})

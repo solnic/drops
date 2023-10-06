@@ -10,6 +10,7 @@ defmodule Drops.Contract do
   Returns `{:ok, validated_data}`.
 
   ## Examples
+
       iex> defmodule UserContract do
       ...>   use Drops.Contract
       ...>
@@ -24,6 +25,7 @@ defmodule Drops.Contract do
       {:ok, %{name: "Jane", age: 48}}
       iex> UserContract.conform(%{name: "Jane", age: "not an integer"})
       {:error, [error: {[:age], :type?, [:integer, "not an integer"]}]}
+
   """
   @doc since: "0.1.0"
   @callback conform(data :: map()) :: {:ok, map()} | {:error, list()}
@@ -175,7 +177,8 @@ defmodule Drops.Contract do
   @doc ~S"""
   Define a schema for the contract.
 
-  ## Examples
+  ## Simple schema
+
       iex> defmodule UserContract do
       ...>   use Drops.Contract
       ...>
@@ -186,30 +189,59 @@ defmodule Drops.Contract do
       ...>     }
       ...>   end
       ...> end
-      iex> UserContract.schema()
-      %Drops.Types.Map{
-        primitive: :map,
-        constraints: [predicate: {:type?, :map}],
-        keys: [
-          %Drops.Types.Map.Key{
-            path: [:age],
-            presence: :required,
-            type: %Drops.Types.Type{
-              primitive: :integer,
-              constraints: [predicate: {:type?, :integer}]
-            }
-          },
-          %Drops.Types.Map.Key{
-            path: [:name],
-            presence: :required,
-            type: %Drops.Types.Type{
-              primitive: :string,
-              constraints: [predicate: {:type?, :string}]
-            }
-          }
-        ],
-        atomize: false
-      }
+      iex> UserContract.conform(%{name: "John", age: 21})
+      {:ok, %{name: "John", age: 21}}
+
+  ## Nested schema
+
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema(atomize: true) do
+      ...>     %{
+      ...>       required(:user) => %{
+      ...>         required(:name) => type(:string, [:filled?]),
+      ...>         required(:age) => type(:integer),
+      ...>         required(:address) => %{
+      ...>           required(:city) => type(:string, [:filled?]),
+      ...>           required(:street) => type(:string, [:filled?]),
+      ...>           required(:zipcode) => type(:string, [:filled?])
+      ...>         }
+      ...>       }
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{
+      ...>  "user" => %{
+      ...>    "name" => "John",
+      ...>    "age" => 21,
+      ...>    "address" => %{
+      ...>      "city" => "New York",
+      ...>      "street" => "",
+      ...>      "zipcode" => "10001"
+      ...>    }
+      ...>  }
+      ...> })
+      {:error, [error: {[:user, :address, :street], :filled?, [""]}]}
+      iex> UserContract.conform(%{
+      ...>  "user" => %{
+      ...>    "name" => "John",
+      ...>    "age" => 21,
+      ...>    "address" => %{
+      ...>      "city" => "New York",
+      ...>      "street" => "Central Park",
+      ...>      "zipcode" => "10001"
+      ...>    }
+      ...>  }
+      ...> })
+      {:ok,
+       %{
+         user: %{
+           name: "John",
+           address: %{city: "New York", street: "Central Park", zipcode: "10001"},
+           age: 21
+         }
+       }}
   """
   defmacro schema(opts \\ [], do: block) do
     set_schema(__CALLER__, opts, block)
