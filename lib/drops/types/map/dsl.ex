@@ -225,11 +225,11 @@ defmodule Drops.Types.Map.DSL do
   end
 
   @doc ~S"""
-  Returns a integer type specification.
+  Returns an integer type specification.
 
   ## Examples
 
-      # a integer with no constraints
+      # an integer with no constraints
       integer()
 
   """
@@ -242,14 +242,14 @@ defmodule Drops.Types.Map.DSL do
   end
 
   @doc ~S"""
-  Returns a integer type specification with additional constraints.
+  Returns an integer type specification with additional constraints.
 
   ## Examples
 
-      # a integer with constraints
+      # an integer with constraints
       integer(:even?)
 
-      # a integer with multiple constraints
+      # an integer with multiple constraints
       integer([:even?, gt?: 100])
 
   """
