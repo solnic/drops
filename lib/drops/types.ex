@@ -1,5 +1,8 @@
 defmodule Drops.Types do
-  @moduledoc false
+  @moduledoc ~S"""
+  Drops.Types is a module that provides functions for creating type structs
+  from DSL's type specs represented by plain tuples.
+  """
   alias Drops.Types.{
     Type,
     Sum,

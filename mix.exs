@@ -53,6 +53,7 @@ defmodule Drops.MixProject do
           Drops.Validator
         ],
         Types: [
+          Drops.Types,
           Drops.Types.Type,
           Drops.Types.List,
           Drops.Types.Map,
