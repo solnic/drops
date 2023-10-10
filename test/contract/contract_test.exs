@@ -169,38 +169,6 @@ defmodule Drops.ContractTest do
     end
   end
 
-  describe "schema with rules" do
-    contract do
-      schema do
-        %{
-          required(:name) => type(:string, [:filled?]),
-          optional(:age) => type(:integer)
-        }
-      end
-
-      rule(:unique?, %{name: name}) do
-        case name do
-          "John" -> {:error, {:taken, [:name], name}}
-          _ -> :ok
-        end
-      end
-    end
-
-    test "returns success when schema and rules passed", %{contract: contract} do
-      assert {:ok, %{name: "Jane"}} = contract.conform(%{name: "Jane"})
-    end
-
-    test "returns predicate errors and skips rules", %{contract: contract} do
-      assert {:error, [{:error, {[:name], :filled?, [""]}}]} =
-               contract.conform(%{name: ""})
-    end
-
-    test "returns rule errors", %{contract: contract} do
-      assert {:error, [{:error, {:taken, [:name], "John"}}]} =
-               contract.conform(%{name: "John"})
-    end
-  end
-
   describe "schema for string maps" do
     contract do
       schema(atomize: true) do

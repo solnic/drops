@@ -25,6 +25,21 @@ defmodule Drops.Contract do
         conform(data, schema.keys)
       end
 
+      def conform(data, keys) when is_list(keys) do
+        results = validate(data, keys)
+        output = to_output(results)
+        schema_errors = Enum.reject(results, &is_ok/1)
+        rule_errors = apply_rules(output)
+
+        all_errors = schema_errors ++ rule_errors
+
+        if length(all_errors) > 0 do
+          {:error, all_errors}
+        else
+          {:ok, output}
+        end
+      end
+
       def conform(data, %Types.Map{} = schema, path: root) do
         case conform(data, schema) do
           {:ok, value} ->
@@ -35,23 +50,8 @@ defmodule Drops.Contract do
         end
       end
 
-      def conform(data, keys) do
-        results = Enum.map(keys, &validate(data, &1)) |> List.flatten()
-        schema_errors = Enum.reject(results, &is_ok/1)
-
-        if length(schema_errors) == 0 do
-          output = to_output(results)
-
-          case apply_rules(output) do
-            [] ->
-              {:ok, output}
-
-            rule_errors ->
-              {:error, schema_errors ++ rule_errors}
-          end
-        else
-          {:error, schema_errors}
-        end
+      def validate(data, keys) when is_list(keys) do
+        Enum.map(keys, &validate(data, &1)) |> List.flatten()
       end
 
       def validate(value, %Types.Map{} = schema, path: path) do
@@ -95,6 +95,9 @@ defmodule Drops.Contract do
 
             :ok ->
               acc
+
+            {:error, _} ->
+              acc
           end
         end)
       end
@@ -113,6 +116,17 @@ defmodule Drops.Contract do
           end
         end)
       end
+
+      defp nest_errors(errors, root) do
+        Enum.map(errors, fn
+          {:error, {path, name, args}} ->
+            {:error, {root ++ path, name, args}}
+
+          {:error, [] = error_list} ->
+            {:error, nest_errors(error_list, root)}
+        end)
+      end
+
     end
   end
 
@@ -137,8 +151,6 @@ defmodule Drops.Contract do
       def rule(unquote(name), unquote(input)), do: unquote(block)
 
       def rule(unquote(name), _), do: :ok
-
-      defoverridable rule: 2
     end
   end
 

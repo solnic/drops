@@ -109,16 +109,6 @@ defmodule Drops.Validator do
         error
       end
 
-      defp nest_errors(errors, root) do
-        Enum.map(errors, fn
-          {:error, {path, name, args}} ->
-            {:error, {root ++ path, name, args}}
-
-          {:error, [] = error_list} ->
-            {:error, nest_errors(error_list, root)}
-        end)
-      end
-
       defp is_ok(:ok), do: true
       defp is_ok({:ok, _}), do: true
       defp is_ok(:error), do: false
