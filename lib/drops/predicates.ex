@@ -1,25 +1,52 @@
 defmodule Drops.Predicates do
+  @moduledoc ~S"""
+  Drops.Predicates is a module that provides validation functions that can be used as the
+  type constraints.
+  """
   require Integer
 
-  def type?(:nil, nil), do: true
-  def type?(:nil, _), do: false
+  @doc ~S"""
+  Checks if a given value matches a given type identifier
 
-  def type?(:atom, value) when is_atom(value), do: true
+  ## Examples
+
+      iex> Drops.Predicates.type?(:nil, nil)
+      true
+      iex> Drops.Predicates.type?(:atom, :hello)
+      true
+      iex> Drops.Predicates.type?(:string, "hello")
+      true
+      iex> Drops.Predicates.type?(:integer, 1)
+      true
+      iex> Drops.Predicates.type?(:float, 1.2)
+      true
+      iex> Drops.Predicates.type?(:map, %{})
+      true
+      iex> Drops.Predicates.type?(:date_time, DateTime.utc_now())
+      true
+
+  """
+  @spec type?(type :: atom, input :: any) :: boolean()
+
+  def type?(nil, nil), do: true
+  def type?(nil, _), do: false
+
+  def type?(:atom, input) when is_atom(input), do: true
   def type?(:atom, _), do: false
 
-  def type?(:string, value) when is_binary(value), do: true
+  def type?(:string, input) when is_binary(input), do: true
   def type?(:string, _), do: false
 
-  def type?(:integer, value) when is_integer(value), do: true
+  def type?(:integer, input) when is_integer(input), do: true
   def type?(:integer, _), do: false
 
-  def type?(:float, value) when is_float(value), do: true
+  def type?(:float, input) when is_float(input), do: true
   def type?(:float, _), do: false
 
-  def type?(:map, value) when is_map(value), do: true
+  def type?(:map, input) when is_map(input), do: true
   def type?(:map, _), do: false
 
-  def type?(:list, value) when is_list(value), do: true
+  def type?(:list, input) when is_list(input), do: true
   def type?(:list, _), do: false
 
   def type?(:date, %Date{}), do: true
@@ -31,57 +58,275 @@ defmodule Drops.Predicates do
   def type?(:time, %Time{}), do: true
   def type?(:time, _), do: false
 
-  def filled?(value) do
-    not empty?(value)
+  @doc ~S"""
+  Checks if a given input is not empty
+
+
+  ## Examples
+
+      iex> Drops.Predicates.filled?("hello")
+      true
+      iex> Drops.Predicates.filled?("")
+      false
+      iex> Drops.Predicates.filled?(["hello", "world"])
+      true
+      iex> Drops.Predicates.filled?(%{hello: "world"})
+      true
+      iex> Drops.Predicates.filled?(%{})
+      false
+
+  """
+  @spec filled?(input :: binary() | list() | map()) :: boolean()
+  def filled?(input) do
+    not empty?(input)
   end
 
+  @doc ~S"""
+  Checks if a given input is empty
+
+
+  ## Examples
+
+      iex> Drops.Predicates.empty?("hello")
+      false
+      iex> Drops.Predicates.empty?("")
+      true
+      iex> Drops.Predicates.empty?(["hello", "world"])
+      false
+      iex> Drops.Predicates.empty?(%{hello: "world"})
+      false
+      iex> Drops.Predicates.empty?(%{})
+      true
+
+  """
+  @spec empty?(input :: binary() | list() | map()) :: boolean()
   def empty?(""), do: true
   def empty?([]), do: true
-  def empty?(%{} = value) when map_size(value) == 0, do: true
-
+  def empty?(%{} = input) when map_size(input) == 0, do: true
   def empty?(_), do: false
 
-  def eql?(left, right) when left == right, do: true
+  @doc ~S"""
+  Checks if a given value is equal to another value
+
+  ## Examples
+
+      iex> Drops.Predicates.eql?("hello", "hello")
+      true
+      iex> Drops.Predicates.eql?("hello", "world")
+      false
+
+  """
+  @spec eql?(value :: any(), input :: any()) :: boolean()
+  def eql?(value, input) when value == input, do: true
   def eql?(_, _), do: false
 
-  def not_eql?(left, right), do: not eql?(left, right)
+  @doc ~S"""
+  Checks if a given value is not equal to another value
 
-  def even?(value), do: Integer.is_even(value)
+  ## Examples
 
-  def odd?(value), do: not even?(value)
+      iex> Drops.Predicates.not_eql?("hello", "hello")
+      false
+      iex> Drops.Predicates.not_eql?("hello", "world")
+      true
 
-  def gt?(left, right) when left < right, do: true
-  def gt?(left, right) when left >= right, do: false
+  """
+  @spec not_eql?(value :: any(), input :: any()) :: boolean()
+  def not_eql?(value, input), do: not eql?(value, input)
 
-  def gteq?(left, right) when left <= right, do: true
-  def gteq?(left, right) when left > right, do: false
+  @doc ~S"""
+  Checks if a given integer is even
 
-  def lt?(left, right) when left > right, do: true
-  def lt?(left, right) when left <= right, do: false
+  ## Examples
 
-  def lteq?(left, right) when left >= right, do: true
-  def lteq?(left, right) when left < right, do: false
+      iex> Drops.Predicates.even?(4)
+      true
+      iex> Drops.Predicates.even?(7)
+      false
 
-  def size?(size, value) when is_map(value) and map_size(value) == size, do: true
-  def size?(size, value) when is_map(value) and map_size(value) != size, do: false
-  def size?(size, value) when is_list(value) and length(value) == size, do: true
-  def size?(size, value) when is_list(value) and length(value) != size, do: false
+  """
+  @spec even?(input :: integer()) :: boolean()
+  def even?(input), do: Integer.is_even(input)
 
-  def match?(regexp, value), do: String.match?(value, regexp)
+  @doc ~S"""
+  Checks if a given integer is odd
 
-  def max_size?(size, value) when is_map(value) and map_size(value) <= size, do: true
-  def max_size?(size, value) when is_map(value) and map_size(value) > size, do: false
+  ## Examples
 
-  def max_size?(size, value) when is_list(value) and length(value) <= size, do: true
-  def max_size?(size, value) when is_list(value) and length(value) > size, do: false
+      iex> Drops.Predicates.odd?(4)
+      false
+      iex> Drops.Predicates.odd?(7)
+      true
 
-  def min_size?(size, value) when is_map(value) and map_size(value) >= size, do: true
-  def min_size?(size, value) when is_map(value) and map_size(value) < size, do: false
+  """
+  @spec odd?(input :: integer()) :: boolean()
+  def odd?(input), do: not even?(input)
 
-  def min_size?(size, value) when is_list(value) and length(value) >= size, do: true
-  def min_size?(size, value) when is_list(value) and length(value) < size, do: false
+  @doc ~S"""
+  Checks if a given input is greater than another value
 
-  def includes?(element, value) when is_list(value), do: element in value
+  ## Examples
 
-  def excludes?(element, value) when is_list(value), do: not includes?(element, value)
+      iex> Drops.Predicates.gt?(2, 1)
+      false
+      iex> Drops.Predicates.gt?(1, 2)
+      true
+
+  """
+  @spec gt?(value :: any(), input :: any()) :: boolean()
+  def gt?(value, input) when value < input, do: true
+  def gt?(value, input) when value >= input, do: false
+
+  @doc ~S"""
+  Checks if a given value is greater than or equal to another value
+
+  ## Examples
+
+      iex> Drops.Predicates.gteq?(2, 1)
+      false
+      iex> Drops.Predicates.gteq?(1, 1)
+      true
+      iex> Drops.Predicates.gteq?(1, 2)
+      true
+
+  """
+  @spec gteq?(value :: any(), input :: any()) :: boolean()
+  def gteq?(value, input) when value <= input, do: true
+  def gteq?(value, input) when value > input, do: false
+
+  @doc ~S"""
+  Checks if a given input is less than another value
+
+  ## Examples
+
+      iex> Drops.Predicates.lt?(2, 1)
+      true
+      iex> Drops.Predicates.lt?(1, 2)
+      false
+
+  """
+  @spec lt?(value :: any(), input :: any()) :: boolean()
+  def lt?(value, input) when value > input, do: true
+  def lt?(value, input) when value <= input, do: false
+
+  @doc ~S"""
+  Checks if a given input is less than or equal to another value
+
+  ## Examples
+
+      iex> Drops.Predicates.lteq?(2, 1)
+      true
+      iex> Drops.Predicates.lteq?(1, 1)
+      true
+      iex> Drops.Predicates.lteq?(1, 2)
+      false
+  """
+  @spec lteq?(value :: any(), input :: any()) :: boolean()
+  def lteq?(value, input) when value >= input, do: true
+  def lteq?(value, input) when value < input, do: false
+
+  @doc ~S"""
+  Checks if a given list or map size is equal to a given size
+
+  ## Examples
+
+      iex> Drops.Predicates.size?(2, [1, 2])
+      true
+      iex> Drops.Predicates.size?(2, [1, 2, 3])
+      false
+      iex> Drops.Predicates.size?(2, %{a: 1, b: 2})
+      true
+      iex> Drops.Predicates.size?(2, %{a: 1, b: 2, c: 3})
+      false
+
+  """
+  @spec size?(size :: integer(), input :: map() | list()) :: boolean()
+  def size?(size, input) when is_map(input) and map_size(input) == size, do: true
+  def size?(size, input) when is_map(input) and map_size(input) != size, do: false
+  def size?(size, input) when is_list(input) and length(input) == size, do: true
+  def size?(size, input) when is_list(input) and length(input) != size, do: false
+
+  @doc ~S"""
+  Checks if a given string matches a given regular expression
+
+  ## Examples
+
+      iex> Drops.Predicates.match?(~r/hello/, "hello world")
+      true
+      iex> Drops.Predicates.match?(~r/hello/, "world")
+      false
+
+  """
+  @spec match?(regexp :: Regex.t(), input :: binary()) :: boolean()
+  def match?(regexp, input), do: String.match?(input, regexp)
+
+  @doc ~S"""
+  Checks if a given map or list size is less than or equal to a given size
+
+  ## Examples
+
+      iex> Drops.Predicates.max_size?(2, [1, 2])
+      true
+      iex> Drops.Predicates.max_size?(2, [1, 2, 3])
+      false
+      iex> Drops.Predicates.max_size?(2, %{a: 1, b: 2})
+      true
+      iex> Drops.Predicates.max_size?(2, %{a: 1, b: 2, c: 3})
+      false
+
+  """
+  @spec max_size?(size :: integer(), input :: map() | list()) :: boolean()
+  def max_size?(size, input) when is_map(input) and map_size(input) <= size, do: true
+  def max_size?(size, input) when is_map(input) and map_size(input) > size, do: false
+  def max_size?(size, input) when is_list(input) and length(input) <= size, do: true
+  def max_size?(size, input) when is_list(input) and length(input) > size, do: false
+
+  @doc ~S"""
+  Checks if a given map or list size is greater than or equal to a given size
+
+  ## Examples
+
+      iex> Drops.Predicates.min_size?(2, [1, 2])
+      true
+      iex> Drops.Predicates.min_size?(2, [1])
+      false
+      iex> Drops.Predicates.min_size?(2, %{a: 1, b: 2})
+      true
+      iex> Drops.Predicates.min_size?(2, %{a: 1})
+      false
+
+  """
+  @spec min_size?(size :: integer(), input :: map() | list()) :: boolean()
+  def min_size?(size, input) when is_map(input) and map_size(input) >= size, do: true
+  def min_size?(size, input) when is_map(input) and map_size(input) < size, do: false
+  def min_size?(size, input) when is_list(input) and length(input) >= size, do: true
+  def min_size?(size, input) when is_list(input) and length(input) < size, do: false
+
+  @doc ~S"""
+  Checks if a given element is included in a given list
+
+  ## Examples
+
+      iex> Drops.Predicates.includes?(1, [1, 2, 3])
+      true
+      iex> Drops.Predicates.includes?(4, [1, 2, 3])
+      false
+
+  """
+  @spec includes?(element :: any(), input :: list()) :: boolean()
+  def includes?(element, input) when is_list(input), do: element in input
+
+  @doc ~S"""
+  Checks if a given element is not included in a given list
+
+  ## Examples
+
+      iex> Drops.Predicates.excludes?(1, [1, 2, 3])
+      false
+      iex> Drops.Predicates.excludes?(4, [1, 2, 3])
+      true
+
+  """
+  @spec excludes?(element :: any(), input :: list()) :: boolean()
+  def excludes?(element, input) when is_list(input), do: not includes?(element, input)
 end

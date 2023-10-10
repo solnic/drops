@@ -1,10 +1,12 @@
 defmodule Drops.PredicatesTest do
   use Drops.ContractCase
 
+  doctest Drops.Predicates
+
   describe "type?/2 with :nil" do
     contract do
       schema do
-        %{required(:test) => type(:nil)}
+        %{required(:test) => type(nil)}
       end
     end
 
@@ -13,7 +15,7 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:nil, 312]}}]} =
+      assert {:error, [{:error, {[:test], :type?, [nil, 312]}}]} =
                contract.conform(%{test: 312})
     end
   end
@@ -98,7 +100,8 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:map, 312]}}]} = contract.conform(%{test: 312})
+      assert {:error, [{:error, {[:test], :type?, [:map, 312]}}]} =
+               contract.conform(%{test: 312})
     end
   end
 
@@ -182,7 +185,8 @@ defmodule Drops.PredicatesTest do
     end
 
     test "returns error with an empty string", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :filled?, [""]}}]} = contract.conform(%{test: ""})
+      assert {:error, [{:error, {[:test], :filled?, [""]}}]} =
+               contract.conform(%{test: ""})
     end
   end
 
