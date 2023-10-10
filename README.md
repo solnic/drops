@@ -16,9 +16,9 @@ end
 
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and published on [HexDocs](https://hexdocs.pm). Once published, the docs can be found at <https://hexdocs.pm/drops>.
 
-## Drops.Contract
+## Contracts
 
-You can use Drops.Contract to define data coercion and validation schemas with arbitrary validation rules. Here's a simple example:
+You can use `Drops.Contract` to define data coercion and validation schemas with arbitrary validation rules. Here's an example of a `UserContract` which casts and validates a nested map:
 
 ```elixir
 defmodule UserContract do
@@ -27,12 +27,12 @@ defmodule UserContract do
   schema(atomize: true) do
     %{
       required(:user) => %{
-        required(:name) => type(:string, [:filled?]),
-        required(:age) => type(:integer),
+        required(:name) => string(:filled?),
+        required(:age) => integer(),
         required(:address) => %{
-          required(:city) => type(:string, [:filled?]),
-          required(:street) => type(:string, [:filled?]),
-          required(:zipcode) => type(:string, [:filled?])
+          required(:city) => string(:filled?),
+          required(:street) => string(:filled?),
+          required(:zipcode) => string(:filled?)
         }
       }
     }
@@ -73,3 +73,40 @@ UserContract.conform(%{
 #  }}
 ```
 
+## Rules
+
+You can define arbitrary rule functions using `rule` macro. These rules will be applied to the input data only if it passed schema validation. This way you can be sure that rules operate on data that's safe to work with.
+
+
+Here's an example how you could define a rule that checks if either email or login is provided:
+
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:email) => maybe(:string),
+      required(:login) => maybe(:string)
+    }
+  end
+
+  rule(:either_login_or_email, %{email: email, login: login}) do
+    if email == nil and login == nil do
+      {:error, "email or login must be provided"}
+    else
+      :ok
+    end
+  end
+end
+
+UserContract.conform(%{email: "jane@doe.org", login: nil})
+# {:ok, %{email: "jane@doe.org", login: nil}}
+
+UserContract.conform(%{email: nil, login: "jane"})
+# {:ok, %{email: nil, login: "jane"}}
+
+UserContract.conform(%{email: nil, login: nil})
+# {:error, [error: "email or login must be provided"]}
+```
