@@ -92,12 +92,8 @@ defmodule UserContract do
     }
   end
 
-  rule(:either_login_or_email, %{email: email, login: login}) do
-    if email == nil and login == nil do
-      {:error, "email or login must be provided"}
-    else
-      :ok
-    end
+  rule(:either_login_or_email, %{email: nil, login: nil}) do
+    {:error, "email or login must be provided"}
   end
 end
 
