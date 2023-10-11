@@ -6,7 +6,19 @@ defmodule Drops.CastersTest do
   describe ":integer => :string" do
     contract do
       schema do
-        %{required(:test) => cast(:integer) |> type(:string)}
+        %{required(:test) => cast(:integer) |> string()}
+      end
+    end
+
+    test "defining a required key with coercion", %{contract: contract} do
+      assert {:ok, %{test: "12"}} = contract.conform(%{test: 12})
+    end
+  end
+
+  describe ":integer => :string with constraints" do
+    contract do
+      schema do
+        %{required(:test) => cast(:integer) |> string()}
       end
     end
 
@@ -18,7 +30,7 @@ defmodule Drops.CastersTest do
   describe ":string => :integer" do
     contract do
       schema do
-        %{required(:test) => cast(:string) |> type(:integer)}
+        %{required(:test) => cast(:string) |> integer()}
       end
     end
 

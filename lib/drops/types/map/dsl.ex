@@ -107,8 +107,12 @@ defmodule Drops.Types.Map.DSL do
     {:type, {type, predicates}}
   end
 
-  def type({:cast, {input_type, cast_opts}}, output_type) do
+  def type({:cast, {input_type, cast_opts}}, output_type) when is_atom(output_type) do
     {:cast, {type(input_type), type(output_type), cast_opts}}
+  end
+
+  def type({:cast, {input_type, cast_opts}}, output_type) do
+    {:cast, {type(input_type), output_type, cast_opts}}
   end
 
   @doc ~S"""
@@ -227,6 +231,10 @@ defmodule Drops.Types.Map.DSL do
     type(:string, predicates)
   end
 
+  def string({:cast, _} = cast_spec, predicates \\ []) do
+    type(cast_spec, string(predicates))
+  end
+
   @doc ~S"""
   Returns an integer type specification.
 
@@ -267,6 +275,10 @@ defmodule Drops.Types.Map.DSL do
 
   def integer(predicates) when is_list(predicates) do
     type(:integer, predicates)
+  end
+
+  def integer({:cast, _} = cast_spec, predicates \\ []) do
+    type(cast_spec, integer(predicates))
   end
 
   @doc ~S"""
