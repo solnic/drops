@@ -18,14 +18,15 @@ defmodule Drops.Contract.TypeTest do
     end
   end
 
-  describe "type/1 with multiple types" do
+  describe "type/1 with two types" do
     contract do
       schema do
-        %{required(:test) => type([:integer, :string])}
+        %{required(:test) => type([:nil, :integer, :string])}
       end
     end
 
     test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{test: nil}} = contract.conform(%{test: nil})
       assert {:ok, %{test: 312}} = contract.conform(%{test: 312})
       assert {:ok, %{test: "Hello"}} = contract.conform(%{test: "Hello"})
     end

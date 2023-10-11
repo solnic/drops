@@ -75,8 +75,11 @@ defmodule Drops.Types.Map.DSL do
     type(type, predicates)
   end
 
-  def type(types) when is_list(types) do
-    Enum.map(types, &type/1)
+  def type([type | rest]) do
+    case rest do
+      [] -> type(type)
+      _ -> {:sum, {type(type), type(rest)}}
+    end
   end
 
   def type(type) do
@@ -162,7 +165,7 @@ defmodule Drops.Types.Map.DSL do
   @spec maybe(map()) :: [type()]
 
   def maybe(schema) when is_map(schema) do
-    [type(:nil), schema]
+    {:sum, {type(:nil), schema}}
   end
 
   @doc ~S"""

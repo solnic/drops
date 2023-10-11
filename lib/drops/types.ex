@@ -28,7 +28,7 @@ defmodule Drops.Types do
     }
   end
 
-  def from_spec([left, right], opts) do
+  def from_spec({:sum, {left, right}}, opts) do
     %Sum{left: from_spec(left, opts), right: from_spec(right, opts), opts: opts}
   end
 
