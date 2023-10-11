@@ -37,6 +37,8 @@ defmodule Drops.Types.Map do
 
   """
 
+  @type t :: %__MODULE__{}
+
   alias Drops.Types.Map.Key
 
   defstruct [:primitive, :constraints, :keys, :atomize]
