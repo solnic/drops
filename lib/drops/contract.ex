@@ -192,7 +192,7 @@ defmodule Drops.Contract do
       iex> UserContract.conform(%{name: "John", age: 21})
       {:ok, %{name: "John", age: 21}}
 
-  ## Nested schema
+  ## Nested atomized schema
 
       iex> defmodule UserContract do
       ...>   use Drops.Contract
@@ -250,9 +250,8 @@ defmodule Drops.Contract do
   @doc ~S"""
   Define validation rules that are applied to the data validated by the schema.
 
-  Rules are *not* applied if schema validation failed.
-
   ## Examples
+
       iex> defmodule UserContract do
       ...>   use Drops.Contract
       ...>
@@ -263,12 +262,8 @@ defmodule Drops.Contract do
       ...>     }
       ...>   end
       ...>
-      ...>   rule(:either_login_or_email, %{email: email, login: login}) do
-      ...>     if email == nil and login == nil do
-      ...>       {:error, "email or login must be present"}
-      ...>     else
-      ...>       :ok
-      ...>     end
+      ...>   rule(:either_login_or_email, %{email: nil, login: nil}) do
+      ...>     {:error, "email or login must be present"}
       ...>   end
       ...> end
       iex> UserContract.conform(%{email: "jane@doe.org", login: nil})
@@ -277,6 +272,7 @@ defmodule Drops.Contract do
       {:ok, %{email: nil, login: "jane"}}
       iex> UserContract.conform(%{email: nil, login: nil})
       {:error, [error: "email or login must be present"]}
+
   """
   defmacro rule(name, input, do: block) do
     quote do
