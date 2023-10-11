@@ -57,6 +57,9 @@ defmodule Drops.Contract.RuleTest do
     end
 
     test "returns predicate errors and skips rules", %{contract: contract} do
+      assert {:error, [{:error, {[:user], :type?, [:map, ""]}}]} =
+               contract.conform(%{user: ""})
+
       assert {:error, [{:error, {[:user, :name], :filled?, [""]}}]} =
                contract.conform(%{user: %{name: ""}})
     end
