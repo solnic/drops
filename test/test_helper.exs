@@ -4,8 +4,6 @@ defmodule Drops.ContractCase do
   using do
     quote do
       import Drops.ContractCase
-
-      alias Drops.Contract.Map
     end
   end
 
@@ -21,6 +19,10 @@ defmodule Drops.ContractCase do
         on_exit(fn ->
           :code.purge(__MODULE__.TestContract)
           :code.delete(__MODULE__.TestContract)
+
+          # Defined in doctests
+          :code.purge(__MODULE__.UserContract)
+          :code.delete(__MODULE__.UserContract)
         end)
 
         {:ok, contract: TestContract}
