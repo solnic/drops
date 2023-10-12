@@ -103,6 +103,13 @@ defmodule Drops.Types.Map.DSL do
   @spec type(atom(), []) :: type()
   @spec type({:cast, {atom(), []}}, type()) :: type()
 
+  def type([type | rest], predicates) when is_list(predicates) do
+    case rest do
+      [] -> type(type, predicates)
+      _ -> {:sum, {type(type, predicates), type(rest, predicates)}}
+    end
+  end
+
   def type(type, predicates) when is_list(predicates) do
     {:type, {type, predicates}}
   end

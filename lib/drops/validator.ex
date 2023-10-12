@@ -59,8 +59,14 @@ defmodule Drops.Validator do
           {:ok, _} = success ->
             success
 
-          {:error, _} ->
-            validate(value, type.right, path: path)
+          {:error, _} = left_error ->
+            case validate(value, type.right, path: path) do
+              {:ok, _} = success ->
+                success
+
+              {:error, _} = right_error ->
+                {:error, {:or, {left_error, right_error}}}
+            end
         end
       end
 

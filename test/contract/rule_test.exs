@@ -90,11 +90,19 @@ defmodule Drops.Contract.RuleTest do
 
     test "returns success when schema and rules passed", %{contract: contract} do
       assert {:ok, %{login: "jane"}} = contract.conform(%{login: "jane", email: nil})
-      assert {:ok, %{email: "jane@doe.org"}} = contract.conform(%{login: nil, email: "jane@doe.org"})
+
+      assert {:ok, %{email: "jane@doe.org"}} =
+               contract.conform(%{login: nil, email: "jane@doe.org"})
     end
 
     test "returns predicate errors and skips rules", %{contract: contract} do
-      assert {:error, [{:error, {[:login], :filled?, [""]}}]} =
+      assert {:error,
+              [
+                error:
+                  {:or,
+                   {{:error, {[:login], :type?, [nil, ""]}},
+                    {:error, {[:login], :filled?, [""]}}}}
+              ]} =
                contract.conform(%{login: "", email: nil})
     end
 
