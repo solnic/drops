@@ -327,6 +327,23 @@ defmodule Drops.Types.Map.DSL do
   end
 
   @doc ~S"""
+  Returns a boolean type specification.
+
+  ## Examples
+
+      # a boolean with no constraints
+      boolean()
+
+  """
+  @doc since: "0.1.0"
+
+  @spec boolean() :: type()
+
+  def boolean() do
+    type(:boolean)
+  end
+
+  @doc ~S"""
   Returns a map type specification.
 
   ## Examples

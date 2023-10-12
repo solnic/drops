@@ -14,6 +14,10 @@ defmodule Drops.Predicates do
       true
       iex> Drops.Predicates.type?(:atom, :hello)
       true
+      iex> Drops.Predicates.type?(:boolean, true)
+      true
+      iex> Drops.Predicates.type?(:boolean, false)
+      true
       iex> Drops.Predicates.type?(:string, "hello")
       true
       iex> Drops.Predicates.type?(:integer, 1)
@@ -33,6 +37,9 @@ defmodule Drops.Predicates do
 
   def type?(:atom, input) when is_atom(input), do: true
   def type?(:atom, _), do: false
+
+  def type?(:boolean, input) when is_boolean(input), do: true
+  def type?(:boolean, _), do: false
 
   def type?(:string, input) when is_binary(input), do: true
   def type?(:string, _), do: false
