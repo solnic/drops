@@ -289,6 +289,44 @@ defmodule Drops.Types.Map.DSL do
   end
 
   @doc ~S"""
+  Returns a float type specification.
+
+  ## Examples
+
+      # a float with no constraints
+      float()
+
+  """
+  @doc since: "0.1.0"
+
+  @spec float() :: type()
+
+  def float() do
+    type(:float)
+  end
+
+  @doc ~S"""
+  Returns a float type specification with additional constraints.
+
+  ## Examples
+
+      # a float with constraints
+      float(gt?: 1.0)
+
+  """
+  @doc since: "0.1.0"
+
+  @spec float([]) :: type()
+
+  def float(predicates) when is_list(predicates) do
+    type(:float, predicates)
+  end
+
+  def float({:cast, _} = cast_spec, predicates \\ []) do
+    type(cast_spec, float(predicates))
+  end
+
+  @doc ~S"""
   Returns a map type specification.
 
   ## Examples
