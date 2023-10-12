@@ -19,13 +19,115 @@ Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_do
 
 ## Contracts
 
-You can use `Drops.Contract` to define data coercion and validation schemas with arbitrary validation rules. Here's an example of a `UserContract` which casts and validates a nested map:
+You can use `Drops.Contract` to define data coercion and validation schemas with arbitrary validation rules.
+
+Here's an example of a simple `UserContract` which defines two required keys and expected types:
 
 ```elixir
 defmodule UserContract do
   use Drops.Contract
 
-  schema(atomize: true) do
+  schema do
+    %{
+      required(:name) => string(),
+      required(:email) => string()
+    }
+  end
+end
+
+UserContract.conform(%{name: "Jane", email: "jane@doe.org"})
+# {:ok, %{name: "Jane", email: "jane@doe.org"}}
+
+UserContract.conform(%{email: 312})
+# {:error, [error: {[], :has_key?, [:name]}]}
+
+UserContract.conform(%{name: "Jane", email: 312})
+# {:error, [error: {[:email], :type?, [:string, 321]}]}
+```
+
+## Schemas
+
+Contract's schemas are a powerful way of defining the exact shape of the data you expect to work with. They are used to validate **the structure** and **the values** of the input data. Using schemas, you can define which keys are required and whic are optional, the exact types of the values and any additional checks that have to be applied to the values.
+
+### Required and optional keys
+
+A schema must explicitly define which keys are required and which are optional. This is done by using `required` and `optional` functions. Here's an example:
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      optional(:name) => string(),
+      required(:email) => string()
+    }
+  end
+end
+
+UserContract.conform(%{email: "janedoe.org"})
+# {:ok, %{email: "janedoe.org"}}
+
+UserContract.conform(%{name: "Jane", email: "janedoe.org"})
+# {:ok, %{name: "Jane", email: "janedoe.org"}}
+```
+
+### Types
+
+You can define the expected types of the values using `string`, `integer`, `float`, `boolean`, `atom`, `map`, `list`, `any` and `maybe` functions. Here's an example:
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:name) => string(),
+      required(:age) => integer(),
+      required(:active) => boolean(),
+      required(:tags) => list(:string),
+      required(:settings) => map(:string),
+      required(:address) => maybe(:string)
+    }
+  end
+end
+```
+
+### Predicate checks
+
+You can define types that must meet additional requirements by using built-in predicates. Here's an example:
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:name) => string(:filled?),
+      required(:age) => integer(gt?: 18)
+    }
+  end
+end
+
+UserContract.conform(%{name: "Jane", age: 21})
+# {:ok, %{name: "Jane", age: 21}}
+
+UserContract.conform(%{name: "", age: 21})
+# {:error, [error: {[:name], :filled?, [""]}]}
+
+UserContract.conform(%{name: "Jane", age: 12})
+# {:error, [error: {[:age], :gt?, [18, 12]}]}
+```
+
+### Nested schemas
+
+Schemas can be nested, including complex cases like nested lists and maps. Here's an example:
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
     %{
       required(:user) => %{
         required(:name) => string(:filled?),
@@ -34,43 +136,146 @@ defmodule UserContract do
           required(:city) => string(:filled?),
           required(:street) => string(:filled?),
           required(:zipcode) => string(:filled?)
-        }
+        },
+        required(:tags) =>
+          list(%{
+            required(:name) => string(:filled?),
+            required(:created_at) => integer()
+          })
       }
     }
   end
 end
 
 UserContract.conform(%{
- "user" => %{
-   "name" => "John",
-   "age" => 21,
-   "address" => %{
-     "city" => "New York",
-     "street" => "",
-     "zipcode" => "10001"
-   }
- }
+  user: %{
+    name: "Jane",
+    age: 21,
+    address: %{
+      city: "New York",
+      street: "Broadway",
+      zipcode: "10001"
+    },
+    tags: [
+      %{name: "foo", created_at: 1_234_567_890},
+      %{name: "bar", created_at: 1_234_567_890}
+    ]
+  }
 })
-# {:error, [error: {:filled?, [:user, :address, :street], ""}]}
+# {:ok,
+#   %{
+#     user: %{
+#       name: "Jane",
+#       address: %{city: "New York", street: "Broadway", zipcode: "10001"},
+#       age: 21,
+#       tags: [
+#         %{name: "foo", created_at: 1234567890},
+#         %{name: "bar", created_at: 1234567890}
+#       ]
+#     }
+#   }}
 
 UserContract.conform(%{
- "user" => %{
-   "name" => "John",
-   "age" => 21,
-   "address" => %{
-     "city" => "New York",
-     "street" => "Central Park",
-     "zipcode" => "10001"
-   }
- }
+  user: %{
+    name: "Jane",
+    age: 21,
+    address: %{
+      city: "New York",
+      street: "Broadway",
+      zipcode: ""
+    },
+    tags: [
+      %{name: "foo", created_at: 1_234_567_890},
+      %{name: "bar", created_at: nil}
+    ]
+  }
+})
+# {:error,
+#  [
+#    error: {[:user, :address, :zipcode], :filled?, [""]},
+#    error: {[:user, :tags, 1, :created_at], :type?, [:integer, nil]}
+#  ]}
+```
+
+### Type casting
+
+You can define custom type casting functions that will be applied to the input data before it's validated. This is useful when you want to convert the input data to a different format, for example, when you want to convert a string to an integer. Here's an example:
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:count) => cast(:string) |> integer(gt?: 0)
+    }
+  end
+end
+
+UserContract.conform(%{count: "1"})
+# {:ok, %{count: 1}}
+
+UserContract.conform(%{count: "-1"})
+# {:error, [error: {[:count], :gt?, [0, -1]}]}
+```
+
+It's also possible to define a custom casting module and use it via `caster` option:
+
+```elixir
+defmodule CustomCaster do
+  @spec cast(input_type :: atom(), output_type :: atom(), any, Keyword.t()) :: any()
+  def cast(:string, :string, value, _opts) do
+    String.downcase(value)
+  end
+end
+
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:text) => cast(:string, caster: CustomCaster) |> string()
+    }
+  end
+end
+
+UserContract.conform(%{text: "HELLO"})
+# {:ok, %{text: "hello"}}
+
+### Atomized maps
+
+You can define a schema that will atomize the input map using `atomize: true` option:
+
+```elixir
+defmodule UserContract do
+  use Drops.Contract
+
+  schema(atomize: true) do
+    %{
+      required(:name) => string(),
+      required(:age) => integer(),
+      required(:tags) =>
+        list(%{
+          required(:name) => string()
+        })
+    }
+  end
+end
+
+UserContract.conform(%{
+  "name" => "Jane",
+  "age" => 21,
+  "tags" => [
+    %{"name" => "red"},
+    %{"name" => "green"},
+    %{"name" => "blue"}
+  ]
 })
 # {:ok,
 #  %{
-#    user: %{
-#      name: "John",
-#      address: %{city: "New York", street: "Central Park", zipcode: "10001"},
-#      age: 21
-#    }
+#    name: "Jane",
+#    age: 21,
+#    tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]
 #  }}
 ```
 

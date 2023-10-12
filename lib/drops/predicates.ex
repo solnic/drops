@@ -239,10 +239,14 @@ defmodule Drops.Predicates do
   def lteq?(value, input) when value < input, do: false
 
   @doc ~S"""
-  Checks if a given list or map size is equal to a given size
+  Checks if a given list, map or string size is equal to a given size
 
   ## Examples
 
+      iex> Drops.Predicates.size?(2, "ab")
+      true
+      iex> Drops.Predicates.size?(2, "abc")
+      false
       iex> Drops.Predicates.size?(2, [1, 2])
       true
       iex> Drops.Predicates.size?(2, [1, 2, 3])
@@ -275,10 +279,16 @@ defmodule Drops.Predicates do
   def match?(regexp, input), do: String.match?(input, regexp)
 
   @doc ~S"""
-  Checks if a given map or list size is less than or equal to a given size
+  Checks if a given map, list or string size is less than or equal to a given size
 
   ## Examples
 
+      iex> Drops.Predicates.max_size?(2, "a")
+      true
+      iex> Drops.Predicates.max_size?(2, "ab")
+      true
+      iex> Drops.Predicates.max_size?(2, "abc")
+      false
       iex> Drops.Predicates.max_size?(2, [1, 2])
       true
       iex> Drops.Predicates.max_size?(2, [1, 2, 3])
@@ -297,10 +307,16 @@ defmodule Drops.Predicates do
   def max_size?(size, input) when is_binary(input), do: String.length(input) <= size
 
   @doc ~S"""
-  Checks if a given map or list size is greater than or equal to a given size
+  Checks if a given map, list or string size is greater than or equal to a given size
 
   ## Examples
 
+      iex> Drops.Predicates.min_size?(2, "ab")
+      true
+      iex> Drops.Predicates.min_size?(2, "abc")
+      true
+      iex> Drops.Predicates.min_size?(2, "a")
+      false
       iex> Drops.Predicates.min_size?(2, [1, 2])
       true
       iex> Drops.Predicates.min_size?(2, [1])
