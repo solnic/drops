@@ -21,8 +21,8 @@ defmodule Drops.Validator do
 
             validate(casted_value, output_type, path: path)
 
-          {:error, {predicate, value}} ->
-            {:error, {predicate, path, value}}
+          {:error, _} = error ->
+            {:error, {:cast, error}}
         end
       end
 

@@ -18,12 +18,22 @@ defmodule Drops.CastersTest do
   describe ":integer => :string with constraints" do
     contract do
       schema do
-        %{required(:test) => cast(:integer) |> string()}
+        %{required(:test) => cast(:integer) |> string(size?: 3)}
       end
     end
 
-    test "defining a required key with coercion", %{contract: contract} do
-      assert {:ok, %{test: "12"}} = contract.conform(%{test: 12})
+    test "returns successful result when input is valid", %{contract: contract} do
+      assert {:ok, %{test: "312"}} = contract.conform(%{test: 312})
+    end
+
+    test "returns error result when output is invalid", %{contract: contract} do
+      assert {:error, [error: {[:test], :size?, [3, "12"]}]} =
+               contract.conform(%{test: 12})
+    end
+
+    test "returns error when casting could not be applied", %{contract: contract} do
+      assert {:error, [error: {:cast, {:error, {[:test], :type?, [:integer, "12"]}}}]} =
+               contract.conform(%{test: "12"})
     end
   end
 
@@ -59,7 +69,7 @@ defmodule Drops.CastersTest do
     end
 
     test "defining a required key with coercion", %{contract: contract} do
-      timestamp = 1695277470
+      timestamp = 1_695_277_470
       date_time = DateTime.from_unix!(timestamp, :second)
 
       assert {:ok, %{test: ^date_time}} = contract.conform(%{test: timestamp})
@@ -74,7 +84,7 @@ defmodule Drops.CastersTest do
     end
 
     test "defining a required key with coercion", %{contract: contract} do
-      timestamp = 1695277723355
+      timestamp = 1_695_277_723_355
       date_time = DateTime.from_unix!(timestamp, :millisecond)
 
       assert {:ok, %{test: ^date_time}} = contract.conform(%{test: timestamp})
