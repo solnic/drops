@@ -385,7 +385,7 @@ defmodule Drops.PredicatesTest do
     end
   end
 
-  describe "size?/1" do
+  describe "size?/1 with a list" do
     contract do
       schema do
         %{required(:test) => type(:list, size?: 2)}
@@ -406,7 +406,50 @@ defmodule Drops.PredicatesTest do
     end
   end
 
-  describe "max_size?/1" do
+  describe "size?/1 with a map" do
+    contract do
+      schema do
+        %{required(:test) => type(:map, size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: %{a: 1, b: 2}}} =
+               contract.conform(%{test: %{a: 1, b: 2}})
+    end
+
+    test "returns error when the value's size is not equal to the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {[:test], :size?, [2, %{a: 1}]}}]} =
+               contract.conform(%{test: %{a: 1}})
+    end
+  end
+
+  describe "size?/1 with a string" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: "ab"}} = contract.conform(%{test: "ab"})
+    end
+
+    test "returns error when the value's size is not equal to the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {[:test], :size?, [2, "a"]}}]} =
+               contract.conform(%{test: "a"})
+    end
+  end
+
+  describe "max_size?/1 with a list" do
     contract do
       schema do
         %{required(:test) => type(:list, max_size?: 2)}
@@ -433,7 +476,62 @@ defmodule Drops.PredicatesTest do
     end
   end
 
-  describe "min_size?/1" do
+  describe "max_size?/1 with a string" do
+    contract do
+      schema do
+        %{required(:test) => string(max_size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: "ab"}} = contract.conform(%{test: "ab"})
+    end
+
+    test "returns success when the value's size is less than the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: "a"}} = contract.conform(%{test: "a"})
+    end
+
+    test "returns error when the value's size is greater than the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {[:test], :max_size?, [2, "abc"]}}]} =
+               contract.conform(%{test: "abc"})
+    end
+  end
+
+  describe "max_size/1 with a map" do
+    contract do
+      schema do
+        %{required(:test) => map(max_size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: %{a: 1, b: 2}}} =
+               contract.conform(%{test: %{a: 1, b: 2}})
+    end
+
+    test "returns success when the value's size is less than the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: %{a: 1}}} = contract.conform(%{test: %{a: 1}})
+    end
+
+    test "returns error when the value's size is greater than the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {[:test], :max_size?, [2, %{a: 1, b: 2, c: 3}]}}]} =
+               contract.conform(%{test: %{a: 1, b: 2, c: 3}})
+    end
+  end
+
+  describe "min_size?/1 with a list" do
     contract do
       schema do
         %{required(:test) => type(:list, min_size?: 2)}
@@ -457,6 +555,62 @@ defmodule Drops.PredicatesTest do
     } do
       assert {:error, [{:error, {[:test], :min_size?, [2, [1]]}}]} =
                contract.conform(%{test: [1]})
+    end
+  end
+
+  describe "min_size?/1 with a string" do
+    contract do
+      schema do
+        %{required(:test) => string(min_size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: "ab"}} = contract.conform(%{test: "ab"})
+    end
+
+    test "returns success when the value's size is greater than the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: "abc"}} = contract.conform(%{test: "abc"})
+    end
+
+    test "returns error when the value's size is less than the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {[:test], :min_size?, [2, "a"]}}]} =
+               contract.conform(%{test: "a"})
+    end
+  end
+
+  describe "min_size?/1 with a map" do
+    contract do
+      schema do
+        %{required(:test) => map(min_size?: 2)}
+      end
+    end
+
+    test "returns success when the value's size is equal to the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: %{a: 1, b: 2}}} =
+               contract.conform(%{test: %{a: 1, b: 2}})
+    end
+
+    test "returns success when the value's size is greater than the arg", %{
+      contract: contract
+    } do
+      assert {:ok, %{test: %{a: 1, b: 2, c: 3}}} =
+               contract.conform(%{test: %{a: 1, b: 2, c: 3}})
+    end
+
+    test "returns error when the value's size is less than the arg", %{
+      contract: contract
+    } do
+      assert {:error, [{:error, {[:test], :min_size?, [2, %{a: 1}]}}]} =
+               contract.conform(%{test: %{a: 1}})
     end
   end
 

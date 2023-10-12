@@ -240,11 +240,12 @@ defmodule Drops.Predicates do
       false
 
   """
-  @spec size?(size :: integer(), input :: map() | list()) :: boolean()
+  @spec size?(size :: integer(), input :: map() | list() | String.t()) :: boolean()
   def size?(size, input) when is_map(input) and map_size(input) == size, do: true
   def size?(size, input) when is_map(input) and map_size(input) != size, do: false
   def size?(size, input) when is_list(input) and length(input) == size, do: true
   def size?(size, input) when is_list(input) and length(input) != size, do: false
+  def size?(size, input) when is_binary(input), do: String.length(input) == size
 
   @doc ~S"""
   Checks if a given string matches a given regular expression
@@ -275,11 +276,12 @@ defmodule Drops.Predicates do
       false
 
   """
-  @spec max_size?(size :: integer(), input :: map() | list()) :: boolean()
+  @spec max_size?(size :: integer(), input :: map() | list() | String.t()) :: boolean()
   def max_size?(size, input) when is_map(input) and map_size(input) <= size, do: true
   def max_size?(size, input) when is_map(input) and map_size(input) > size, do: false
   def max_size?(size, input) when is_list(input) and length(input) <= size, do: true
   def max_size?(size, input) when is_list(input) and length(input) > size, do: false
+  def max_size?(size, input) when is_binary(input), do: String.length(input) <= size
 
   @doc ~S"""
   Checks if a given map or list size is greater than or equal to a given size
@@ -296,11 +298,12 @@ defmodule Drops.Predicates do
       false
 
   """
-  @spec min_size?(size :: integer(), input :: map() | list()) :: boolean()
+  @spec min_size?(size :: integer(), input :: map() | list() | String.t()) :: boolean()
   def min_size?(size, input) when is_map(input) and map_size(input) >= size, do: true
   def min_size?(size, input) when is_map(input) and map_size(input) < size, do: false
   def min_size?(size, input) when is_list(input) and length(input) >= size, do: true
   def min_size?(size, input) when is_list(input) and length(input) < size, do: false
+  def min_size?(size, input) when is_binary(input), do: String.length(input) >= size
 
   @doc ~S"""
   Checks if a given element is included in a given list
