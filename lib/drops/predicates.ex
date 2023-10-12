@@ -12,6 +12,10 @@ defmodule Drops.Predicates do
 
       iex> Drops.Predicates.type?(:nil, nil)
       true
+      iex> Drops.Predicates.type?(:any, nil)
+      true
+      iex> Drops.Predicates.type?(:any, "foo")
+      true
       iex> Drops.Predicates.type?(:atom, :hello)
       true
       iex> Drops.Predicates.type?(:boolean, true)
@@ -34,6 +38,8 @@ defmodule Drops.Predicates do
 
   def type?(nil, nil), do: true
   def type?(nil, _), do: false
+
+  def type?(:any, _), do: true
 
   def type?(:atom, input) when is_atom(input), do: true
   def type?(:atom, _), do: false

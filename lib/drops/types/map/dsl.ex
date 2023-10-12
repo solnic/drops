@@ -162,6 +162,22 @@ defmodule Drops.Types.Map.DSL do
   end
 
   @doc ~S"""
+  Returns :any type specification.
+
+  ## Examples
+
+      any()
+
+  """
+  @doc since: "0.1.0"
+
+  @spec any() :: type()
+
+  def any() do
+    type(:any)
+  end
+
+  @doc ~S"""
   Returns a maybe type specification.
 
   ## Examples
