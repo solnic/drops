@@ -14,6 +14,8 @@ defmodule UserContract do
 end
 
 UserContract.conform(%{
+  "unexpected" => "value",
+  "this" => "should not be here",
   "name" => "Jane",
   "age" => 21,
   "tags" => [

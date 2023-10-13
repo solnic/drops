@@ -245,7 +245,7 @@ UserContract.conform(%{text: "HELLO"})
 
 ### Atomized maps
 
-You can define a schema that will atomize the input map using `atomize: true` option:
+You can define a schema that will atomize the input map using `atomize: true` option. Only keys that you specified will be atomized, any unexpected key will be ignored. Here's an example:
 
 ```elixir
 defmodule UserContract do
@@ -264,6 +264,8 @@ defmodule UserContract do
 end
 
 UserContract.conform(%{
+  "unexpected" => "value",
+  "this" => "should not be here",
   "name" => "Jane",
   "age" => 21,
   "tags" => [
@@ -272,6 +274,13 @@ UserContract.conform(%{
     %{"name" => "blue"}
   ]
 })
+# {:ok,
+#  %{
+#    name: "Jane",
+#    age: 21,
+#    tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]
+#  }}
+
 # {:ok,
 #  %{
 #    name: "Jane",
