@@ -17,7 +17,13 @@ defmodule Drops.Types do
 
     keys =
       Enum.map(spec, fn {{presence, name}, type_spec} ->
-        %Key{path: [name], presence: presence, type: from_spec(type_spec, opts)}
+        case type_spec do
+          %{primitive: _} ->
+            %Key{path: [name], presence: presence, type: type_spec}
+
+          _ ->
+            %Key{path: [name], presence: presence, type: from_spec(type_spec, opts)}
+        end
       end)
 
     %Map{

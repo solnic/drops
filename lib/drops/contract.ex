@@ -31,7 +31,8 @@ defmodule Drops.Contract do
   @callback conform(data :: map()) :: {:ok, map()} | {:error, list()}
   @callback conform(data :: map(), keys :: list()) :: {:ok, map()} | {:error, list()}
   @callback conform(data :: map(), schema :: Types.Map) :: {:ok, map()} | {:error, list()}
-  @callback conform(data :: map(), schema :: Types.Map, keyword()) :: {:ok, map()} | {:error, list()}
+  @callback conform(data :: map(), schema :: Types.Map, keyword()) ::
+              {:ok, map()} | {:error, list()}
 
   defmacro __using__(_opts) do
     quote do
@@ -41,10 +42,10 @@ defmodule Drops.Contract do
 
       import Drops.Contract
       import Drops.Contract.Runtime
+      import Drops.Types.Map.DSL
 
       @behaviour Drops.Contract
 
-      Module.register_attribute(__MODULE__, :schema, accumulate: false)
       Module.register_attribute(__MODULE__, :rules, accumulate: true)
 
       @before_compile Drops.Contract.Runtime
@@ -162,7 +163,6 @@ defmodule Drops.Contract do
             {:error, nest_errors(error_list, root)}
         end)
       end
-
     end
   end
 
@@ -170,7 +170,10 @@ defmodule Drops.Contract do
     @moduledoc false
     defmacro __before_compile__(_env) do
       quote do
-        def schema, do: @schema
+        def schema, do: @schemas[:default]
+        def schema(name), do: @schemas[name]
+
+        def schemas, do: @schemas
 
         def rules, do: @rules
       end
@@ -246,8 +249,20 @@ defmodule Drops.Contract do
          }
        }}
   """
-  defmacro schema(opts \\ [], do: block) do
-    set_schema(__CALLER__, opts, block)
+  defmacro schema(do: block) do
+    set_schema(__CALLER__, :default, [], block)
+  end
+
+  defmacro schema(name, do: block) when is_atom(name) do
+    set_schema(__CALLER__, name, [], block)
+  end
+
+  defmacro schema(opts, do: block) do
+    set_schema(__CALLER__, :default, opts, block)
+  end
+
+  defmacro schema(name, opts, do: block) when is_atom(name) do
+    set_schema(__CALLER__, name, opts, block)
   end
 
   @doc ~S"""
@@ -287,17 +302,21 @@ defmodule Drops.Contract do
     end
   end
 
-  defp set_schema(_caller, opts, block) do
+  defp set_schema(_caller, name, opts, block) do
     quote do
-      alias Drops.Types
-
       mod = __MODULE__
 
-      import Drops.Types.Map.DSL
+      schemas = Module.get_attribute(mod, :schemas, %{})
 
-      Module.put_attribute(mod, :schema, Types.from_spec(unquote(block), unquote(opts)))
-
-      import Drops.Contract.Runtime
+      Module.put_attribute(
+        mod,
+        :schemas,
+        Map.put(
+          schemas,
+          unquote(name),
+          Drops.Types.from_spec(unquote(block), unquote(opts))
+        )
+      )
     end
   end
 end
