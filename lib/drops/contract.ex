@@ -62,6 +62,22 @@ defmodule Drops.Contract do
         conform(data, schema.keys)
       end
 
+      def conform(data, %Types.Sum{} = type) do
+        case conform(data, type.left) do
+          {:ok, value} ->
+            {:ok, value}
+
+          {:error, _} = left_errors ->
+            case conform(data, type.right) do
+              {:ok, value} ->
+                {:ok, value}
+
+              {:error, error} = right_errors ->
+                {:error, {:or, {left_errors, right_errors}}}
+            end
+        end
+      end
+
       def conform(data, keys) when is_list(keys) do
         results = validate(data, keys)
         output = to_output(results)
@@ -198,7 +214,7 @@ defmodule Drops.Contract do
       iex> UserContract.conform(%{name: "John", age: 21})
       {:ok, %{name: "John", age: 21}}
   """
-  @spec schema(do: Macro.t) :: Macro.t
+  @spec schema(do: Macro.t()) :: Macro.t()
   defmacro schema(do: block) do
     set_schema(__CALLER__, :default, [], block)
   end
@@ -316,17 +332,17 @@ defmodule Drops.Contract do
          error: {[:age], :type?, [:integer, "21"]}
        ]}
   """
-  @spec schema(name :: atom()) :: Macro.t
+  @spec schema(name :: atom()) :: Macro.t()
   defmacro schema(name, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, [], block)
   end
 
-  @spec schema(opts :: keyword()) :: Macro.t
+  @spec schema(opts :: keyword()) :: Macro.t()
   defmacro schema(opts, do: block) do
     set_schema(__CALLER__, :default, opts, block)
   end
 
-  @spec schema(name :: atom(), opts :: keyword()) :: Macro.t
+  @spec schema(name :: atom(), opts :: keyword()) :: Macro.t()
   defmacro schema(name, opts, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, opts, block)
   end

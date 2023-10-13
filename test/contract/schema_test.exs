@@ -106,7 +106,8 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, {[], :has_key?, [:age]}}]} = contract.conform(%{name: "Jane"})
+      assert {:error, [{:error, {[], :has_key?, [:age]}}]} =
+               contract.conform(%{name: "Jane"})
     end
 
     test "returns error with invalid data", %{contract: contract} do
@@ -356,6 +357,34 @@ defmodule Drops.Contract.SchemaTest do
                    }
                  }
                })
+    end
+  end
+
+  describe "sum of schemas" do
+    contract do
+      schema(:left) do
+        %{required(:name) => string()}
+      end
+
+      schema(:right) do
+        %{required(:login) => string()}
+      end
+
+      schema do
+        [@schemas.left, @schemas.right]
+      end
+    end
+
+    test "returns success when either of the schemas passed", %{contract: contract} do
+      assert {:ok, %{name: "John Doe"}} = contract.conform(%{name: "John Doe"})
+      assert {:ok, %{login: "john"}} = contract.conform(%{login: "john"})
+    end
+
+    test "returns error when both schemas didn't pass", %{contract: contract} do
+      assert {:error,
+              {:or,
+               {{:error, [error: {[], :has_key?, [:name]}]},
+                {:error, [error: {[], :has_key?, [:login]}]}}}} = contract.conform(%{})
     end
   end
 end

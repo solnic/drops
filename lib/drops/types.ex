@@ -55,6 +55,10 @@ defmodule Drops.Types do
     }
   end
 
+  def from_spec([left, right], opts) do
+    %Sum{left: left, right: right, opts: opts}
+  end
+
   def from_spec(spec, opts) do
     %Type{
       primitive: infer_primitive(spec, opts),
