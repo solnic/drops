@@ -32,7 +32,7 @@ defmodule Drops.CastersTest do
     end
 
     test "returns error when casting could not be applied", %{contract: contract} do
-      assert {:error, [error: {:cast, {:error, {[:test], :type?, [:integer, "12"]}}}]} =
+      assert {:error, [{:cast, {:error, {[:test], :type?, [:integer, "12"]}}}]} =
                contract.conform(%{test: "12"})
     end
   end

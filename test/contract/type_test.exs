@@ -34,13 +34,14 @@ defmodule Drops.Contract.TypeTest do
     test "returns error with invalid data", %{contract: contract} do
       assert {:error,
               [
-                error: {
-                  :or,
-                  {{:error, {[:test], :type?, [nil, :invalid]}},
-                   {:error,
-                    {:or,
-                     {{:error, {[:test], :type?, [:integer, :invalid]}},
-                      {:error, {[:test], :type?, [:string, :invalid]}}}}}}
+                or: {
+                  {:error, {[:test], :type?, [nil, :invalid]}},
+                  {:error,
+                   [
+                     or:
+                       {{:error, {[:test], :type?, [:integer, :invalid]}},
+                        {:error, {[:test], :type?, [:string, :invalid]}}}
+                   ]}
                 }
               ]} =
                contract.conform(%{test: :invalid})
@@ -62,19 +63,17 @@ defmodule Drops.Contract.TypeTest do
     test "returns error with invalid data", %{contract: contract} do
       assert {:error,
               [
-                error:
-                  {:or,
-                   {{:error, {[:test], :type?, [:integer, :invalid]}},
-                    {:error, {[:test], :type?, [:string, :invalid]}}}}
+                or:
+                  {{:error, {[:test], :type?, [:integer, :invalid]}},
+                   {:error, {[:test], :type?, [:string, :invalid]}}}
               ]} =
                contract.conform(%{test: :invalid})
 
       assert {:error,
               [
-                {:error,
-                 {:or,
+                or:
                   {{:error, {[:test], :type?, [:integer, ""]}},
-                   {:error, {[:test], :filled?, [""]}}}}}
+                   {:error, {[:test], :filled?, [""]}}}
               ]} =
                contract.conform(%{test: ""})
     end
@@ -95,19 +94,17 @@ defmodule Drops.Contract.TypeTest do
     test "returns error with invalid data", %{contract: contract} do
       assert {:error,
               [
-                error:
-                  {:or,
-                   {{:error, {[:test], :filled?, [[]]}},
-                    {:error, {[:test], :type?, [:map, []]}}}}
+                or:
+                  {{:error, {[:test], :filled?, [[]]}},
+                   {:error, {[:test], :type?, [:map, []]}}}
               ]} =
                contract.conform(%{test: []})
 
       assert {:error,
               [
-                error:
-                  {:or,
-                   {{:error, {[:test], :type?, [:list, %{}]}},
-                    {:error, {[:test], :filled?, [%{}]}}}}
+                or:
+                  {{:error, {[:test], :type?, [:list, %{}]}},
+                   {:error, {[:test], :filled?, [%{}]}}}
               ]} =
                contract.conform(%{test: %{}})
     end

@@ -360,6 +360,39 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
+  describe "using list shortcut for sum types" do
+    contract do
+      schema(:left) do
+        %{required(:name) => string()}
+      end
+
+      schema(:right) do
+        %{required(:login) => string()}
+      end
+
+      schema do
+        %{
+          required(:user) => [@schemas.left, @schemas.right]
+        }
+      end
+    end
+
+    test "returns success when either of the schemas passed", %{contract: contract} do
+      assert {:ok, %{user: %{name: "John Doe"}}} =
+               contract.conform(%{user: %{name: "John Doe"}})
+    end
+
+    test "returns error when both schemas didn't pass", %{contract: contract} do
+      assert {:error,
+              [
+                or:
+                  {{:error, [error: {[:user], :has_key?, [:name]}]},
+                   {:error, [error: {[:user], :has_key?, [:login]}]}}
+              ]} =
+               contract.conform(%{user: %{}})
+    end
+  end
+
   describe "sum of schemas" do
     contract do
       schema(:left) do

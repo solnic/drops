@@ -87,7 +87,7 @@ defmodule Drops.Contract do
         all_errors = schema_errors ++ rule_errors
 
         if length(all_errors) > 0 do
-          {:error, all_errors}
+          {:error, collapse_errors(all_errors)}
         else
           {:ok, output}
         end
@@ -99,7 +99,7 @@ defmodule Drops.Contract do
             {:ok, {root, value}}
 
           {:error, errors} ->
-            nest_errors(errors, root)
+            {:error, nest_errors(errors, root)}
         end
       end
 
@@ -175,10 +175,27 @@ defmodule Drops.Contract do
           {:error, {path, name, args}} ->
             {:error, {root ++ path, name, args}}
 
-          {:error, [] = error_list} ->
-            {:error, nest_errors(error_list, root)}
+          {:error, error_list} ->
+            nest_errors(error_list, root)
         end)
+        |> List.flatten()
       end
+
+      defp collapse_errors(errors) when is_list(errors) do
+        Enum.map(errors, fn
+          {:error, {path, name, args}} ->
+            {:error, {path, name, args}}
+
+          {:error, error_list} ->
+            collapse_errors(error_list)
+
+          result ->
+            result
+        end)
+        |> List.flatten()
+      end
+
+      defp collapse_errors(errors), do: errors
     end
   end
 
@@ -371,7 +388,7 @@ defmodule Drops.Contract do
       iex> UserContract.conform(%{email: nil, login: "jane"})
       {:ok, %{email: nil, login: "jane"}}
       iex> UserContract.conform(%{email: nil, login: nil})
-      {:error, [error: "email or login must be present"]}
+      {:error, ["email or login must be present"]}
 
   """
   defmacro rule(name, input, do: block) do

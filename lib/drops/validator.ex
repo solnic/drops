@@ -50,10 +50,6 @@ defmodule Drops.Validator do
         apply_predicates(value, predicates, path: path)
       end
 
-      def validate(value, {:and, predicates}, path: path) do
-        validate(value, predicates, path: path)
-      end
-
       def validate(value, %Types.Sum{} = type, path: path) do
         case validate(value, type.left, path: path) do
           {:ok, _} = success ->
@@ -65,7 +61,7 @@ defmodule Drops.Validator do
                 success
 
               {:error, _} = right_error ->
-                {:error, {:or, {left_error, right_error}}}
+                {:error, [{:or, {left_error, right_error}}]}
             end
         end
       end
@@ -73,9 +69,10 @@ defmodule Drops.Validator do
       def validate(value, %Types.List{member_type: member_type} = type, path: path) do
         case validate(value, type.constraints, path: path) do
           {:ok, {_, members}} ->
-            result = List.flatten(
-              Enum.with_index(members, &validate(&1, member_type, path: path ++ [&2]))
-            )
+            result =
+              List.flatten(
+                Enum.with_index(members, &validate(&1, member_type, path: path ++ [&2]))
+              )
 
             errors = Enum.reject(result, &is_ok/1)
 
@@ -86,6 +83,10 @@ defmodule Drops.Validator do
           error ->
             error
         end
+      end
+
+      def validate(value, {:and, predicates}, path: path) do
+        validate(value, predicates, path: path)
       end
 
       defp apply_predicates(value, {:and, predicates}, path: path) do

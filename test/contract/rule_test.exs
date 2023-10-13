@@ -98,16 +98,15 @@ defmodule Drops.Contract.RuleTest do
     test "returns predicate errors and skips rules", %{contract: contract} do
       assert {:error,
               [
-                error:
-                  {:or,
-                   {{:error, {[:login], :type?, [nil, ""]}},
-                    {:error, {[:login], :filled?, [""]}}}}
+                or:
+                  {{:error, {[:login], :type?, [nil, ""]}},
+                   {:error, {[:login], :filled?, [""]}}}
               ]} =
                contract.conform(%{login: "", email: nil})
     end
 
     test "returns rule errors", %{contract: contract} do
-      assert {:error, [{:error, "either login or email required"}]} =
+      assert {:error, ["either login or email required"]} =
                contract.conform(%{login: nil, email: nil})
     end
   end
