@@ -375,4 +375,18 @@ defmodule Drops.Predicates do
   """
   @spec in?(list :: list(), input :: any()) :: boolean()
   def in?(list, input) when is_list(list), do: input in list
+
+  @doc ~S"""
+  Checks if a given element is not included in a given list
+
+  ## Examples
+
+      iex> Drops.Predicates.not_in?([1, 2, 3], 2)
+      false
+      iex> Drops.Predicates.not_in?([1, 2, 3], 4)
+      true
+
+  """
+  @spec not_in?(list :: list(), input :: any()) :: boolean()
+  def not_in?(list, input) when is_list(list), do: input not in list
 end
