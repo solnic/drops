@@ -241,6 +241,7 @@ end
 
 UserContract.conform(%{text: "HELLO"})
 # {:ok, %{text: "hello"}}
+```
 
 ### Atomized maps
 
