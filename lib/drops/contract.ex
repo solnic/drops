@@ -181,7 +181,7 @@ defmodule Drops.Contract do
   end
 
   @doc ~S"""
-  Define a schema for the contract.
+  Define a default schema for the contract.
 
   ## Simple schema
 
@@ -197,6 +197,14 @@ defmodule Drops.Contract do
       ...> end
       iex> UserContract.conform(%{name: "John", age: 21})
       {:ok, %{name: "John", age: 21}}
+  """
+  @spec schema(do: Macro.t) :: Macro.t
+  defmacro schema(do: block) do
+    set_schema(__CALLER__, :default, [], block)
+  end
+
+  @doc ~S"""
+  Define schemas for the contract.
 
   ## Nested atomized schema
 
@@ -248,19 +256,77 @@ defmodule Drops.Contract do
            age: 21
          }
        }}
-  """
-  defmacro schema(do: block) do
-    set_schema(__CALLER__, :default, [], block)
-  end
 
+  ## Reusing schemas
+
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema(:address) do
+      ...>     %{
+      ...>       required(:street) => string(:filled?),
+      ...>       required(:city) => string(:filled?),
+      ...>       required(:zip) => string(:filled?),
+      ...>       required(:country) => string(:filled?)
+      ...>     }
+      ...>   end
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:name) => string(),
+      ...>       required(:age) => integer(),
+      ...>       required(:address) => @schemas.address
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{
+      ...>   name: "John",
+      ...>   age: 21,
+      ...>   address: %{
+      ...>     street: "Main St.",
+      ...>     city: "New York",
+      ...>     zip: "10001",
+      ...>     country: "USA"
+      ...>   }
+      ...> })
+      {:ok,
+       %{
+         name: "John",
+         address: %{
+           zip: "10001",
+           street: "Main St.",
+           city: "New York",
+           country: "USA"
+         },
+         age: 21
+       }}
+      iex> UserContract.conform(%{
+      ...>   name: "John",
+      ...>   age: "21",
+      ...>   address: %{
+      ...>     street: "Main St.",
+      ...>     city: "",
+      ...>     zip: "10001",
+      ...>     country: "USA"
+      ...>   }
+      ...> })
+      {:error,
+       [
+         error: {[:address, :city], :filled?, [""]},
+         error: {[:age], :type?, [:integer, "21"]}
+       ]}
+  """
+  @spec schema(name :: atom()) :: Macro.t
   defmacro schema(name, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, [], block)
   end
 
+  @spec schema(opts :: keyword()) :: Macro.t
   defmacro schema(opts, do: block) do
     set_schema(__CALLER__, :default, opts, block)
   end
 
+  @spec schema(name :: atom(), opts :: keyword()) :: Macro.t
   defmacro schema(name, opts, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, opts, block)
   end
