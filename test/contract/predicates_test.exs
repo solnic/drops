@@ -664,4 +664,21 @@ defmodule Drops.PredicatesTest do
                contract.conform(%{test: "Hello"})
     end
   end
+
+  describe "in?/2" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, in?: ["Hello", "World"])}
+      end
+    end
+
+    test "returns success when the value is in the list", %{contract: contract} do
+      assert {:ok, %{test: "Hello"}} = contract.conform(%{test: "Hello"})
+    end
+
+    test "returns error when the value is not in the list", %{contract: contract} do
+      assert {:error, [{:error, {[:test], :in?, [["Hello", "World"], "312"]}}]} =
+               contract.conform(%{test: "312"})
+    end
+  end
 end
