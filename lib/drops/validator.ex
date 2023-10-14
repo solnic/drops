@@ -78,7 +78,7 @@ defmodule Drops.Validator do
 
             if length(errors) == 0,
               do: {:ok, {path, result}},
-              else: errors
+              else: {:error, errors}
 
           error ->
             error

@@ -189,6 +189,9 @@ defmodule Drops.Contract do
           {:error, error_list} ->
             collapse_errors(error_list)
 
+          {:or, {left_errors, right_errors}} ->
+            {:or, {collapse_errors(left_errors), collapse_errors(right_errors)}}
+
           result ->
             result
         end)

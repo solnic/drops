@@ -12,6 +12,10 @@ defmodule Drops.Types do
     Map.Key
   }
 
+  def from_spec(%{primitive: _} = type, _opts) do
+    type
+  end
+
   def from_spec(%{} = spec, opts) do
     atomize = opts[:atomize] || false
 
@@ -53,6 +57,10 @@ defmodule Drops.Types do
       output_type: from_spec(output_type, opts),
       opts: cast_opts
     }
+  end
+
+  def from_spec([left, right], opts) when is_tuple(left) and is_tuple(right) do
+    %Sum{left: from_spec(left, opts), right: from_spec(right, opts), opts: opts}
   end
 
   def from_spec([left, right], opts) do

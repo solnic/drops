@@ -393,6 +393,73 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
+  describe "sum of lists" do
+    contract do
+      schema do
+        %{
+          required(:values) => [
+            list(:string),
+            list(:integer)
+          ]
+        }
+      end
+    end
+
+    test "returns success when either of the lists passed", %{contract: contract} do
+      assert {:ok, %{values: ["hello", "world"]}} =
+               contract.conform(%{values: ["hello", "world"]})
+
+      assert {:ok, %{values: [1, 2]}} = contract.conform(%{values: [1, 2]})
+    end
+
+    test "returns error when both cases didn't pass", %{contract: contract} do
+      assert {:error,
+              [
+                or:
+                  {{:error, [error: {[:values, 0], :type?, [:string, 1]}]},
+                   {:error, [error: {[:values, 1], :type?, [:integer, "hello"]}]}}
+              ]} =
+               contract.conform(%{values: [1, "hello"]})
+    end
+  end
+
+  describe "sum of list of schemas" do
+    contract do
+      schema(:left) do
+        %{required(:name) => string()}
+      end
+
+      schema(:right) do
+        %{required(:login) => string()}
+      end
+
+      schema do
+        %{
+          required(:values) => [list(@schemas.left), list(@schemas.right)]
+        }
+      end
+    end
+
+    test "returns success when either of cases passed", %{contract: contract} do
+      assert {:ok, %{values: [%{name: "John Doe"}]}} =
+               contract.conform(%{values: [%{name: "John Doe"}]})
+
+      assert {:ok, %{values: [%{login: "john"}]}} =
+               contract.conform(%{values: [%{login: "john"}]})
+    end
+
+    test "returns error when both cases didn't pass", %{contract: contract} do
+      assert {:error,
+              [
+                or:
+                  {{:error,
+                    [error: [error: {[:values, 0, :name], :type?, [:string, 1]}]]},
+                   {:error, [error: [error: {[:values, 0], :has_key?, [:login]}]]}}
+              ]} =
+               contract.conform(%{values: [%{name: 1}]})
+    end
+  end
+
   describe "sum of schemas" do
     contract do
       schema(:left) do
