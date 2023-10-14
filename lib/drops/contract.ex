@@ -170,15 +170,22 @@ defmodule Drops.Contract do
         end)
       end
 
-      defp nest_errors(errors, root) do
+      defp nest_errors(errors, root) when is_list(errors) do
         Enum.map(errors, fn
           {:error, {path, name, args}} ->
             {:error, {root ++ path, name, args}}
 
           {:error, error_list} ->
             nest_errors(error_list, root)
+
+          {:or, {left, right}} ->
+            {:or, {nest_errors(left, root), nest_errors(right, root)}}
         end)
         |> List.flatten()
+      end
+
+      defp nest_errors({:error, errors}, root) do
+        {:error, nest_errors(errors, root)}
       end
 
       defp collapse_errors(errors) when is_list(errors) do
