@@ -452,9 +452,8 @@ defmodule Drops.Contract.SchemaTest do
       assert {:error,
               [
                 or:
-                  {{:error,
-                    [error: [error: {[:values, 0, :name], :type?, [:string, 1]}]]},
-                   {:error, [error: [error: {[:values, 0], :has_key?, [:login]}]]}}
+                  {{:error, [error: {[:values, 0, :name], :type?, [:string, 1]}]},
+                   {:error, [error: {[:values, 0], :has_key?, [:login]}]}}
               ]} =
                contract.conform(%{values: [%{name: 1}]})
     end
@@ -500,41 +499,44 @@ defmodule Drops.Contract.SchemaTest do
     test "returns error when all cases didn't pass", %{contract: contract} do
       assert {:error, [error: {[], :has_key?, [:values]}]} = contract.conform(%{})
 
-      assert {:error,
-              [
-                or:
-                  {{:error,
-                    [error: [error: {[:values, 0, :name], :type?, [:string, 1]}]]},
+      assert {
+               :error,
+               [
+                 or: {
+                   {:error, [error: {[:values, 0, :name], :type?, [:string, 1]}]},
                    {:error,
                     [
-                      error: [
-                        error: {[:values, 0], :has_key?, [:groups]},
-                        error: {[:values, 0], :has_key?, [:login]}
-                      ]
-                    ]}}
-              ]} = contract.conform(%{values: [%{name: 1}]})
+                      {:error, {[:values, 0], :has_key?, [:groups]}},
+                      {:error, {[:values, 0], :has_key?, [:login]}}
+                    ]}
+                 }
+               ]
+             } = contract.conform(%{values: [%{name: 1}]})
 
-      assert {:error,
-              [
-                or:
-                  {{:error, [error: [error: {[:values, 0], :has_key?, [:name]}]]},
-                   {:error,
-                    [
-                      error: [
-                        or:
-                          {{:error,
-                            [
-                              error:
-                                {[:values, 0, :groups, 0], :type?, [:string, %{name: 1}]}
-                            ]},
-                           {:error,
-                            [
-                              error:
-                                {[:values, 0, :groups, 0, :name], :type?, [:string, 1]}
-                            ]}}
-                      ]
-                    ]}}
-              ]} = contract.conform(%{values: [%{login: "jane", groups: [%{name: 1}]}]})
+      assert {
+               :error,
+               [
+                 or: {
+                   {:error, [error: {[:values, 0], :has_key?, [:name]}]},
+                   {
+                     :error,
+                     [
+                       or:
+                         {{:error,
+                           [
+                             error:
+                               {[:values, 0, :groups, 0], :type?, [:string, %{name: 1}]}
+                           ]},
+                          {:error,
+                           [
+                             error:
+                               {[:values, 0, :groups, 0, :name], :type?, [:string, 1]}
+                           ]}}
+                     ]
+                   }
+                 }
+               ]
+             } = contract.conform(%{values: [%{login: "jane", groups: [%{name: 1}]}]})
     end
   end
 

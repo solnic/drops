@@ -205,6 +205,10 @@ defmodule Drops.Contract do
         |> List.flatten()
       end
 
+      defp collapse_errors({:error, errors}) do
+        {:error, collapse_errors(errors)}
+      end
+
       defp collapse_errors(errors), do: errors
     end
   end
