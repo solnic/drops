@@ -34,17 +34,56 @@ defmodule Drops.Contract do
   @callback conform(data :: map(), schema :: Types.Map, keyword()) ::
               {:ok, map()} | {:error, list()}
 
-  defmacro __using__(_opts) do
+  @doc """
+  Return errors from results returned by `conform/2`.
+
+  ## Examples
+
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:name) => string(:filled?),
+      ...>       required(:email) => string(:filled?)
+      ...>     }
+      ...>   end
+      ...> end
+      iex> errors = UserContract.conform(%{name: "", email: 312}) |> UserContract.errors()
+      [
+        %Drops.Contract.Messages.Error{
+          path: [:email],
+          text: "must be a string",
+          meta: %{args: [:string, 312], predicate: :type?}
+        },
+        %Drops.Contract.Messages.Error{
+          path: [:name],
+          text: "must be filled",
+          meta: %{args: [""], predicate: :filled?}
+        }
+      ]
+      iex> Enum.map(errors, &to_string/1)
+      ["email must be a string", "name must be filled"]
+
+  """
+  @doc since: "0.1.0"
+  @callback errors({:ok, map()}) :: []
+  @callback errors({:error, map()}) :: [Drops.Contract.Messages.Error.t()]
+
+  defmacro __using__(opts) do
     quote do
       use Drops.Validator
 
       alias Drops.Types
+      alias Drops.Contract.Messages
 
       import Drops.Contract
       import Drops.Contract.Runtime
       import Drops.Types.Map.DSL
 
       @behaviour Drops.Contract
+
+      @message_backend unquote(opts[:message_backend]) || Messages.DefaultBackend
 
       Module.register_attribute(__MODULE__, :rules, accumulate: true)
 
@@ -102,6 +141,12 @@ defmodule Drops.Contract do
             {:error, nest_errors(errors, root)}
         end
       end
+
+      def errors({:error, errors}) do
+        @message_backend.errors(errors)
+      end
+
+      def errors({:ok, _}), do: []
 
       def validate(data, keys) when is_list(keys) do
         Enum.map(keys, &validate(data, &1)) |> List.flatten()
