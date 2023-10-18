@@ -200,12 +200,12 @@ defmodule Drops.Contract.SchemaTest do
       schema do
         %{
           required(:user) => %{
-            required(:name) => type(:string, [:filled?]),
-            required(:age) => type(:integer),
+            required(:name) => string(:filled?),
+            required(:age) => maybe(:integer),
             required(:address) => %{
-              required(:city) => type(:string, [:filled?]),
-              required(:street) => type(:string, [:filled?]),
-              required(:zipcode) => type(:string, [:filled?])
+              required(:city) => string(:filled?),
+              required(:street) => string(:filled?),
+              required(:zipcode) => maybe(:string, [:filled?])
             }
           }
         }
@@ -228,15 +228,20 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns deeply nested errors", %{contract: contract} do
-      assert {:error, [{:error, {[:user, :address, :street], :filled?, [""]}}]} =
+      assert {:error,
+              [
+                or:
+                  {{:error, {[:user, :address, :zipcode], :type?, [nil, ""]}},
+                   {:error, {[:user, :address, :zipcode], :filled?, [""]}}}
+              ]} =
                contract.conform(%{
                  user: %{
                    name: "John",
                    age: 21,
                    address: %{
                      city: "New York",
-                     street: "",
-                     zipcode: "10001"
+                     street: "Broadway 121",
+                     zipcode: ""
                    }
                  }
                })
