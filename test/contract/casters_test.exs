@@ -52,7 +52,7 @@ defmodule Drops.CastersTest do
   describe ":string => :float" do
     contract do
       schema do
-        %{required(:test) => cast(:string) |> type(:float)}
+        %{required(:test) => cast(:string) |> float()}
       end
     end
 

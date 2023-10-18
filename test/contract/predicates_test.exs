@@ -74,7 +74,7 @@ defmodule Drops.PredicatesTest do
   describe "type?/2 with :float" do
     contract do
       schema do
-        %{required(:test) => type(:float)}
+        %{required(:test) => float()}
       end
     end
 
