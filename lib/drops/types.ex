@@ -63,6 +63,10 @@ defmodule Drops.Types do
     %Sum{left: from_spec(left, opts), right: from_spec(right, opts), opts: opts}
   end
 
+  def from_spec([left, right], opts) when is_map(left) and is_map(right) do
+    %Sum{left: from_spec(left, opts), right: from_spec(right, opts), opts: opts}
+  end
+
   def from_spec([left, right], opts) do
     %Sum{left: left, right: right, opts: opts}
   end
