@@ -7,9 +7,10 @@ defmodule Drops.Contract.MessagesTest do
     contract do
       schema do
         %{
-          required(:name) => string(:filled?),
-          required(:age) => integer(gt?: 18),
-          optional(:role) => string(in?: ["admin", "user"])
+          optional(:name) => string(:filled?),
+          optional(:age) => integer(gt?: 18),
+          optional(:role) => string(in?: ["admin", "user"]),
+          optional(:birthday) => maybe(:date)
         }
       end
     end
@@ -52,6 +53,20 @@ defmodule Drops.Contract.MessagesTest do
       assert path == [:role]
       assert meta == %{predicate: :in?, args: [["admin", "user"], "oops"]}
       assert to_string(error) == "role must be one of: admin, user"
+    end
+
+    test "returns errors from a sum type", %{contract: contract} do
+      result = contract.conform(%{birthday: "oops"})
+
+      assert [error = %{left: left_error, right: right_error}] = contract.errors(result)
+
+      assert left_error.path == [:birthday]
+      assert left_error.meta == %{predicate: :type?, args: [:nil, "oops"]}
+
+      assert right_error.path == [:birthday]
+      assert right_error.meta == %{predicate: :type?, args: [:date, "oops"]}
+
+      assert to_string(error) == "birthday must be nil or birthday must be a date"
     end
   end
 end

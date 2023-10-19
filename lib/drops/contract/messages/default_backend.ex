@@ -4,6 +4,7 @@ defmodule Drops.Contract.Messages.DefaultBackend do
 
   @text_mapping %{
     type?: %{
+      nil: "must be nil",
       integer: "must be an integer",
       float: "must be a float",
       boolean: "must be boolean",

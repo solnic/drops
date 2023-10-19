@@ -74,6 +74,10 @@ defmodule Drops.Contract.Messages.Backend do
           }
         }
       end
+
+      defp error({:or, {left, right}}) do
+        %Error.Sum{left: error(left), right: error(right)}
+      end
     end
   end
 end
