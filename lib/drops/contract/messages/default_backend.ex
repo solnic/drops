@@ -16,6 +16,7 @@ defmodule Drops.Contract.Messages.DefaultBackend do
       date_time: "must be a date time",
       time: "must be a time"
     },
+    has_key?: "is missing",
     filled?: "must be filled",
     empty?: "must be empty",
     eql?: "must be equal to %input%",

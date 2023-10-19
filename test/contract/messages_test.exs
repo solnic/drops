@@ -3,6 +3,27 @@ defmodule Drops.Contract.MessagesTest do
 
   doctest Drops.Contract.Messages.Backend
 
+  describe "errors/1 with key errors" do
+    contract do
+      schema do
+        %{
+          required(:name) => string(:filled?),
+          required(:age) => integer(gt?: 18)
+        }
+      end
+    end
+
+    test "returns errors from the has_key? predicate", %{contract: contract} do
+      result = contract.conform(%{name: "Jane Doe"})
+
+      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+
+      assert path == [:age]
+      assert meta == %{predicate: :has_key?, args: [:age]}
+      assert to_string(error) == "age is missing"
+    end
+  end
+
   describe "errors/1" do
     contract do
       schema do

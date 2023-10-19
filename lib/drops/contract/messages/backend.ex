@@ -53,6 +53,17 @@ defmodule Drops.Contract.Messages.Backend do
         Enum.map(results, &error/1)
       end
 
+      defp error({:error, {[], :has_key?, [value]}}) do
+        %Error{
+          path: List.flatten([value]),
+          text: text(:has_key?, value),
+          meta: %{
+            predicate: :has_key?,
+            args: [value]
+          }
+        }
+      end
+
       defp error({:error, {path, predicate, [value, input] = args}}) do
         %Error{
           path: path,
