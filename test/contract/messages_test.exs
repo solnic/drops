@@ -61,12 +61,46 @@ defmodule Drops.Contract.MessagesTest do
       assert [error = %{left: left_error, right: right_error}] = contract.errors(result)
 
       assert left_error.path == [:birthday]
-      assert left_error.meta == %{predicate: :type?, args: [:nil, "oops"]}
+      assert left_error.meta == %{predicate: :type?, args: [nil, "oops"]}
 
       assert right_error.path == [:birthday]
       assert right_error.meta == %{predicate: :type?, args: [:date, "oops"]}
 
       assert to_string(error) == "birthday must be nil or birthday must be a date"
+    end
+  end
+
+  describe "errors/1 with a nested schema" do
+    contract do
+      schema do
+        %{
+          required(:user) => %{
+            optional(:name) => string(:filled?),
+            optional(:age) => integer(gt?: 18),
+            optional(:roles) => list(:string)
+          }
+        }
+      end
+    end
+
+    test "returns errors from a type? predicate", %{contract: contract} do
+      result = contract.conform(%{user: %{age: "twenty"}})
+
+      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+
+      assert path == [:user, :age]
+      assert meta == %{predicate: :type?, args: [:integer, "twenty"]}
+      assert to_string(error) == "user.age must be an integer"
+    end
+
+    test "returns errors from a list type", %{contract: contract} do
+      result = contract.conform(%{user: %{roles: ["admin", 312, "moderator"]}})
+
+      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+
+      assert path == [:user, :roles, 1]
+      assert meta == %{predicate: :type?, args: [:string, 312]}
+      assert to_string(error) == "user.roles.1 must be a string"
     end
   end
 end
