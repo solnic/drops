@@ -16,7 +16,7 @@ defmodule Drops.Contract.Messages.DefaultBackend do
       date_time: "must be a date time",
       time: "must be a time"
     },
-    has_key?: "is missing",
+    has_key?: "key must be present",
     filled?: "must be filled",
     empty?: "must be empty",
     eql?: "must be equal to %input%",
@@ -30,10 +30,11 @@ defmodule Drops.Contract.Messages.DefaultBackend do
     size?: "size must be %input%",
     even?: "must be even",
     odd?: "must be odd",
-    match?: "must match %input%",
+    match?: "must have a valid format",
     includes?: "must include %input%",
     excludes?: "must exclude %input%",
-    in?: "must be one of: %input%"
+    in?: "must be one of: %input%",
+    not_in?: "must not be one of: %input%"
   }
 
   @impl true
@@ -47,8 +48,18 @@ defmodule Drops.Contract.Messages.DefaultBackend do
   end
 
   @impl true
+  def text(:match?, _regex, _input) do
+    @text_mapping[:match?]
+  end
+
+  @impl true
   def text(:in?, values, _input) do
     String.replace(@text_mapping[:in?], "%input%", Enum.join(values, ", "))
+  end
+
+  @impl true
+  def text(:not_in?, values, _input) do
+    String.replace(@text_mapping[:not_in?], "%input%", Enum.join(values, ", "))
   end
 
   @impl true

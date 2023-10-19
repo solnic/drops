@@ -106,20 +106,21 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "defining required keys with types", %{contract: contract} do
-      assert {:error, [{:error, {[], :has_key?, [:age]}}]} =
-               contract.conform(%{name: "Jane"})
+      assert_errors(["age key must be present"], contract.conform(%{name: "Jane"}))
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:name], :type?, [:string, 312]}}]} =
-               contract.conform(%{name: 312, age: 21})
+      assert_errors(["name must be a string"], contract.conform(%{name: 312, age: 21}))
     end
 
     test "returns multiple errors with invalid data", %{contract: contract} do
-      {:error, result} = contract.conform(%{name: 312, age: "21"})
-
-      assert Enum.member?(result, {:error, {[:name], :type?, [:string, 312]}})
-      assert Enum.member?(result, {:error, {[:age], :type?, [:integer, "21"]}})
+      assert_errors(
+        [
+          "age must be an integer",
+          "name must be a string"
+        ],
+        contract.conform(%{name: 312, age: "21"})
+      )
     end
   end
 
@@ -138,17 +139,20 @@ defmodule Drops.Contract.SchemaTest do
                contract.conform(%{email: "jane@doe.org", name: "Jane"})
     end
 
-    test "returns has_key? error when a required key is missing", %{contract: contract} do
-      assert {:error, [{:error, {[], :has_key?, [:email]}}]} = contract.conform(%{})
+    test "returns has_key? error when a required key key must be present", %{contract: contract} do
+      assert_errors(["email key must be present"], contract.conform(%{}))
     end
 
     test "returns predicate errors", %{contract: contract} do
-      assert {:error,
-              [{:error, {[:name], :filled?, [""]}}, {:error, {[:email], :filled?, [""]}}]} =
-               contract.conform(%{email: "", name: ""})
+      assert_errors(
+        ["email must be filled"],
+        contract.conform(%{email: "", name: "Jane"})
+      )
 
-      assert {:error, [{:error, {[:name], :filled?, [""]}}]} =
-               contract.conform(%{email: "jane@doe.org", name: ""})
+      assert_errors(
+        ["name must be filled"],
+        contract.conform(%{email: "jane@doe.org", name: ""})
+      )
     end
   end
 
@@ -163,8 +167,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns predicate errors", %{contract: contract} do
-      assert {:error, [{:error, {[:name], :filled?, [""]}}]} =
-               contract.conform(%{name: "", age: 21})
+      assert_errors(
+        ["age must be an integer", "name must be filled"],
+        contract.conform(%{name: "", age: "21"})
+      )
     end
   end
 
@@ -185,13 +191,14 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns nested errors", %{contract: contract} do
-      assert {:error, [{:error, {[], :has_key?, [:user]}}]} = contract.conform(%{})
+      assert_errors(["user key must be present"], contract.conform(%{}))
 
-      assert {:error, [{:error, {[:user], :type?, [:map, nil]}}]} =
-               contract.conform(%{user: nil})
+      assert_errors(["user must be a map"], contract.conform(%{user: nil}))
 
-      assert {:error, [{:error, {[:user, :name], :filled?, [""]}}]} =
-               contract.conform(%{user: %{name: "", age: 21}})
+      assert_errors(
+        ["user.name must be filled"],
+        contract.conform(%{user: %{name: "", age: 21}})
+      )
     end
   end
 
@@ -228,40 +235,35 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns deeply nested errors", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:user, :address, :zipcode], :type?, [nil, ""]}},
-                   {:error, {[:user, :address, :zipcode], :filled?, [""]}}}
-              ]} =
-               contract.conform(%{
-                 user: %{
-                   name: "John",
-                   age: 21,
-                   address: %{
-                     city: "New York",
-                     street: "Broadway 121",
-                     zipcode: ""
-                   }
-                 }
-               })
+      assert_errors(
+        ["user.address.zipcode must be nil or user.address.zipcode must be filled"],
+        contract.conform(%{
+          user: %{
+            name: "John",
+            age: 21,
+            address: %{
+              city: "New York",
+              street: "Broadway 121",
+              zipcode: ""
+            }
+          }
+        })
+      )
 
-      assert {:error,
-              [
-                {:error, {[:user, :address, :street], :filled?, [""]}},
-                {:error, {[:user, :name], :filled?, [""]}}
-              ]} =
-               contract.conform(%{
-                 user: %{
-                   name: "",
-                   age: 21,
-                   address: %{
-                     city: "New York",
-                     street: "",
-                     zipcode: "10001"
-                   }
-                 }
-               })
+      assert_errors(
+        ["user.address.street must be filled", "user.name must be filled"],
+        contract.conform(%{
+          user: %{
+            name: "",
+            age: 21,
+            address: %{
+              city: "New York",
+              street: "",
+              zipcode: "10001"
+            }
+          }
+        })
+      )
     end
   end
 
@@ -346,22 +348,23 @@ defmodule Drops.Contract.SchemaTest do
 
       assert expected_output == output
 
-      assert {:error,
-              [
-                {:error, {[:user, :address, :street], :filled?, [""]}},
-                {:error, {[:user, :name], :filled?, [""]}}
-              ]} =
-               contract.conform(%{
-                 "user" => %{
-                   "name" => "",
-                   "age" => 21,
-                   "address" => %{
-                     "city" => "New York",
-                     "street" => "",
-                     "zipcode" => "10001"
-                   }
-                 }
-               })
+      assert_errors(
+        [
+          "user.address.street must be filled",
+          "user.name must be filled"
+        ],
+        contract.conform(%{
+          "user" => %{
+            "name" => "",
+            "age" => 21,
+            "address" => %{
+              "city" => "New York",
+              "street" => "",
+              "zipcode" => "10001"
+            }
+          }
+        })
+      )
     end
   end
 
@@ -383,13 +386,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when both schemas didn't pass", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, [error: {[:user], :has_key?, [:name]}]},
-                   {:error, [error: {[:user], :has_key?, [:login]}]}}
-              ]} =
-               contract.conform(%{user: %{}})
+      assert_errors(
+        ["user.name key must be present or user.login key must be present"],
+        contract.conform(%{user: %{}})
+      )
     end
   end
 
@@ -414,13 +414,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when both schemas didn't pass", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, [error: {[:user], :has_key?, [:name]}]},
-                   {:error, [error: {[:user], :has_key?, [:login]}]}}
-              ]} =
-               contract.conform(%{"user" => %{}})
+      assert_errors(
+        ["user.name key must be present or user.login key must be present"],
+        contract.conform(%{"user" => %{}})
+      )
     end
   end
 
@@ -447,13 +444,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when both schemas didn't pass", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, [error: {[:user], :has_key?, [:name]}]},
-                   {:error, [error: {[:user], :has_key?, [:login]}]}}
-              ]} =
-               contract.conform(%{user: %{}})
+      assert_errors(
+        ["user.name key must be present or user.login key must be present"],
+        contract.conform(%{user: %{}})
+      )
     end
   end
 
@@ -477,13 +471,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when both cases didn't pass", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, [error: {[:values, 0], :type?, [:string, 1]}]},
-                   {:error, [error: {[:values, 1], :type?, [:integer, "hello"]}]}}
-              ]} =
-               contract.conform(%{values: [1, "hello"]})
+      assert_errors(
+        ["values.0 must be a string or values.1 must be an integer"],
+        contract.conform(%{values: [1, "hello"]})
+      )
     end
   end
 
@@ -513,13 +504,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when both cases didn't pass", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, [error: {[:values, 0, :name], :type?, [:string, 1]}]},
-                   {:error, [error: {[:values, 0], :has_key?, [:login]}]}}
-              ]} =
-               contract.conform(%{values: [%{name: 1}]})
+      assert_errors(
+        ["values.0.name must be a string or values.0.login key must be present"],
+        contract.conform(%{values: [%{name: 1}]})
+      )
     end
   end
 
@@ -561,46 +549,12 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when all cases didn't pass", %{contract: contract} do
-      assert {:error, [error: {[], :has_key?, [:values]}]} = contract.conform(%{})
-
-      assert {
-               :error,
-               [
-                 or: {
-                   {:error, [error: {[:values, 0, :name], :type?, [:string, 1]}]},
-                   {:error,
-                    [
-                      {:error, {[:values, 0], :has_key?, [:groups]}},
-                      {:error, {[:values, 0], :has_key?, [:login]}}
-                    ]}
-                 }
-               ]
-             } = contract.conform(%{values: [%{name: 1}]})
-
-      assert {
-               :error,
-               [
-                 or: {
-                   {:error, [error: {[:values, 0], :has_key?, [:name]}]},
-                   {
-                     :error,
-                     [
-                       or:
-                         {{:error,
-                           [
-                             error:
-                               {[:values, 0, :groups, 0], :type?, [:string, %{name: 1}]}
-                           ]},
-                          {:error,
-                           [
-                             error:
-                               {[:values, 0, :groups, 0, :name], :type?, [:string, 1]}
-                           ]}}
-                     ]
-                   }
-                 }
-               ]
-             } = contract.conform(%{values: [%{login: "jane", groups: [%{name: 1}]}]})
+      assert_errors(
+        [
+          "values.0.name key must be present or values.0.groups.0 must be a string or values.0.groups.0.name must be a string"
+        ],
+        contract.conform(%{values: [%{login: "jane", groups: [%{name: 1}]}]})
+      )
     end
   end
 
@@ -625,10 +579,10 @@ defmodule Drops.Contract.SchemaTest do
     end
 
     test "returns error when both schemas didn't pass", %{contract: contract} do
-      assert {:error,
-              {:or,
-               {{:error, [error: {[], :has_key?, [:name]}]},
-                {:error, [error: {[], :has_key?, [:login]}]}}}} = contract.conform(%{})
+      assert_errors(
+        ["name key must be present or login key must be present"],
+        contract.conform(%{})
+      )
     end
   end
 end

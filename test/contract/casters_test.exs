@@ -27,13 +27,14 @@ defmodule Drops.CastersTest do
     end
 
     test "returns error result when output is invalid", %{contract: contract} do
-      assert {:error, [error: {[:test], :size?, [3, "12"]}]} =
-               contract.conform(%{test: 12})
+      assert_errors(["test size must be 3"], contract.conform(%{test: 12}))
     end
 
     test "returns error when casting could not be applied", %{contract: contract} do
-      assert {:error, [{:cast, {:error, {[:test], :type?, [:integer, "12"]}}}]} =
-               contract.conform(%{test: "12"})
+      assert_errors(
+        ["cast error: test must be an integer"],
+        contract.conform(%{test: "12"})
+      )
     end
   end
 

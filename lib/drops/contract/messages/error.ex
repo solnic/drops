@@ -25,4 +25,32 @@ defmodule Drops.Contract.Messages.Error do
       end
     end
   end
+
+  defmodule Set do
+    alias __MODULE__
+
+    @type t :: %__MODULE__{}
+
+    defstruct [:errors]
+
+    defimpl String.Chars, for: Set do
+      def to_string(%Error.Set{errors: errors}) do
+        Enum.map(errors, &Kernel.to_string/1) |> Enum.join(" and ")
+      end
+    end
+  end
+
+  defmodule Caster do
+    alias __MODULE__
+
+    @type t :: %__MODULE__{}
+
+    defstruct [:error]
+
+    defimpl String.Chars, for: Caster do
+      def to_string(%Error.Caster{error: error}) do
+        "cast error: #{Kernel.to_string(error)}"
+      end
+    end
+  end
 end

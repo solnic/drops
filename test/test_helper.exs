@@ -3,7 +3,13 @@ defmodule Drops.ContractCase do
 
   using do
     quote do
+      alias Drops.Contract.Messages.DefaultBackend, as: MessageBackend
+
       import Drops.ContractCase
+
+      def assert_errors(errors, {:error, results}) do
+        assert errors == MessageBackend.errors(results) |> Enum.map(&to_string/1)
+      end
     end
   end
 

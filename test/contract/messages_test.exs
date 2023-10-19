@@ -20,7 +20,7 @@ defmodule Drops.Contract.MessagesTest do
 
       assert path == [:age]
       assert meta == %{predicate: :has_key?, args: [:age]}
-      assert to_string(error) == "age is missing"
+      assert to_string(error) == "age key must be present"
     end
   end
 

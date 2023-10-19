@@ -49,13 +49,17 @@ defmodule Drops.Contract.Messages.Backend do
 
       alias Drops.Contract.Messages.Error
 
-      def errors(results) do
+      def errors(results) when is_list(results) do
         Enum.map(results, &error/1)
       end
 
-      defp error({:error, {[], :has_key?, [value]}}) do
+      def errors(results) when is_tuple(results) do
+        [error(results)]
+      end
+
+      defp error({:error, {path, :has_key?, [value]}}) do
         %Error{
-          path: List.flatten([value]),
+          path: path ++ [value],
           text: text(:has_key?, value),
           meta: %{
             predicate: :has_key?,
@@ -86,8 +90,16 @@ defmodule Drops.Contract.Messages.Backend do
         }
       end
 
+      defp error({:error, results}) when is_list(results) do
+        %Error.Set{errors: Enum.map(results, &error/1)}
+      end
+
       defp error({:or, {left, right}}) do
         %Error.Sum{left: error(left), right: error(right)}
+      end
+
+      defp error({:cast, error}) do
+        %Error.Caster{error: error(error)}
       end
     end
   end
