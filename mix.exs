@@ -13,6 +13,7 @@ defmodule Drops.MixProject do
       deps: deps(),
       licenses: "MIT",
       description: "Tools for working with data effectively - data schemas, type-safe coercions, and more.",
+      links: %{"GitHub" => @source_url},
       package: package(),
       docs: docs()
     ]
