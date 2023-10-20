@@ -66,6 +66,14 @@ UserContract.conform(%{
 })
 # {:error,
 #  [
-#    error: {[:user, :address, :zipcode], :filled?, [""]},
-#    error: {[:user, :tags, 1, :created_at], :type?, [:integer, nil]}
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:user, :address, :zipcode],
+#      text: "must be filled",
+#      meta: %{args: [""], predicate: :filled?}
+#    },
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:user, :tags, 1, :created_at],
+#      text: "must be an integer",
+#      meta: %{args: [:integer, nil], predicate: :type?}
+#    }
 #  ]}
