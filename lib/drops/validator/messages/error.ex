@@ -1,10 +1,10 @@
 defmodule Drops.Validator.Messages.Error do
+  @moduledoc false
+
   alias __MODULE__
 
   defprotocol Conversions do
-    @doc """
-    Protocol for error conversions
-    """
+    @moduledoc false
 
     @spec nest(error :: map(), root :: list()) :: map()
     def nest(error, root)
@@ -37,6 +37,7 @@ defmodule Drops.Validator.Messages.Error do
   end
 
   defmodule Sum do
+    @moduledoc false
     @type t :: %__MODULE__{}
 
     defstruct [:left, :right]
@@ -58,6 +59,7 @@ defmodule Drops.Validator.Messages.Error do
   end
 
   defmodule Set do
+    @moduledoc false
     @type t :: %__MODULE__{}
 
     defstruct [:errors]
@@ -76,6 +78,7 @@ defmodule Drops.Validator.Messages.Error do
   end
 
   defmodule Caster do
+    @moduledoc false
     @type t :: %__MODULE__{}
 
     defstruct [:error]
@@ -94,6 +97,7 @@ defmodule Drops.Validator.Messages.Error do
   end
 
   defmodule Rule do
+    @moduledoc false
     @type t :: %__MODULE__{}
 
     defstruct [:text, path: []]
