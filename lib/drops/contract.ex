@@ -415,13 +415,24 @@ defmodule Drops.Contract do
       ["email or login must be present"]
 
   """
-  defmacro rule(name, input, do: block) do
-    quote do
+  defmacro rule(name, {data, _line, rest} = input, do: block) when is_atom(data) do
+    pre = quote do
       Module.put_attribute(__MODULE__, :rules, unquote(name))
 
       def rule(unquote(name), unquote(input)), do: unquote(block)
+    end
 
-      def rule(unquote(name), _), do: :ok
+    post = if is_nil(rest) do
+      []
+    else
+      quote do
+        def rule(unquote(name), _), do: :ok
+      end
+    end
+
+    quote do
+      unquote(pre)
+      unquote(post)
     end
   end
 

@@ -103,4 +103,37 @@ defmodule Drops.Contract.RuleTest do
       )
     end
   end
+
+  describe "rule/1 with guard clauses" do
+    contract do
+      schema do
+        %{
+          optional(:login) => maybe(:string, [:filled?]),
+          optional(:email) => maybe(:string, [:filled?])
+        }
+      end
+
+      rule(:auth_required, data) do
+        if is_nil(data[:login]) and is_nil(data[:email]) do
+          {:error, "either login or email required"}
+        else
+          :ok
+        end
+      end
+    end
+
+    test "returns success when schema and rules passed", %{contract: contract} do
+      assert {:ok, %{login: "jane"}} = contract.conform(%{login: "jane", email: nil})
+
+      assert {:ok, %{email: "jane@doe.org"}} =
+               contract.conform(%{login: nil, email: "jane@doe.org"})
+    end
+
+    test "returns rule errors", %{contract: contract} do
+      assert_errors(
+        ["either login or email required"],
+        contract.conform(%{login: nil, email: nil})
+      )
+    end
+  end
 end
