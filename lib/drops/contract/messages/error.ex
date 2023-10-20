@@ -18,7 +18,7 @@ defmodule Drops.Contract.Messages.Error do
 
     defimpl String.Chars, for: Error.Type do
       def to_string(%Error.Type{path: path, text: text}) do
-        String.trim("#{Enum.join(path, ".")} #{text}")
+        "#{Enum.join(path, ".")} #{text}"
       end
     end
 
@@ -42,7 +42,10 @@ defmodule Drops.Contract.Messages.Error do
 
     defimpl Error.Conversions, for: Sum do
       def nest(%Error.Sum{left: left, right: right} = error, root) do
-        Map.merge(error, %{left: Error.Conversions.nest(left, root), right: Error.Conversions.nest(right, root)})
+        Map.merge(error, %{
+          left: Error.Conversions.nest(left, root),
+          right: Error.Conversions.nest(right, root)
+        })
       end
     end
   end
@@ -79,6 +82,28 @@ defmodule Drops.Contract.Messages.Error do
     defimpl Error.Conversions, for: Error.Caster do
       def nest(%Error.Caster{error: error} = caster_error, root) do
         Map.merge(caster_error, %{error: Error.Conversions.nest(error, root)})
+      end
+    end
+  end
+
+  defmodule Rule do
+    @type t :: %__MODULE__{}
+
+    defstruct [:text, path: []]
+
+    defimpl String.Chars, for: Error.Rule do
+      def to_string(%Error.Rule{text: text, path: path}) when length(path) == 0 do
+        text
+      end
+
+      def to_string(%Error.Rule{text: text, path: path}) do
+        "#{Enum.join(path, ".")} #{text}"
+      end
+    end
+
+    defimpl Error.Conversions, for: Error.Caster do
+      def nest(%Error.Rule{path: path} = error, root) do
+        Map.merge(error, %{path: root ++ path})
       end
     end
   end

@@ -60,11 +60,11 @@ defmodule Drops.Contract.Messages.Backend do
       end
 
       defp error(text) when is_binary(text) do
-        %Error.Type{path: [], text: text, meta: %{}}
+        %Error.Rule{text: text}
       end
 
       defp error({path, text}) when is_list(path) do
-        %Error.Type{path: path, text: text, meta: %{}}
+        %Error.Rule{text: text, path: path}
       end
 
       defp error(%{path: path} = error), do: error
