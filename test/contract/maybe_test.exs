@@ -17,13 +17,10 @@ defmodule Drops.MaybeTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [nil, 312]}},
-                   {:error, {[:test], :type?, [:string, 312]}}}
-              ]} =
-               contract.conform(%{test: 312})
+      assert_errors(
+        ["test must be nil or test must be a string"],
+        contract.conform(%{test: 312})
+      )
     end
   end
 
@@ -43,23 +40,17 @@ defmodule Drops.MaybeTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [nil, 312]}},
-                   {:error, {[:test], :type?, [:string, 312]}}}
-              ]} =
-               contract.conform(%{test: 312})
+      assert_errors(
+        ["test must be nil or test must be a string"],
+        contract.conform(%{test: 312})
+      )
     end
 
     test "returns error when extra predicates fail", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [nil, ""]}},
-                   {:error, {[:test], :filled?, [""]}}}
-              ]} =
-               contract.conform(%{test: ""})
+      assert_errors(
+        ["test must be nil or test must be filled"],
+        contract.conform(%{test: ""})
+      )
     end
   end
 
@@ -82,13 +73,10 @@ defmodule Drops.MaybeTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [nil, 312]}},
-                   {:error, {[:test], :type?, [:map, 312]}}}
-              ]} =
-               contract.conform(%{"test" => 312})
+      assert_errors(
+        ["test must be nil or test must be a map"],
+        contract.conform(%{"test" => 312})
+      )
     end
   end
 
@@ -108,13 +96,10 @@ defmodule Drops.MaybeTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [nil, 312]}},
-                   {:error, {[:test], :type?, [:map, 312]}}}
-              ]} =
-               contract.conform(%{test: 312})
+      assert_errors(
+        ["test must be nil or test must be a map"],
+        contract.conform(%{test: 312})
+      )
     end
   end
 
@@ -139,13 +124,10 @@ defmodule Drops.MaybeTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [nil, 312]}},
-                   {:error, {[:test], :type?, [:map, 312]}}}
-              ]} =
-               contract.conform(%{test: 312})
+      assert_errors(
+        ["test must be nil or test.name must be a string"],
+        contract.conform(%{test: %{name: 312}})
+      )
     end
   end
 end

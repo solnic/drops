@@ -7,8 +7,8 @@ defmodule Drops.ContractCase do
 
       import Drops.ContractCase
 
-      def assert_errors(errors, {:error, results}) do
-        assert errors == MessageBackend.errors(results) |> Enum.map(&to_string/1)
+      def assert_errors(errors, {:error, messages}) do
+        assert errors == Enum.map(messages, &to_string/1)
       end
     end
   end

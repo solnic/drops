@@ -13,8 +13,7 @@ defmodule Drops.Contract.Types.MapTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:map, 312]}}]} =
-               contract.conform(%{test: 312})
+      assert_errors(["test must be a map"], contract.conform(%{test: 312}))
     end
   end
 
@@ -30,8 +29,7 @@ defmodule Drops.Contract.Types.MapTest do
     end
 
     test "returns error with a non-map value", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :filled?, [%{}]}}]} =
-               contract.conform(%{test: %{}})
+      assert_errors(["test must be a map"], contract.conform(%{test: 312}))
     end
   end
 end

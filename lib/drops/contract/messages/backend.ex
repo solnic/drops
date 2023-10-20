@@ -25,19 +25,21 @@ defmodule Drops.Contract.Messages.Backend do
       ...>     }
       ...>   end
       ...> end
-      iex> UserContract.conform(%{name: "", email: 312}) |> UserContract.errors()
-      [
-        %Drops.Contract.Messages.Error{
-          path: [:email],
-          text: "312 received but it must be a string",
-          meta: %{args: [:string, 312], predicate: :type?}
-        },
-        %Drops.Contract.Messages.Error{
-          path: [:name],
-          text: "cannot be empty",
-          meta: %{args: [""], predicate: :filled?}
-        }
-      ]
+      iex> UserContract.conform(%{name: "", email: 312})
+      {:error,
+        [
+          %Drops.Contract.Messages.Error.Type{
+            path: [:email],
+            text: "312 received but it must be a string",
+            meta: %{args: [:string, 312], predicate: :type?}
+          },
+          %Drops.Contract.Messages.Error.Type{
+            path: [:name],
+            text: "cannot be empty",
+            meta: %{args: [""], predicate: :filled?}
+          }
+        ]
+      }
 
   """
   @callback text(atom(), any()) :: String.t()
@@ -57,8 +59,19 @@ defmodule Drops.Contract.Messages.Backend do
         [error(results)]
       end
 
+      defp error(text) when is_binary(text) do
+        %Error.Type{path: [], text: text, meta: %{}}
+      end
+
+      defp error({path, text}) when is_list(path) do
+        %Error.Type{path: path, text: text, meta: %{}}
+      end
+
+      defp error(%{path: path} = error), do: error
+      defp error(%Error.Sum{} = error), do: error
+
       defp error({:error, {path, :has_key?, [value]}}) do
-        %Error{
+        %Error.Type{
           path: path ++ [value],
           text: text(:has_key?, value),
           meta: %{
@@ -69,7 +82,7 @@ defmodule Drops.Contract.Messages.Backend do
       end
 
       defp error({:error, {path, predicate, [value, input] = args}}) do
-        %Error{
+        %Error.Type{
           path: path,
           text: text(predicate, value, input),
           meta: %{
@@ -80,7 +93,7 @@ defmodule Drops.Contract.Messages.Backend do
       end
 
       defp error({:error, {path, predicate, [input] = args}}) do
-        %Error{
+        %Error.Type{
           path: path,
           text: text(predicate, input),
           meta: %{

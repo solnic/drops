@@ -14,9 +14,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from the has_key? predicate", %{contract: contract} do
-      result = contract.conform(%{name: "Jane Doe"})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{name: "Jane Doe"})
 
       assert path == [:age]
       assert meta == %{predicate: :has_key?, args: [:age]}
@@ -37,9 +36,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from a type? predicate", %{contract: contract} do
-      result = contract.conform(%{name: "Jane Doe", age: "twenty"})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{name: "Jane Doe", age: "twenty"})
 
       assert path == [:age]
       assert meta == %{predicate: :type?, args: [:integer, "twenty"]}
@@ -47,9 +45,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from a predicate with no args", %{contract: contract} do
-      result = contract.conform(%{name: "", age: 21})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{name: "", age: 21})
 
       assert path == [:name]
       assert meta == %{predicate: :filled?, args: [""]}
@@ -57,9 +54,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from a predicate with args", %{contract: contract} do
-      result = contract.conform(%{name: "Jane", age: 12})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{name: "Jane", age: 12})
 
       assert path == [:age]
       assert meta == %{predicate: :gt?, args: [18, 12]}
@@ -67,9 +63,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from in? with a list of valid values", %{contract: contract} do
-      result = contract.conform(%{name: "Jane", age: 19, role: "oops"})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{name: "Jane", age: 19, role: "oops"})
 
       assert path == [:role]
       assert meta == %{predicate: :in?, args: [["admin", "user"], "oops"]}
@@ -77,9 +72,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from a sum type", %{contract: contract} do
-      result = contract.conform(%{birthday: "oops"})
-
-      assert [error = %{left: left_error, right: right_error}] = contract.errors(result)
+      assert {:error, [error = %{left: left_error, right: right_error}]} =
+               contract.conform(%{birthday: "oops"})
 
       assert left_error.path == [:birthday]
       assert left_error.meta == %{predicate: :type?, args: [nil, "oops"]}
@@ -105,9 +99,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from a type? predicate", %{contract: contract} do
-      result = contract.conform(%{user: %{age: "twenty"}})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{user: %{age: "twenty"}})
 
       assert path == [:user, :age]
       assert meta == %{predicate: :type?, args: [:integer, "twenty"]}
@@ -115,9 +108,8 @@ defmodule Drops.Contract.MessagesTest do
     end
 
     test "returns errors from a list type", %{contract: contract} do
-      result = contract.conform(%{user: %{roles: ["admin", 312, "moderator"]}})
-
-      assert [error = %{path: path, meta: meta}] = contract.errors(result)
+      assert {:error, [error = %{path: path, meta: meta}]} =
+               contract.conform(%{user: %{roles: ["admin", 312, "moderator"]}})
 
       assert path == [:user, :roles, 1]
       assert meta == %{predicate: :type?, args: [:string, 312]}

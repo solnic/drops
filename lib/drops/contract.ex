@@ -23,8 +23,9 @@ defmodule Drops.Contract do
       ...> end
       iex> UserContract.conform(%{name: "Jane", age: 48})
       {:ok, %{name: "Jane", age: 48}}
-      iex> UserContract.conform(%{name: "Jane", age: "not an integer"})
-      {:error, [error: {[:age], :type?, [:integer, "not an integer"]}]}
+      iex> {:error, errors} = UserContract.conform(%{name: "Jane", age: "not an integer"})
+      iex> Enum.map(errors, &to_string/1)
+      ["age must be an integer"]
 
   """
   @doc since: "0.1.0"
@@ -49,19 +50,21 @@ defmodule Drops.Contract do
       ...>     }
       ...>   end
       ...> end
-      iex> errors = UserContract.conform(%{name: "", email: 312}) |> UserContract.errors()
-      [
-        %Drops.Contract.Messages.Error{
-          path: [:email],
-          text: "must be a string",
-          meta: %{args: [:string, 312], predicate: :type?}
-        },
-        %Drops.Contract.Messages.Error{
-          path: [:name],
-          text: "must be filled",
-          meta: %{args: [""], predicate: :filled?}
-        }
-      ]
+      iex> {:error, errors} = UserContract.conform(%{name: "", email: 312})
+      {:error,
+        [
+          %Drops.Contract.Messages.Error.Type{
+            path: [:email],
+            text: "must be a string",
+            meta: %{args: [:string, 312], predicate: :type?}
+          },
+          %Drops.Contract.Messages.Error.Type{
+            path: [:name],
+            text: "must be filled",
+            meta: %{args: [""], predicate: :filled?}
+          }
+        ]
+      }
       iex> Enum.map(errors, &to_string/1)
       ["email must be a string", "name must be filled"]
 
@@ -112,7 +115,7 @@ defmodule Drops.Contract do
                 {:ok, value}
 
               {:error, error} = right_errors ->
-                {:error, {:or, {left_errors, right_errors}}}
+                {:error, @message_backend.errors({:or, {left_errors, right_errors}})}
             end
         end
       end
@@ -126,7 +129,7 @@ defmodule Drops.Contract do
         all_errors = schema_errors ++ rule_errors
 
         if length(all_errors) > 0 do
-          {:error, collapse_errors(all_errors)}
+          {:error, @message_backend.errors(collapse_errors(all_errors))}
         else
           {:ok, output}
         end
@@ -141,12 +144,6 @@ defmodule Drops.Contract do
             {:error, nest_errors(errors, root)}
         end
       end
-
-      def errors({:error, errors}) do
-        @message_backend.errors(errors)
-      end
-
-      def errors({:ok, _}), do: []
 
       def validate(data, keys) when is_list(keys) do
         Enum.map(keys, &validate(data, &1)) |> List.flatten()
@@ -217,6 +214,9 @@ defmodule Drops.Contract do
 
       defp nest_errors(errors, root) when is_list(errors) do
         Enum.map(errors, fn
+          %{__struct__: _error_type} = error ->
+            Messages.Error.Conversions.nest(error, root)
+
           {:error, {path, name, args}} ->
             {:error, nest_errors({path, name, args}, root)}
 
@@ -321,7 +321,7 @@ defmodule Drops.Contract do
       ...>     }
       ...>   end
       ...> end
-      iex> UserContract.conform(%{
+      iex> {:error, errors} = UserContract.conform(%{
       ...>  "user" => %{
       ...>    "name" => "John",
       ...>    "age" => 21,
@@ -332,7 +332,8 @@ defmodule Drops.Contract do
       ...>    }
       ...>  }
       ...> })
-      {:error, [error: {[:user, :address, :street], :filled?, [""]}]}
+      iex> Enum.map(errors, &to_string/1)
+      ["user.address.street must be filled"]
       iex> UserContract.conform(%{
       ...>  "user" => %{
       ...>    "name" => "John",
@@ -396,7 +397,7 @@ defmodule Drops.Contract do
          },
          age: 21
        }}
-      iex> UserContract.conform(%{
+      iex> {:error, errors} = UserContract.conform(%{
       ...>   name: "John",
       ...>   age: "21",
       ...>   address: %{
@@ -406,11 +407,8 @@ defmodule Drops.Contract do
       ...>     country: "USA"
       ...>   }
       ...> })
-      {:error,
-       [
-         error: {[:address, :city], :filled?, [""]},
-         error: {[:age], :type?, [:integer, "21"]}
-       ]}
+      iex> Enum.map(errors, &to_string/1)
+      ["address.city must be filled", "age must be an integer"]
   """
   @spec schema(name :: atom()) :: Macro.t()
   defmacro schema(name, do: block) when is_atom(name) do
@@ -450,8 +448,9 @@ defmodule Drops.Contract do
       {:ok, %{email: "jane@doe.org", login: nil}}
       iex> UserContract.conform(%{email: nil, login: "jane"})
       {:ok, %{email: nil, login: "jane"}}
-      iex> UserContract.conform(%{email: nil, login: nil})
-      {:error, ["email or login must be present"]}
+      iex> {:error, errors} = UserContract.conform(%{email: nil, login: nil})
+      iex> Enum.map(errors, &to_string/1)
+      ["email or login must be present"]
 
   """
   defmacro rule(name, input, do: block) do

@@ -540,9 +540,6 @@ defmodule Drops.PredicatesTest do
     test "returns error when the value's size is less than the arg", %{
       contract: contract
     } do
-      assert {:error, [{:error, {[:test], :min_size?, [2, [1]]}}]} =
-               contract.conform(%{test: [1]})
-
       assert_errors(["test size cannot be less than 2"], contract.conform(%{test: [1]}))
     end
   end

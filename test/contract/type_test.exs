@@ -13,8 +13,7 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:string, 312]}}]} =
-               contract.conform(%{test: 312})
+      assert_errors(["test must be a string"], contract.conform(%{test: 312}))
     end
   end
 
@@ -32,19 +31,10 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error,
-              [
-                or: {
-                  {:error, {[:test], :type?, [nil, :invalid]}},
-                  {:error,
-                   [
-                     or:
-                       {{:error, {[:test], :type?, [:integer, :invalid]}},
-                        {:error, {[:test], :type?, [:string, :invalid]}}}
-                   ]}
-                }
-              ]} =
-               contract.conform(%{test: :invalid})
+      assert_errors(
+        ["test must be nil or test must be an integer or test must be a string"],
+        contract.conform(%{test: :invalid})
+      )
     end
   end
 
@@ -61,21 +51,15 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [:integer, :invalid]}},
-                   {:error, {[:test], :type?, [:string, :invalid]}}}
-              ]} =
-               contract.conform(%{test: :invalid})
+      assert_errors(
+        ["test must be an integer or test must be a string"],
+        contract.conform(%{test: :invalid})
+      )
 
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [:integer, ""]}},
-                   {:error, {[:test], :filled?, [""]}}}
-              ]} =
-               contract.conform(%{test: ""})
+      assert_errors(
+        ["test must be an integer or test must be filled"],
+        contract.conform(%{test: ""})
+      )
     end
   end
 
@@ -92,21 +76,15 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :filled?, [[]]}},
-                   {:error, {[:test], :type?, [:map, []]}}}
-              ]} =
-               contract.conform(%{test: []})
+      assert_errors(
+        ["test must be filled or test must be a map"],
+        contract.conform(%{test: []})
+      )
 
-      assert {:error,
-              [
-                or:
-                  {{:error, {[:test], :type?, [:list, %{}]}},
-                   {:error, {[:test], :filled?, [%{}]}}}
-              ]} =
-               contract.conform(%{test: %{}})
+      assert_errors(
+        ["test must be a list or test must be filled"],
+        contract.conform(%{test: %{}})
+      )
     end
   end
 end
