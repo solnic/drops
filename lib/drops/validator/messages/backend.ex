@@ -71,7 +71,7 @@ defmodule Drops.Validator.Messages.Backend do
       defp error(%Error.Sum{} = error), do: error
 
       defp error({:error, {path, :has_key?, [value]}}) do
-        %Error.Type{
+        %Error.Key{
           path: path ++ [value],
           text: text(:has_key?, value),
           meta: %{

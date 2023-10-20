@@ -46,7 +46,7 @@ UserContract.conform(%{name: "Jane", email: "jane@doe.org"})
 #      text: "must be a string",
 #      meta: %{args: [:string, 312], predicate: :type?}
 #    },
-#    %Drops.Validator.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Key{
 #      path: [:name],
 #      text: "key must be present",
 #      meta: %{args: [:name], predicate: :has_key?}

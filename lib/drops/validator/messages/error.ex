@@ -15,17 +15,24 @@ defmodule Drops.Validator.Messages.Error do
     @type t :: %__MODULE__{}
 
     defstruct [:path, :text, :meta]
+  end
 
-    defimpl String.Chars, for: Error.Type do
-      def to_string(%Error.Type{path: path, text: text}) do
-        "#{Enum.join(path, ".")} #{text}"
-      end
+  defmodule Key do
+    @moduledoc false
+    @type t :: %__MODULE__{}
+
+    defstruct [:path, :text, :meta]
+  end
+
+  defimpl String.Chars, for: [Error.Type, Error.Key] do
+    def to_string(%{path: path, text: text}) do
+      "#{Enum.join(path, ".")} #{text}"
     end
+  end
 
-    defimpl Error.Conversions, for: Error.Type do
-      def nest(%Error.Type{path: path} = error, root) do
-        Map.merge(error, %{path: root ++ path})
-      end
+  defimpl Error.Conversions, for: [Error.Type, Error.Key] do
+    def nest(%{path: path} = error, root) do
+      Map.merge(error, %{path: root ++ path})
     end
   end
 
