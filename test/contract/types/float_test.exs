@@ -37,7 +37,7 @@ defmodule Drops.Contract.Types.FloatTest do
   describe "float/1 with extra predicates" do
     contract do
       schema do
-        %{required(:test) => float([gt?: 0, lt?: 100])}
+        %{required(:test) => float(gt?: 0, lt?: 100)}
       end
     end
 

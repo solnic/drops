@@ -416,19 +416,21 @@ defmodule Drops.Contract do
 
   """
   defmacro rule(name, {data, _line, rest} = input, do: block) when is_atom(data) do
-    pre = quote do
-      Module.put_attribute(__MODULE__, :rules, unquote(name))
-
-      def rule(unquote(name), unquote(input)), do: unquote(block)
-    end
-
-    post = if is_nil(rest) do
-      []
-    else
+    pre =
       quote do
-        def rule(unquote(name), _), do: :ok
+        Module.put_attribute(__MODULE__, :rules, unquote(name))
+
+        def rule(unquote(name), unquote(input)), do: unquote(block)
       end
-    end
+
+    post =
+      if is_nil(rest) do
+        []
+      else
+        quote do
+          def rule(unquote(name), _), do: :ok
+        end
+      end
 
     quote do
       unquote(pre)

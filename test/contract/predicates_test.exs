@@ -455,7 +455,10 @@ defmodule Drops.PredicatesTest do
     test "returns error when the value's size is greater than the arg", %{
       contract: contract
     } do
-      assert_errors(["test size cannot be greater than 2"], contract.conform(%{test: [1, 2, 3]}))
+      assert_errors(
+        ["test size cannot be greater than 2"],
+        contract.conform(%{test: [1, 2, 3]})
+      )
     end
   end
 

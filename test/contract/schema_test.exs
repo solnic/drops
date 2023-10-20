@@ -139,7 +139,9 @@ defmodule Drops.Contract.SchemaTest do
                contract.conform(%{email: "jane@doe.org", name: "Jane"})
     end
 
-    test "returns has_key? error when a required key key must be present", %{contract: contract} do
+    test "returns has_key? error when a required key key must be present", %{
+      contract: contract
+    } do
       assert_errors(["email key must be present"], contract.conform(%{}))
     end
 

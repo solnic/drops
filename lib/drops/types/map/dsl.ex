@@ -58,16 +58,16 @@ defmodule Drops.Types.Map.DSL do
   @doc since: "0.1.0"
 
   @spec type({atom(), []}) :: type()
-  @spec type([list: atom()]) :: type()
-  @spec type([list: []]) :: type()
+  @spec type(list: atom()) :: type()
+  @spec type(list: []) :: type()
   @spec type([atom()]) :: [type()]
   @spec type(atom()) :: type()
 
-  def type([list: members]) when is_map(members) or is_tuple(members) do
+  def type(list: members) when is_map(members) or is_tuple(members) do
     {:type, {:list, members}}
   end
 
-  def type([list: [type | predicates]]) do
+  def type(list: [type | predicates]) do
     {:type, {:list, type(type, predicates)}}
   end
 
@@ -192,7 +192,7 @@ defmodule Drops.Types.Map.DSL do
   @spec maybe(map()) :: [type()]
 
   def maybe(schema) when is_map(schema) do
-    {:sum, {type(:nil), schema}}
+    {:sum, {type(nil), schema}}
   end
 
   @doc ~S"""
@@ -209,7 +209,7 @@ defmodule Drops.Types.Map.DSL do
   @spec maybe(atom(), []) :: type()
 
   def maybe(type, predicates \\ []) do
-    type([:nil, {type, predicates}])
+    type([nil, {type, predicates}])
   end
 
   @doc ~S"""
