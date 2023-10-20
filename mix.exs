@@ -15,7 +15,8 @@ defmodule Drops.MixProject do
       description: "Tools for working with data effectively - data schemas, type-safe coercions, and more.",
       links: %{"GitHub" => @source_url},
       package: package(),
-      docs: docs()
+      docs: docs(),
+      source_url: @source_url
     ]
   end
 
