@@ -41,8 +41,18 @@ UserContract.conform(%{name: "Jane", email: "jane@doe.org"})
 UserContract.conform(%{email: 312})
 # {:error, [error: {[], :has_key?, [:name]}]}
 
-UserContract.conform(%{name: "Jane", email: 312})
-# {:error, [error: {[:email], :type?, [:string, 321]}]}
+{:error, errors} = UserContract.conform(%{name: "Jane", email: 312})
+# {:error,
+#  [
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:email],
+#      text: "must be a string",
+#      meta: %{args: [:string, 312], predicate: :type?}
+#    }
+#  ]}
+
+Enum.map(errors, &to_string/1)
+# ["email must be a string"]
 ```
 
 ## Schemas
