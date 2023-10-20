@@ -1,4 +1,4 @@
-defmodule Drops.Contract.Messages.Error do
+defmodule Drops.Validator.Messages.Error do
   alias __MODULE__
 
   defprotocol Conversions do

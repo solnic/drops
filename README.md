@@ -41,12 +41,12 @@ UserContract.conform(%{name: "Jane", email: "jane@doe.org"})
 {:error, errors} = UserContract.conform(%{email: 312})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:email],
 #      text: "must be a string",
 #      meta: %{args: [:string, 312], predicate: :type?}
 #    },
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:name],
 #      text: "key must be present",
 #      meta: %{args: [:name], predicate: :has_key?}
@@ -59,7 +59,7 @@ Enum.map(errors, &to_string/1)
 {:error, errors} = UserContract.conform(%{name: "Jane", email: 312})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:email],
 #      text: "must be a string",
 #      meta: %{args: [:string, 312], predicate: :type?}
@@ -140,7 +140,7 @@ UserContract.conform(%{name: "Jane", age: 21})
 UserContract.conform(%{name: "", age: 21})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:name],
 #      text: "must be filled",
 #      meta: %{args: [""], predicate: :filled?}
@@ -150,7 +150,7 @@ UserContract.conform(%{name: "", age: 21})
 UserContract.conform(%{name: "Jane", age: 12})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:age],
 #      text: "must be greater than 18",
 #      meta: %{args: [18, 12], predicate: :gt?}
@@ -232,12 +232,12 @@ UserContract.conform(%{
 })
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:user, :address, :zipcode],
 #      text: "must be filled",
 #      meta: %{args: [""], predicate: :filled?}
 #    },
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:user, :tags, 1, :created_at],
 #      text: "must be an integer",
 #      meta: %{args: [:integer, nil], predicate: :type?}
@@ -265,8 +265,8 @@ UserContract.conform(%{count: "1"})
 
 UserContract.conform(%{count: nil})
 #  [
-#    %Drops.Contract.Messages.Error.Caster{
-#      error: %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Caster{
+#      error: %Drops.Validator.Messages.Error.Type{
 #        path: [:count],
 #        text: "must be a string",
 #        meta: %{args: [:string, nil], predicate: :type?}
@@ -277,7 +277,7 @@ UserContract.conform(%{count: nil})
 UserContract.conform(%{count: "-1"})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Type{
+#    %Drops.Validator.Messages.Error.Type{
 #      path: [:count],
 #      text: "must be greater than 0",
 #      meta: %{args: [0, -1], predicate: :gt?}
@@ -382,7 +382,7 @@ UserContract.conform(%{email: nil, login: "jane"})
 UserContract.conform(%{email: nil, login: nil})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Rule{
+#    %Drops.Validator.Messages.Error.Rule{
 #      path: [],
 #      text: "email or login must be present",
 #      meta: %{}

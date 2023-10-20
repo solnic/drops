@@ -24,7 +24,7 @@ UserContract.conform(%{email: nil, login: "jane"})
 UserContract.conform(%{email: nil, login: nil})
 # {:error,
 #  [
-#    %Drops.Contract.Messages.Error.Rule{
+#    %Drops.Validator.Messages.Error.Rule{
 #      path: [],
 #      text: "email or login must be present",
 #      meta: %{}

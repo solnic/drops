@@ -1,6 +1,6 @@
-defmodule Drops.Contract.Messages.DefaultBackend do
+defmodule Drops.Validator.Messages.DefaultBackend do
   @moduledoc false
-  use Drops.Contract.Messages.Backend
+  use Drops.Validator.Messages.Backend
 
   @text_mapping %{
     type?: %{

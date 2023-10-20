@@ -40,7 +40,7 @@ defmodule Drops.Contract do
       use Drops.Validator
 
       alias Drops.Types
-      alias Drops.Contract.Messages
+      alias Drops.Validator.Messages
 
       import Drops.Contract
       import Drops.Contract.Runtime

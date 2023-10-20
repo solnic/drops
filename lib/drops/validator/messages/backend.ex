@@ -1,11 +1,11 @@
-defmodule Drops.Contract.Messages.Backend do
+defmodule Drops.Validator.Messages.Backend do
   @moduledoc ~S"""
   Messages Backends are used to generate error messages from error results.
 
   ## Examples
 
       iex> defmodule MyBackend do
-      ...>   use Drops.Contract.Messages.Backend
+      ...>   use Drops.Validator.Messages.Backend
       ...>
       ...>   def text(:type?, type, input) do
       ...>     "#{inspect(input)} received but it must be a #{type}"
@@ -28,12 +28,12 @@ defmodule Drops.Contract.Messages.Backend do
       iex> UserContract.conform(%{name: "", email: 312})
       {:error,
         [
-          %Drops.Contract.Messages.Error.Type{
+          %Drops.Validator.Messages.Error.Type{
             path: [:email],
             text: "312 received but it must be a string",
             meta: %{args: [:string, 312], predicate: :type?}
           },
-          %Drops.Contract.Messages.Error.Type{
+          %Drops.Validator.Messages.Error.Type{
             path: [:name],
             text: "cannot be empty",
             meta: %{args: [""], predicate: :filled?}
@@ -47,9 +47,9 @@ defmodule Drops.Contract.Messages.Backend do
 
   defmacro __using__(_opts) do
     quote do
-      @behaviour Drops.Contract.Messages.Backend
+      @behaviour Drops.Validator.Messages.Backend
 
-      alias Drops.Contract.Messages.Error
+      alias Drops.Validator.Messages.Error
 
       def errors(results) when is_list(results) do
         Enum.map(results, &error/1)

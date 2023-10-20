@@ -1,7 +1,7 @@
-defmodule Drops.Contract.MessagesTest do
+defmodule Drops.Validator.MessagesTest do
   use Drops.ContractCase
 
-  doctest Drops.Contract.Messages.Backend
+  doctest Drops.Validator.Messages.Backend
 
   describe "errors/1 with key errors" do
     contract do

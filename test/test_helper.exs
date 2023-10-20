@@ -3,7 +3,7 @@ defmodule Drops.ContractCase do
 
   using do
     quote do
-      alias Drops.Contract.Messages.DefaultBackend, as: MessageBackend
+      alias Drops.Validator.Messages.DefaultBackend, as: MessageBackend
 
       import Drops.ContractCase
 

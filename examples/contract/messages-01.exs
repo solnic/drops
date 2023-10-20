@@ -1,5 +1,5 @@
 defmodule MyBackend do
-  use Drops.Contract.Messages.Backend
+  use Drops.Validator.Messages.Backend
 
   def text(:type?, type, input) do
     "#{inspect(input)} received but it must be a #{type}"
