@@ -1,9 +1,10 @@
-## v0.1.0 - TBR
+## v0.1.0 - 2023-10-20
 
 ### Features
 
 - Added `Drops.Contract` module for defining validation schemas with additional rules
 - Added `Drops.Validator` module for running validation functions against input
+- Added `Drops.Validator.Messages.DefaultBackend` that's configured by default in contracts
 - Added `Drops.Types` module with the following built-in types:
   - `Drops.Types.Type` - basic type
   - `Drops.Types.List` - a list if member type
