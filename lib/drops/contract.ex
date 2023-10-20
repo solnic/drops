@@ -35,44 +35,6 @@ defmodule Drops.Contract do
   @callback conform(data :: map(), schema :: Types.Map, keyword()) ::
               {:ok, map()} | {:error, list()}
 
-  @doc """
-  Return errors from results returned by `conform/2`.
-
-  ## Examples
-
-      iex> defmodule UserContract do
-      ...>   use Drops.Contract
-      ...>
-      ...>   schema do
-      ...>     %{
-      ...>       required(:name) => string(:filled?),
-      ...>       required(:email) => string(:filled?)
-      ...>     }
-      ...>   end
-      ...> end
-      iex> {:error, errors} = UserContract.conform(%{name: "", email: 312})
-      {:error,
-        [
-          %Drops.Contract.Messages.Error.Type{
-            path: [:email],
-            text: "must be a string",
-            meta: %{args: [:string, 312], predicate: :type?}
-          },
-          %Drops.Contract.Messages.Error.Type{
-            path: [:name],
-            text: "must be filled",
-            meta: %{args: [""], predicate: :filled?}
-          }
-        ]
-      }
-      iex> Enum.map(errors, &to_string/1)
-      ["email must be a string", "name must be filled"]
-
-  """
-  @doc since: "0.1.0"
-  @callback errors({:ok, map()}) :: []
-  @callback errors({:error, map()}) :: [Drops.Contract.Messages.Error.t()]
-
   defmacro __using__(opts) do
     quote do
       use Drops.Validator

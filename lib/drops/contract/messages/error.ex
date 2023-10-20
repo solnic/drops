@@ -101,7 +101,7 @@ defmodule Drops.Contract.Messages.Error do
       end
     end
 
-    defimpl Error.Conversions, for: Error.Caster do
+    defimpl Error.Conversions, for: Error.Rule do
       def nest(%Error.Rule{path: path} = error, root) do
         Map.merge(error, %{path: root ++ path})
       end
