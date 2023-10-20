@@ -14,8 +14,7 @@ defmodule Drops.Contract.Types.BooleanTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:boolean, :invalid]}}]} =
-               contract.conform(%{test: :invalid})
+      assert_errors(["test must be boolean"], contract.conform(%{test: :invalid}))
     end
   end
 end

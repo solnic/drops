@@ -48,6 +48,7 @@ defmodule Drops.MixProject do
       groups_for_modules: [
         Validation: [
           Drops.Contract,
+          Drops.Contract.Messages,
           Drops.Casters,
           Drops.Predicates,
           Drops.Validator

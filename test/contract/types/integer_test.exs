@@ -13,8 +13,7 @@ defmodule Drops.Contract.Types.IntegerTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:integer, :invalid]}}]} =
-               contract.conform(%{test: :invalid})
+      assert_errors(["test must be an integer"], contract.conform(%{test: :invalid}))
     end
   end
 
@@ -30,11 +29,8 @@ defmodule Drops.Contract.Types.IntegerTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:integer, :invalid]}}]} =
-               contract.conform(%{test: :invalid})
-
-      assert {:error, [{:error, {[:test], :odd?, [312]}}]} =
-               contract.conform(%{test: 312})
+      assert_errors(["test must be an integer"], contract.conform(%{test: :invalid}))
+      assert_errors(["test must be odd"], contract.conform(%{test: 312}))
     end
   end
 
@@ -50,11 +46,8 @@ defmodule Drops.Contract.Types.IntegerTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:integer, :invalid]}}]} =
-               contract.conform(%{test: :invalid})
-
-      assert {:error, [{:error, {[:test], :gt?, [2, 0]}}]} =
-               contract.conform(%{test: 0})
+      assert_errors(["test must be an integer"], contract.conform(%{test: :invalid}))
+      assert_errors(["test must be greater than 2"], contract.conform(%{test: 0}))
     end
   end
 
@@ -70,14 +63,9 @@ defmodule Drops.Contract.Types.IntegerTest do
     end
 
     test "returns error with invalid data", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:integer, :invalid]}}]} =
-               contract.conform(%{test: :invalid})
-
-      assert {:error, [{:error, {[:test], :even?, [7]}}]} =
-               contract.conform(%{test: 7})
-
-      assert {:error, [{:error, {[:test], :gt?, [2, 0]}}]} =
-               contract.conform(%{test: 0})
+      assert_errors(["test must be an integer"], contract.conform(%{test: :invalid}))
+      assert_errors(["test must be even"], contract.conform(%{test: 311}))
+      assert_errors(["test must be greater than 2"], contract.conform(%{test: 0}))
     end
   end
 end

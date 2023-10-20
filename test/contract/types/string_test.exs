@@ -13,8 +13,7 @@ defmodule Drops.Contract.Types.StringTest do
     end
 
     test "returns error with a non-string value", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :type?, [:string, 312]}}]} =
-               contract.conform(%{test: 312})
+      assert_errors(["test must be a string"], contract.conform(%{test: 312}))
     end
   end
 
@@ -30,7 +29,7 @@ defmodule Drops.Contract.Types.StringTest do
     end
 
     test "returns error with an empty string", %{contract: contract} do
-      assert {:error, [{:error, {[:test], :filled?, [""]}}]} = contract.conform(%{test: ""})
+      assert_errors(["test must be filled"], contract.conform(%{test: ""}))
     end
   end
 end

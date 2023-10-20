@@ -18,5 +18,15 @@ defmodule UserContract do
 end
 
 UserContract.conform(%{email: "jane@doe.org", login: nil})
+
 UserContract.conform(%{email: nil, login: "jane"})
+
 UserContract.conform(%{email: nil, login: nil})
+# {:error,
+#  [
+#    %Drops.Contract.Messages.Error.Rule{
+#      path: [],
+#      text: "email or login must be present",
+#      meta: %{}
+#    }
+#  ]}

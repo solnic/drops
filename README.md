@@ -113,10 +113,25 @@ UserContract.conform(%{name: "Jane", age: 21})
 # {:ok, %{name: "Jane", age: 21}}
 
 UserContract.conform(%{name: "", age: 21})
-# {:error, [error: {[:name], :filled?, [""]}]}
+# {:error,
+#  [
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:name],
+#      text: "must be filled",
+#      meta: %{args: [""], predicate: :filled?}
+#    }
+#  ]}
 
 UserContract.conform(%{name: "Jane", age: 12})
-# {:error, [error: {[:age], :gt?, [18, 12]}]}
+# {:error,
+#  [
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:age],
+#      text: "must be greater than 18",
+#      meta: %{args: [18, 12], predicate: :gt?}
+#    }
+#  ]}
+
 ```
 
 ### Nested schemas
@@ -192,12 +207,20 @@ UserContract.conform(%{
 })
 # {:error,
 #  [
-#    error: {[:user, :address, :zipcode], :filled?, [""]},
-#    error: {[:user, :tags, 1, :created_at], :type?, [:integer, nil]}
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:user, :address, :zipcode],
+#      text: "must be filled",
+#      meta: %{args: [""], predicate: :filled?}
+#    },
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:user, :tags, 1, :created_at],
+#      text: "must be an integer",
+#      meta: %{args: [:integer, nil], predicate: :type?}
+#    }
 #  ]}
 ```
 
-### Type casting
+### Type-safe casting
 
 You can define custom type casting functions that will be applied to the input data before it's validated. This is useful when you want to convert the input data to a different format, for example, when you want to convert a string to an integer. Here's an example:
 
@@ -215,8 +238,27 @@ end
 UserContract.conform(%{count: "1"})
 # {:ok, %{count: 1}}
 
+UserContract.conform(%{count: nil})
+#  [
+#    %Drops.Contract.Messages.Error.Caster{
+#      error: %Drops.Contract.Messages.Error.Type{
+#        path: [:count],
+#        text: "must be a string",
+#        meta: %{args: [:string, nil], predicate: :type?}
+#      }
+#    }
+#  ]}
+
 UserContract.conform(%{count: "-1"})
-# {:error, [error: {[:count], :gt?, [0, -1]}]}
+# {:error,
+#  [
+#    %Drops.Contract.Messages.Error.Type{
+#      path: [:count],
+#      text: "must be greater than 0",
+#      meta: %{args: [0, -1], predicate: :gt?}
+#    }
+#  ]}
+
 ```
 
 It's also possible to define a custom casting module and use it via `caster` option:
@@ -280,13 +322,6 @@ UserContract.conform(%{
 #    age: 21,
 #    tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]
 #  }}
-
-# {:ok,
-#  %{
-#    name: "Jane",
-#    age: 21,
-#    tags: [%{name: "red"}, %{name: "green"}, %{name: "blue"}]
-#  }}
 ```
 
 ## Rules
@@ -320,5 +355,12 @@ UserContract.conform(%{email: nil, login: "jane"})
 # {:ok, %{email: nil, login: "jane"}}
 
 UserContract.conform(%{email: nil, login: nil})
-# {:error, [error: "email or login must be provided"]}
+# {:error,
+#  [
+#    %Drops.Contract.Messages.Error.Rule{
+#      path: [],
+#      text: "email or login must be present",
+#      meta: %{}
+#    }
+#  ]}
 ```
