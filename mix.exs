@@ -12,7 +12,7 @@ defmodule Drops.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       licenses: "MIT",
-      description: "Tools for working with data effectively",
+      description: "Tools for working with data effectively - data schemas, type-safe coercions, and more.",
       package: package(),
       docs: docs()
     ]
