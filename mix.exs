@@ -8,7 +8,7 @@ defmodule Drops.MixProject do
     [
       app: :drops,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       licenses: "MIT",
