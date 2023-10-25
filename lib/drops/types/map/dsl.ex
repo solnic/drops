@@ -37,6 +37,16 @@ defmodule Drops.Types.Map.DSL do
 
   @doc ~S"""
   Returns a type cast specification.
+
+
+  ## Examples
+
+      # cast a string to an integer
+      cast(:string) |> integer()
+
+      # cast a string to an integer with additional constraints
+      cast(string(match?: ~r/\d+/])) |> integer()
+
   """
   @doc since: "0.1.0"
   @spec cast(type(), Keyword.t()) :: {:cast, {type(), Keyword.t()}}
@@ -112,6 +122,11 @@ defmodule Drops.Types.Map.DSL do
 
   def type(type, predicates) when is_list(predicates) do
     {:type, {type, predicates}}
+  end
+
+  def type({:cast, {input_type, cast_opts}}, output_type)
+      when is_tuple(input_type) and is_tuple(output_type) do
+    {:cast, {input_type, output_type, cast_opts}}
   end
 
   def type({:cast, {input_type, cast_opts}}, output_type) when is_atom(output_type) do

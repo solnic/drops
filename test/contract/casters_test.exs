@@ -50,6 +50,25 @@ defmodule Drops.CastersTest do
     end
   end
 
+  describe ":string => :integer with input format constraints" do
+    contract do
+      schema do
+        %{required(:test) => cast(string(match?: ~r/\d+/)) |> integer()}
+      end
+    end
+
+    test "returns error when input format is invalid", %{contract: contract} do
+      assert_errors(
+        ["cast error: test must have a valid format"],
+        contract.conform(%{test: "oops"})
+      )
+    end
+
+    test "defining a required key with coercion", %{contract: contract} do
+      assert {:ok, %{test: 12}} = contract.conform(%{test: "12"})
+    end
+  end
+
   describe ":string => :float" do
     contract do
       schema do
