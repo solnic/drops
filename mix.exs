@@ -3,6 +3,7 @@ defmodule Drops.MixProject do
 
   @source_url "https://github.com/solnic/drops"
   @version "0.1.0"
+  @license "LGPL-3.0-or-later"
 
   def project do
     [
@@ -11,7 +12,7 @@ defmodule Drops.MixProject do
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      licenses: "MIT",
+      licenses: [@license],
       description: "Tools for working with data effectively - data schemas, type-safe coercions, and more.",
       links: %{"GitHub" => @source_url},
       package: package(),
@@ -31,7 +32,7 @@ defmodule Drops.MixProject do
     [
       name: "drops",
       files: ~w(lib .formatter.exs mix.exs README* LICENSE CHANGELOG.md),
-      licenses: ["LGPLv3"],
+      licenses: [@license],
       links: %{"GitHub" => "https://github.com/solnic/drops"}
     ]
   end
