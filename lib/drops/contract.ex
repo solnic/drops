@@ -265,7 +265,6 @@ defmodule Drops.Contract do
       iex> UserContract.conform(%{name: "John", age: 21})
       {:ok, %{name: "John", age: 21}}
   """
-  @spec schema(do: Macro.t()) :: Macro.t()
   defmacro schema(do: block) do
     set_schema(__CALLER__, :default, [], block)
   end
@@ -381,17 +380,14 @@ defmodule Drops.Contract do
       iex> Enum.map(errors, &to_string/1)
       ["address.city must be filled", "age must be an integer"]
   """
-  @spec schema(name :: atom()) :: Macro.t()
   defmacro schema(name, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, [], block)
   end
 
-  @spec schema(opts :: keyword()) :: Macro.t()
   defmacro schema(opts, do: block) do
     set_schema(__CALLER__, :default, opts, block)
   end
 
-  @spec schema(name :: atom(), opts :: keyword()) :: Macro.t()
   defmacro schema(name, opts, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, opts, block)
   end
