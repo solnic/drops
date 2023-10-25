@@ -25,6 +25,8 @@ defmodule Drops.Validator.Messages.Error do
   end
 
   defimpl String.Chars, for: [Error.Type, Error.Key] do
+    def to_string(%{path: [], text: text}), do: text
+
     def to_string(%{path: path, text: text}) do
       "#{Enum.join(path, ".")} #{text}"
     end

@@ -21,6 +21,9 @@ defmodule Drops.Contract do
       ...>     }
       ...>   end
       ...> end
+      iex> {:error, errors} = UserContract.conform("oops")
+      iex> Enum.map(errors, &to_string/1)
+      ["must be a map"]
       iex> UserContract.conform(%{name: "Jane", age: 48})
       {:ok, %{name: "Jane", age: 48}}
       iex> {:error, errors} = UserContract.conform(%{name: "Jane", age: "not an integer"})
@@ -63,7 +66,13 @@ defmodule Drops.Contract do
       end
 
       def conform(data, %Types.Map{} = schema) do
-        conform(data, schema.keys)
+        case validate(data, schema) do
+          {:ok, {_, validated_data}} ->
+            conform(validated_data, schema.keys)
+
+          error ->
+            {:error, @message_backend.errors(error)}
+        end
       end
 
       def conform(data, %Types.Sum{} = type) do

@@ -27,6 +27,10 @@ defmodule Drops.Validator do
         end
       end
 
+      def validate(input, %Types.Map{} = type) do
+        validate(input, type.constraints, path: [])
+      end
+
       def validate(data, %Key{presence: :required, path: path} = key) do
         if Key.present?(data, key) do
           validate(get_in(data, path), key.type, path: path)
