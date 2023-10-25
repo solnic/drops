@@ -1,5 +1,5 @@
 # Elixir Drops 💦
-[![Elixir CI](https://github.com/solnic/drops/actions/workflows/elixir.yml/badge.svg)](https://github.com/solnic/drops/actions/workflows/elixir.yml) [![Hex pm](https://img.shields.io/hexpm/v/drops.svg?style=flat)](https://hex.pm/packages/drops) [![hex.pm downloads](https://img.shields.io/hexpm/dt/drops.svg?style=flat)](https://hex.pm/packages/drops)
+[![CI](https://github.com/solnic/drops/actions/workflows/ci.yml/badge.svg)](https://github.com/solnic/drops/actions/workflows/ci.yml) [![Hex pm](https://img.shields.io/hexpm/v/drops.svg?style=flat)](https://hex.pm/packages/drops) [![hex.pm downloads](https://img.shields.io/hexpm/dt/drops.svg?style=flat)](https://hex.pm/packages/drops)
 
 Elixir `Drops` is a collection of small modules that provide useful extensions and functions that can be used to work with data effectively.
 
