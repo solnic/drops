@@ -104,7 +104,7 @@ defmodule Drops.Contract.RuleTest do
     end
   end
 
-  describe "rule/1 with guard clauses" do
+  describe "rule/1 for the whole input" do
     contract do
       schema do
         %{
@@ -133,6 +133,60 @@ defmodule Drops.Contract.RuleTest do
       assert_errors(
         ["either login or email required"],
         contract.conform(%{login: nil, email: nil})
+      )
+    end
+  end
+
+  describe "rule/1 for the whole input when nested" do
+    contract do
+      schema do
+        %{
+          required(:name) => string(),
+          optional(:contact) => %{
+            required(:email) => string()
+          },
+          optional(:address) => %{
+            required(:street) => string(),
+            required(:city) => string(),
+            required(:country) => string(),
+            required(:zipcode) => string()
+          }
+        }
+      end
+
+      rule(:info_required, data) do
+        if is_nil(data[:contact]) and is_nil(data[:address]) do
+          {:error, "either contact or address info is required"}
+        else
+          :ok
+        end
+      end
+    end
+
+    test "returns success when schema and rules passed", %{contract: contract} do
+      assert {:ok, %{name: "jane", contact: %{email: "jane@doe.org"}}} =
+               contract.conform(%{name: "jane", contact: %{email: "jane@doe.org"}})
+
+      assert {:ok,
+              %{
+                name: "jane",
+                address: %{street: "Main St", city: "NY", country: "US", zipcode: "12345"}
+              }} =
+               contract.conform(%{
+                 name: "jane",
+                 address: %{
+                   street: "Main St",
+                   city: "NY",
+                   country: "US",
+                   zipcode: "12345"
+                 }
+               })
+    end
+
+    test "returns rule errors", %{contract: contract} do
+      assert_errors(
+        ["either contact or address info is required"],
+        contract.conform(%{name: "jane"})
       )
     end
   end
