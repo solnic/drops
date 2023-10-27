@@ -13,7 +13,10 @@ defmodule Drops.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       licenses: [@license],
-      description: "Tools for working with data effectively - data schemas, type-safe coercions, and more.",
+      description: """
+      Tools for working with data effectively - data contracts using schemas, \
+      domain validation rules, type-safe casting, and more.
+      """
       links: %{"GitHub" => @source_url},
       package: package(),
       docs: docs(),
