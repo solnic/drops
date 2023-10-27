@@ -58,30 +58,30 @@ defmodule Drops.Contract do
       @before_compile Drops.Contract.Runtime
 
       def conform(data) do
-        conform(data, schema())
+        conform(data, schema(), root: true)
       end
 
-      def conform(data, %Types.Map{atomize: true} = schema) do
-        conform(Types.Map.atomize(data, schema.keys), schema.keys)
+      def conform(data, %Types.Map{atomize: true} = schema, root: root) do
+        conform(Types.Map.atomize(data, schema.keys), schema.keys, root: root)
       end
 
-      def conform(data, %Types.Map{} = schema) do
+      def conform(data, %Types.Map{} = schema, root: root) do
         case validate(data, schema) do
           {:ok, {_, validated_data}} ->
-            conform(validated_data, schema.keys)
+            conform(validated_data, schema.keys, root: root)
 
           error ->
             {:error, @message_backend.errors(error)}
         end
       end
 
-      def conform(data, %Types.Sum{} = type) do
-        case conform(data, type.left) do
+      def conform(data, %Types.Sum{} = type, root: root) do
+        case conform(data, type.left, root: root) do
           {:ok, value} ->
             {:ok, value}
 
           {:error, _} = left_errors ->
-            case conform(data, type.right) do
+            case conform(data, type.right, root: root) do
               {:ok, value} ->
                 {:ok, value}
 
@@ -91,28 +91,27 @@ defmodule Drops.Contract do
         end
       end
 
-      def conform(data, keys) when is_list(keys) do
+      def conform(data, %Types.Map{} = schema, path: path) do
+        case conform(data, schema, root: false) do
+          {:ok, value} ->
+            {:ok, {path, value}}
+
+          {:error, errors} ->
+            {:error, nest_errors(errors, path)}
+        end
+      end
+
+      def conform(data, keys, root: root) when is_list(keys) do
         results = validate(data, keys)
         output = to_output(results)
-        schema_errors = Enum.reject(results, &is_ok/1)
-        rule_errors = apply_rules(output)
+        errors = Enum.reject(results, &is_ok/1)
 
-        all_errors = schema_errors ++ rule_errors
+        all_errors = if root, do: errors ++ apply_rules(output), else: errors
 
         if length(all_errors) > 0 do
           {:error, @message_backend.errors(collapse_errors(all_errors))}
         else
           {:ok, output}
-        end
-      end
-
-      def conform(data, %Types.Map{} = schema, path: root) do
-        case conform(data, schema) do
-          {:ok, value} ->
-            {:ok, {root, value}}
-
-          {:error, errors} ->
-            {:error, nest_errors(errors, root)}
         end
       end
 
