@@ -1,3 +1,9 @@
+## v0.1.1 - 2023-10-27
+
+### Bug fixes
+
+- [`Drops.Contract`] Rules are now correctly applied only to the root map (via #32)
+
 ## v0.1.0 - 2023-10-25
 
 ### Features
