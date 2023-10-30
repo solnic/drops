@@ -35,8 +35,6 @@ defmodule Drops.Contract do
   @callback conform(data :: map()) :: {:ok, map()} | {:error, list()}
   @callback conform(data :: map(), keys :: list()) :: {:ok, map()} | {:error, list()}
   @callback conform(data :: map(), schema :: Types.Map) :: {:ok, map()} | {:error, list()}
-  @callback conform(data :: map(), schema :: Types.Map, keyword()) ::
-              {:ok, map()} | {:error, list()}
 
   defmacro __using__(opts) do
     quote do
