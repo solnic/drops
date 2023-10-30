@@ -105,7 +105,7 @@ defmodule Drops.Validator.Messages.Error do
     defstruct [:text, path: []]
 
     defimpl String.Chars, for: Error.Rule do
-      def to_string(%Error.Rule{text: text, path: path}) when length(path) == 0 do
+      def to_string(%Error.Rule{text: text, path: path}) when Enum.empty?(path) do
         text
       end
 
