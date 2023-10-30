@@ -1,4 +1,6 @@
 defmodule Drops.Types.Map.Key do
+  @moduledoc false
+
   alias __MODULE__
 
   defstruct [:path, :presence, :type]
