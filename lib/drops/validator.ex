@@ -81,7 +81,7 @@ defmodule Drops.Validator do
 
             errors = Enum.reject(result, &is_ok/1)
 
-            if Enum.empty?(errors),
+            if length(errors) == 0,
               do: {:ok, {path, result}},
               else: {:error, errors}
 
