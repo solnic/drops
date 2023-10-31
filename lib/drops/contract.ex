@@ -4,6 +4,9 @@ defmodule Drops.Contract do
   """
   @moduledoc since: "0.1.0"
 
+  alias Drops.Types
+  alias Drops.Validator.Messages
+
   @doc ~S"""
   Validates the given `data` against the schema defined in the module.
 
@@ -39,9 +42,6 @@ defmodule Drops.Contract do
   defmacro __using__(opts) do
     quote do
       use Drops.Validator
-
-      alias Drops.Types
-      alias Drops.Validator.Messages
 
       import Drops.Contract
       import Drops.Types.Map.DSL
@@ -112,10 +112,6 @@ defmodule Drops.Contract do
         end
       end
 
-      def validate(data, keys) when is_list(keys) do
-        Enum.map(keys, &validate(data, &1)) |> List.flatten()
-      end
-
       def validate(value, %Types.Map{} = schema, path: path) do
         case validate(value, schema.constraints, path: path) do
           {:ok, {_, validated_value}} ->
@@ -126,16 +122,6 @@ defmodule Drops.Contract do
         end
       end
 
-      defp apply_predicates(value, {:and, [left, %Types.Map{} = schema]}, path: path) do
-        case apply_predicate(left, {:ok, {path, value}}) do
-          {:ok, _} ->
-            conform(value, schema, path: path)
-
-          {:error, error} ->
-            {:error, error}
-        end
-      end
-
       defp apply_rules(output) do
         Enum.map(rules(), fn name -> apply(__MODULE__, :rule, [name, output]) end)
         |> Enum.filter(fn
@@ -143,89 +129,6 @@ defmodule Drops.Contract do
           _ -> true
         end)
       end
-
-      defp to_output(results) do
-        Enum.reduce(results, %{}, fn result, acc ->
-          case result do
-            {:ok, {path, value}} ->
-              if is_list(value),
-                do: put_in(acc, path, map_list_results(value)),
-                else: put_in(acc, path, value)
-
-            {:ok, value} ->
-              value
-
-            :ok ->
-              acc
-
-            {:error, _} ->
-              acc
-          end
-        end)
-      end
-
-      defp map_list_results(members) do
-        Enum.map(members, fn member ->
-          case member do
-            {:ok, {_, value}} ->
-              if is_list(value), do: map_list_results(value), else: value
-
-            {:ok, value} ->
-              if is_list(value), do: map_list_results(value), else: value
-
-            value ->
-              value
-          end
-        end)
-      end
-
-      defp nest_errors(errors, root) when is_list(errors) do
-        Enum.map(errors, fn
-          %{__struct__: _error_type} = error ->
-            Messages.Error.Conversions.nest(error, root)
-
-          {:error, {path, name, args}} ->
-            {:error, nest_errors({path, name, args}, root)}
-
-          {:error, error_list} ->
-            nest_errors(error_list, root)
-
-          {:or, {left, right}} ->
-            {:or, {nest_errors(left, root), nest_errors(right, root)}}
-        end)
-        |> List.flatten()
-      end
-
-      defp nest_errors({path, name, args}, root) when is_list(path) do
-        {root ++ path, name, args}
-      end
-
-      defp nest_errors({:error, errors}, root) do
-        {:error, nest_errors(errors, root)}
-      end
-
-      defp collapse_errors(errors) when is_list(errors) do
-        Enum.map(errors, fn
-          {:error, {path, name, args}} ->
-            {:error, {path, name, args}}
-
-          {:error, error_list} ->
-            collapse_errors(error_list)
-
-          {:or, {left_errors, right_errors}} ->
-            {:or, {collapse_errors(left_errors), collapse_errors(right_errors)}}
-
-          result ->
-            result
-        end)
-        |> List.flatten()
-      end
-
-      defp collapse_errors({:error, errors}) do
-        {:error, collapse_errors(errors)}
-      end
-
-      defp collapse_errors(errors), do: errors
     end
   end
 
@@ -434,6 +337,89 @@ defmodule Drops.Contract do
       unquote(pre)
       unquote(post)
     end
+  end
+
+  def collapse_errors(errors) when is_list(errors) do
+    Enum.map(errors, fn
+      {:error, {path, name, args}} ->
+        {:error, {path, name, args}}
+
+      {:error, error_list} ->
+        collapse_errors(error_list)
+
+      {:or, {left_errors, right_errors}} ->
+        {:or, {collapse_errors(left_errors), collapse_errors(right_errors)}}
+
+      result ->
+        result
+    end)
+    |> List.flatten()
+  end
+
+  def collapse_errors({:error, errors}) do
+    {:error, collapse_errors(errors)}
+  end
+
+  def collapse_errors(errors), do: errors
+
+  def nest_errors(errors, root) when is_list(errors) do
+    Enum.map(errors, fn
+      %{__struct__: _error_type} = error ->
+        Messages.Error.Conversions.nest(error, root)
+
+      {:error, {path, name, args}} ->
+        {:error, nest_errors({path, name, args}, root)}
+
+      {:error, error_list} ->
+        nest_errors(error_list, root)
+
+      {:or, {left, right}} ->
+        {:or, {nest_errors(left, root), nest_errors(right, root)}}
+    end)
+    |> List.flatten()
+  end
+
+  def nest_errors({path, name, args}, root) when is_list(path) do
+    {root ++ path, name, args}
+  end
+
+  def nest_errors({:error, errors}, root) do
+    {:error, nest_errors(errors, root)}
+  end
+
+  def map_list_results(members) do
+    Enum.map(members, fn member ->
+      case member do
+        {:ok, {_, value}} ->
+          if is_list(value), do: map_list_results(value), else: value
+
+        {:ok, value} ->
+          if is_list(value), do: map_list_results(value), else: value
+
+        value ->
+          value
+      end
+    end)
+  end
+
+  def to_output(results) do
+    Enum.reduce(results, %{}, fn result, acc ->
+      case result do
+        {:ok, {path, value}} ->
+          if is_list(value),
+            do: put_in(acc, path, map_list_results(value)),
+            else: put_in(acc, path, value)
+
+        {:ok, value} ->
+          value
+
+        :ok ->
+          acc
+
+        {:error, _} ->
+          acc
+      end
+    end)
   end
 
   defp set_schema(_caller, name, opts, block) do

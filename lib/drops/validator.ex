@@ -31,6 +31,10 @@ defmodule Drops.Validator do
         validate(input, type.constraints, path: [])
       end
 
+      def validate(data, keys) when is_list(keys) do
+        Enum.map(keys, &validate(data, &1)) |> List.flatten()
+      end
+
       def validate(data, %Key{presence: :required, path: path} = key) do
         if Key.present?(data, key) do
           validate(get_in(data, path), key.type, path: path)
