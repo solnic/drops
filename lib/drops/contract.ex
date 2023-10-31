@@ -372,9 +372,6 @@ defmodule Drops.Contract do
         {:ok, {_, value}} ->
           if is_list(value), do: map_list_results(value), else: value
 
-        {:ok, value} ->
-          if is_list(value), do: map_list_results(value), else: value
-
         value ->
           value
       end
