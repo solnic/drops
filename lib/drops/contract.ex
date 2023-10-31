@@ -44,7 +44,6 @@ defmodule Drops.Contract do
       alias Drops.Validator.Messages
 
       import Drops.Contract
-      import Drops.Contract.Runtime
       import Drops.Types.Map.DSL
 
       @behaviour Drops.Contract
@@ -53,7 +52,7 @@ defmodule Drops.Contract do
 
       Module.register_attribute(__MODULE__, :rules, accumulate: true)
 
-      @before_compile Drops.Contract.Runtime
+      @before_compile Drops.Contract
 
       def conform(data) do
         conform(data, schema(), root: true)
@@ -230,17 +229,14 @@ defmodule Drops.Contract do
     end
   end
 
-  defmodule Runtime do
-    @moduledoc false
-    defmacro __before_compile__(_env) do
-      quote do
-        def schema, do: @schemas[:default]
-        def schema(name), do: @schemas[name]
+  defmacro __before_compile__(_env) do
+    quote do
+      def schema, do: @schemas[:default]
+      def schema(name), do: @schemas[name]
 
-        def schemas, do: @schemas
+      def schemas, do: @schemas
 
-        def rules, do: @rules
-      end
+      def rules, do: @rules
     end
   end
 
