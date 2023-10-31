@@ -386,9 +386,6 @@ defmodule Drops.Contract do
             do: put_in(acc, path, map_list_results(value)),
             else: put_in(acc, path, value)
 
-        {:ok, value} ->
-          value
-
         :ok ->
           acc
 
