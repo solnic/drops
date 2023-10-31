@@ -362,29 +362,8 @@ defmodule Drops.Contract do
 
   def collapse_errors(errors), do: errors
 
-  def nest_errors(errors, root) when is_list(errors) do
-    Enum.map(errors, fn
-      %{__struct__: _error_type} = error ->
-        Messages.Error.Conversions.nest(error, root)
-
-      {:error, {path, name, args}} ->
-        {:error, nest_errors({path, name, args}, root)}
-
-      {:error, error_list} ->
-        nest_errors(error_list, root)
-
-      {:or, {left, right}} ->
-        {:or, {nest_errors(left, root), nest_errors(right, root)}}
-    end)
-    |> List.flatten()
-  end
-
-  def nest_errors({path, name, args}, root) when is_list(path) do
-    {root ++ path, name, args}
-  end
-
-  def nest_errors({:error, errors}, root) do
-    {:error, nest_errors(errors, root)}
+  def nest_errors(errors, root) do
+    List.flatten(Enum.map(errors, &Messages.Error.Conversions.nest(&1, root)))
   end
 
   def map_list_results(members) do
