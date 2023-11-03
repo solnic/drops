@@ -96,6 +96,12 @@ defmodule Drops.Validator do
         validate(value, predicates, path: path)
       end
 
+      def validate(value, %{primitive: primitive, constraints: constraints} = type,
+            path: path
+          ) when primitive != :map do
+        apply_predicates(value, constraints, path: path)
+      end
+
       defp apply_predicates(value, {:and, predicates}, path: path) do
         apply_predicates(value, predicates, path: path)
       end
