@@ -71,6 +71,10 @@ defmodule Drops.Types do
     %Sum{left: left, right: right, opts: opts}
   end
 
+  def from_spec(mod, opts) when is_atom(mod) do
+    mod.new(opts)
+  end
+
   def from_spec(spec, opts) do
     %Type{
       primitive: infer_primitive(spec, opts),
