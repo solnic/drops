@@ -2,7 +2,7 @@ defmodule Drops.Contract.Types.CustomTest do
   use Drops.ContractCase
 
   defmodule FilledString do
-    use Drops.Type, {:string, [:filled?]}
+    use Drops.Type, string(:filled?)
   end
 
   describe "using a custom type" do

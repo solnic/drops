@@ -6,12 +6,13 @@ defmodule Drops.Type do
   defmacro __using__(spec) do
     quote do
       import Drops.Type
+      import Drops.Types.Map.DSL
 
       @type t :: %__MODULE__{}
 
       defstruct [:primitive, :constraints]
 
-      @__spec__ {:type, unquote(spec)}
+      @__spec__ unquote(spec)
 
       def new(opts) do
         %__MODULE__{
