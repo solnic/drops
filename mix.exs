@@ -65,7 +65,7 @@ defmodule Drops.MixProject do
           Drops.Types.List,
           Drops.Types.Map,
           Drops.Types.Map.Key,
-          Drops.Types.Map.DSL,
+          Drops.Type.DSL,
           Drops.Types.Sum,
           Drops.Types.Cast
         ]

@@ -1,4 +1,4 @@
-defmodule Drops.Types.Map.DSL do
+defmodule Drops.Type.DSL do
   @moduledoc """
   DSL functions for defining map key and value type specifications.
 

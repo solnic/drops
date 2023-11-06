@@ -6,7 +6,7 @@ defmodule Drops.Type do
   defmacro __using__(spec) do
     quote do
       import Drops.Type
-      import Drops.Types.Map.DSL
+      import Drops.Type.DSL
 
       @type t :: %__MODULE__{}
 
