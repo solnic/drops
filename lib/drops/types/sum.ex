@@ -6,11 +6,11 @@ defmodule Drops.Types.Sum do
 
       iex> Drops.Types.from_spec([{:type, {:string, []}}, {:type, {:integer, []}}], [])
       %Drops.Types.Sum{
-        left: %Drops.Types.Type{
+        left: %Drops.Types.Primitive{
           primitive: :string,
           constraints: [predicate: {:type?, :string}]
         },
-        right: %Drops.Types.Type{
+        right: %Drops.Types.Primitive{
           primitive: :integer,
           constraints: [predicate: {:type?, :integer}]
         },
@@ -18,5 +18,11 @@ defmodule Drops.Types.Sum do
       }
 
   """
-  defstruct [:left, :right, :opts]
+  use Drops.Type do
+    deftype [:left, :right, :opts]
+
+    def new(left, right) when is_struct(left) and is_struct(right) do
+      struct(__MODULE__, left: left, right: right)
+    end
+  end
 end

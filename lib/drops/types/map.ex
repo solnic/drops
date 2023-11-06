@@ -5,7 +5,7 @@ defmodule Drops.Types.Map do
   ## Examples
 
       iex> Drops.Types.from_spec({:type, {:map, []}}, [])
-      %Drops.Types.Type{primitive: :map, constraints: [predicate: {:type?, :map}]}
+      %Drops.Types.Primitive{primitive: :map, constraints: [predicate: {:type?, :map}]}
 
       iex> Drops.Types.from_spec(%{
       ...>   {:required, :name} => {:type, {:string, []}},
@@ -18,7 +18,7 @@ defmodule Drops.Types.Map do
           %Drops.Types.Map.Key{
             path: [:age],
             presence: :optional,
-            type: %Drops.Types.Type{
+            type: %Drops.Types.Primitive{
               primitive: :integer,
               constraints: [predicate: {:type?, :integer}]
             }
@@ -26,7 +26,7 @@ defmodule Drops.Types.Map do
           %Drops.Types.Map.Key{
             path: [:name],
             presence: :required,
-            type: %Drops.Types.Type{
+            type: %Drops.Types.Primitive{
               primitive: :string,
               constraints: [predicate: {:type?, :string}]
             }
@@ -37,11 +37,16 @@ defmodule Drops.Types.Map do
 
   """
 
-  @type t :: %__MODULE__{}
-
   alias Drops.Types.Map.Key
 
-  defstruct [:primitive, :constraints, :keys, :atomize]
+  use Drops.Type do
+    deftype :map, [keys: [], atomize: false]
+
+    def new(keys, opts) when is_list(keys) do
+      atomize = opts[:atomize] || false
+      struct(__MODULE__, keys: keys, atomize: atomize)
+    end
+  end
 
   def atomize(data, keys, initial \\ %{}) do
     Enum.reduce(keys, initial, fn %{path: path} = key, acc ->

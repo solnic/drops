@@ -51,7 +51,7 @@ defmodule Drops.Validator do
         end
       end
 
-      def validate(value, %Types.Type{constraints: constraints}, path: path) do
+      def validate(value, %Types.Primitive{constraints: constraints}, path: path) do
         validate(value, constraints, path: path)
       end
 
