@@ -9,11 +9,11 @@ defmodule Drops.Types.Cast do
       ...>   []
       ...> )
       %Drops.Types.Cast{
-        input_type: %Drops.Types.Type{
+        input_type: %Drops.Types.Primitive{
           primitive: :integer,
           constraints: [predicate: {:type?, :integer}]
         },
-        output_type: %Drops.Types.Type{
+        output_type: %Drops.Types.Primitive{
           primitive: :date_time,
           constraints: [predicate: {:type?, :date_time}]
         },
@@ -21,5 +21,11 @@ defmodule Drops.Types.Cast do
       }
 
   """
-  defstruct [:input_type, :output_type, :opts]
+  use Drops.Type do
+    deftype [:input_type, :output_type, opts: []]
+
+    def new(input_type, output_type, opts) do
+      struct(__MODULE__, input_type: input_type, output_type: output_type, opts: opts)
+    end
+  end
 end

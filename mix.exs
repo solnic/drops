@@ -61,7 +61,7 @@ defmodule Drops.MixProject do
         ],
         Types: [
           Drops.Types,
-          Drops.Types.Type,
+          Drops.Types.Primitive,
           Drops.Types.List,
           Drops.Types.Map,
           Drops.Types.Map.Key,

@@ -1,21 +1,21 @@
-defmodule Drops.Types.Type do
+defmodule Drops.Types.Primitive do
   @moduledoc ~S"""
-  Drops.Types.Type is a struct that represents a primitive type with optional constraints.
+  Drops.Types.Primitive is a struct that represents a primitive type with optional constraints.
 
   ## Examples
 
       iex> Drops.Types.from_spec({:type, {:string, []}}, [])
-      %Drops.Types.Type{
+      %Drops.Types.Primitive{
         primitive: :string,
         constraints: [predicate: {:type?, :string}]
       }
 
       iex> Drops.Types.from_spec({:type, {:string, [:filled?]}}, [])
-      %Drops.Types.Type{
+      %Drops.Types.Primitive{
         primitive: :string,
         constraints: {:and, [predicate: {:type?, :string}, predicate: {:filled?, []}]}
       }
 
   """
-  defstruct [:primitive, :constraints]
+  use Drops.Type
 end

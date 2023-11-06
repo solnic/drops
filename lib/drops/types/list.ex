@@ -6,17 +6,23 @@ defmodule Drops.Types.List do
   ## Examples
 
       iex> Drops.Types.from_spec({:type, {:list, []}}, [])
-      %Drops.Types.Type{primitive: :list, constraints: [predicate: {:type?, :list}]}
+      %Drops.Types.Primitive{primitive: :list, constraints: [predicate: {:type?, :list}]}
 
       iex> Drops.Types.from_spec({:type, {:list, {:type, {:integer, []}}}}, [])
       %Drops.Types.List{
         primitive: :list,
         constraints: [predicate: {:type?, :list}],
-        member_type: %Drops.Types.Type{
+        member_type: %Drops.Types.Primitive{
           primitive: :integer,
           constraints: [predicate: {:type?, :integer}]
         }
       }
   """
-  defstruct [:primitive, :constraints, :member_type]
+  use Drops.Type do
+    deftype :list, [member_type: nil]
+
+    def new(member_type) when is_struct(member_type) do
+      struct(__MODULE__, member_type: member_type)
+    end
+  end
 end
