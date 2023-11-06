@@ -3,7 +3,7 @@ defmodule Drops.Casters do
   Drops.Casters is a module that provides functions for casting values
   from one type to another.
 
-  This module is the default caster module used by the Drops.Types.Map.DSL.cast function.
+  This module is the default caster module used by the Drops.Type.DSL.cast function.
   """
 
   @doc ~S"""

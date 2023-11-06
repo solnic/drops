@@ -44,7 +44,7 @@ defmodule Drops.Contract do
       use Drops.Validator
 
       import Drops.Contract
-      import Drops.Types.Map.DSL
+      import Drops.Type.DSL
 
       @behaviour Drops.Contract
 
