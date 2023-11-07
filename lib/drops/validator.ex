@@ -51,8 +51,8 @@ defmodule Drops.Validator do
         end
       end
 
-      def validate(value, %Types.Primitive{constraints: constraints}, path: path) do
-        validate(value, constraints, path: path)
+      def validate(value, %Types.Primitive{} = type, path: path) do
+        Drops.Type.Validator.validate(type, value, path: path)
       end
 
       def validate(value, predicates, path: path) when is_list(predicates) do

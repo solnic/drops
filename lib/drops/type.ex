@@ -57,6 +57,8 @@ defmodule Drops.Type do
 
   defmacro deftype(attributes) when is_list(attributes) do
     quote do
+      alias __MODULE__
+
       @type t :: %__MODULE__{}
 
       defstruct(unquote(attributes))
