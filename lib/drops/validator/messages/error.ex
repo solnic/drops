@@ -32,6 +32,12 @@ defmodule Drops.Validator.Messages.Error do
     end
   end
 
+  defimpl Error.Conversions, for: [List] do
+    def nest(errors, root) do
+      Enum.map(errors, &Error.Conversions.nest(&1, root))
+    end
+  end
+
   defimpl Error.Conversions, for: [Error.Type, Error.Key] do
     def nest(%{path: path} = error, root) do
       Map.merge(error, %{path: root ++ path})
@@ -45,6 +51,18 @@ defmodule Drops.Validator.Messages.Error do
     defstruct [:left, :right]
 
     defimpl String.Chars, for: Sum do
+      def to_string(%Error.Sum{left: left, right: right}) when is_list(left) and is_list(right) do
+        "#{Enum.map(left, &Kernel.to_string/1)} or #{Enum.map(right, &Kernel.to_string/1)}"
+      end
+
+      def to_string(%Error.Sum{left: left, right: right}) when is_list(left) do
+        "#{Enum.map(left, &Kernel.to_string/1)} or #{right}"
+      end
+
+      def to_string(%Error.Sum{left: left, right: right}) when is_list(right) do
+        "#{left} or #{Enum.map(right, &Kernel.to_string/1)}"
+      end
+
       def to_string(%Error.Sum{left: left, right: right}) do
         "#{left} or #{right}"
       end
@@ -68,7 +86,11 @@ defmodule Drops.Validator.Messages.Error do
 
     defimpl String.Chars, for: Error.Set do
       def to_string(%Error.Set{errors: errors}) do
-        Enum.map(errors, &Kernel.to_string/1) |> Enum.join(" and ")
+        Enum.map(errors, fn e ->
+          if is_list(e), do: Enum.map(e, &Kernel.to_string/1), else: Kernel.to_string(e)
+        end)
+        |> List.flatten()
+        |> Enum.join(" and ")
       end
     end
 

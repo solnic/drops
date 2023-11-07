@@ -55,70 +55,44 @@ defmodule Drops.Contract do
       @before_compile Drops.Contract
 
       def conform(data) do
-        conform(data, schema(), root: true)
-      end
-
-      def conform(data, %Types.Map{atomize: true} = schema, root: root) do
-        conform(Types.Map.atomize(data, schema.keys), schema.keys, root: root)
-      end
-
-      def conform(data, %Types.Map{} = schema, root: root) do
-        case validate(data, schema) do
-          {:ok, {_, validated_data}} ->
-            conform(validated_data, schema.keys, root: root)
-
-          error ->
-            {:error, @message_backend.errors(error)}
-        end
-      end
-
-      def conform(data, %Types.Sum{} = type, root: root) do
-        case conform(data, type.left, root: root) do
-          {:ok, value} ->
-            {:ok, value}
-
-          {:error, _} = left_errors ->
-            case conform(data, type.right, root: root) do
-              {:ok, value} ->
-                {:ok, value}
-
-              {:error, error} = right_errors ->
-                {:error, @message_backend.errors({:or, {left_errors, right_errors}})}
-            end
-        end
+        conform(data, schema(), path: [])
       end
 
       def conform(data, %Types.Map{} = schema, path: path) do
-        case conform(data, schema, root: false) do
-          {:ok, value} ->
-            {:ok, {path, value}}
+        case Drops.Type.Validator.validate(schema, data) do
+          {outcome, {:map, items}} = result ->
+            output = to_output(result)
+            errors = if outcome == :ok, do: [], else: Enum.reject(items, &is_ok/1)
 
-          {:error, errors} ->
-            {:error, nest_errors(errors, path)}
+            all_errors = if Enum.empty?(path), do: errors ++ apply_rules(output), else: errors
+
+            if length(all_errors) > 0 do
+              {:error, @message_backend.errors(all_errors)}
+            else
+              {:ok, output}
+            end
+
+          {:error, meta} ->
+            {:error, @message_backend.errors({:error, {path, meta}})}
         end
       end
 
-      def conform(data, keys, root: root) when is_list(keys) do
-        results = validate(data, keys)
-        output = to_output(results)
-        errors = Enum.reject(results, &is_ok/1)
+      def conform(data, %Types.Sum{} = type, path: path) do
+        case conform(data, type.left, path: path) do
+          {:ok, output} = success ->
+            success
 
-        all_errors = if root, do: errors ++ apply_rules(output), else: errors
+          {:error, left_error} ->
+            case conform(data, type.right, path: path) do
+              {:ok, output} = success ->
+                success
 
-        if length(all_errors) > 0 do
-          {:error, @message_backend.errors(collapse_errors(all_errors))}
-        else
-          {:ok, output}
-        end
-      end
-
-      def validate(value, %Types.Map{} = schema, path: path) do
-        case validate(value, schema.constraints, path: path) do
-          {:ok, {_, validated_value}} ->
-            conform(validated_value, schema, path: path)
-
-          error ->
-            error
+              {:error, right_error} ->
+                {:error,
+                 @message_backend.errors(
+                   {:error, {path, {:or, {left_error, right_error}}}}
+                 )}
+            end
         end
       end
 
@@ -339,60 +313,56 @@ defmodule Drops.Contract do
     end
   end
 
-  def collapse_errors(errors) when is_list(errors) do
-    Enum.map(errors, fn
-      {:error, {path, name, args}} ->
-        {:error, {path, name, args}}
-
-      {:error, error_list} ->
-        collapse_errors(error_list)
-
-      {:or, {left_errors, right_errors}} ->
-        {:or, {collapse_errors(left_errors), collapse_errors(right_errors)}}
-
-      result ->
-        result
-    end)
-    |> List.flatten()
+  def to_output({_, {:map, [head | tail]}}) do
+    to_output(tail, to_output(head, %{}))
   end
 
-  def collapse_errors({:error, errors}) do
-    {:error, collapse_errors(errors)}
+  def to_output({_, {:list, results}}) do
+    to_output(results)
   end
 
-  def collapse_errors(errors), do: errors
-
-  def nest_errors(errors, root) do
-    List.flatten(Enum.map(errors, &Messages.Error.Conversions.nest(&1, root)))
+  def to_output({:list, results}) do
+    to_output(results)
   end
 
-  def map_list_results(members) do
-    Enum.map(members, fn member ->
-      case member do
-        {:ok, {_, value}} ->
-          if is_list(value), do: map_list_results(value), else: value
-
-        value ->
-          value
-      end
-    end)
+  def to_output({:map, results}) do
+    to_output(results, %{})
   end
 
-  def to_output(results) do
-    Enum.reduce(results, %{}, fn result, acc ->
-      case result do
-        {:ok, {path, value}} ->
-          if is_list(value),
-            do: put_in(acc, path, map_list_results(value)),
-            else: put_in(acc, path, value)
+  def to_output([head | tail]) do
+    [to_output(head) | to_output(tail)]
+  end
 
-        :ok ->
-          acc
+  def to_output({:ok, value}) do
+    to_output(value)
+  end
 
-        {:error, _} ->
-          acc
-      end
-    end)
+  def to_output(value) do
+    value
+  end
+
+  def to_output(:ok, output) do
+    output
+  end
+
+  def to_output([], output) do
+    output
+  end
+
+  def to_output({:ok, {path, result}}, output) do
+    put_in(output, Enum.map(path, &Access.key(&1, %{})), to_output(result))
+  end
+
+  def to_output({:error, _}, output) do
+    output
+  end
+
+  def to_output({:list, results}, output) do
+    to_output(results, output)
+  end
+
+  def to_output([head | tail], output) do
+    to_output(tail, to_output(head, output))
   end
 
   defp set_schema(_caller, name, opts, block) do

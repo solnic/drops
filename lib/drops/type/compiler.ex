@@ -32,6 +32,10 @@ defmodule Drops.Type.Compiler do
     List.new(visit(member_type, opts))
   end
 
+  def visit({:type, {:list, predicates}}, opts) do
+    List.new(visit({:type, {:any, []}}, opts), predicates)
+  end
+
   def visit({:cast, {input_type, output_type, cast_opts}}, opts) do
     Cast.new(visit(input_type, opts), visit(output_type, opts), cast_opts)
   end

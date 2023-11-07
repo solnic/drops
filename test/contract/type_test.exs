@@ -75,12 +75,14 @@ defmodule Drops.Contract.TypeTest do
       assert {:ok, %{test: %{a: 1, b: 2}}} = contract.conform(%{test: %{a: 1, b: 2}})
     end
 
-    test "returns error with invalid data", %{contract: contract} do
+    test "returns error from left predicates", %{contract: contract} do
       assert_errors(
         ["test must be filled or test must be a map"],
         contract.conform(%{test: []})
       )
+    end
 
+    test "returns errors from right predicates", %{contract: contract} do
       assert_errors(
         ["test must be a list or test must be filled"],
         contract.conform(%{test: %{}})

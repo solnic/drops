@@ -19,10 +19,28 @@ defmodule Drops.Types.Sum do
 
   """
   use Drops.Type do
-    deftype [:left, :right, :opts]
+    deftype([:left, :right, :opts])
 
     def new(left, right) when is_struct(left) and is_struct(right) do
       struct(__MODULE__, left: left, right: right)
+    end
+  end
+
+  defimpl Drops.Type.Validator, for: Sum do
+    def validate(%{left: left, right: right}, input) do
+      case Drops.Type.Validator.validate(left, input) do
+        {:ok, value} ->
+          {:ok, value}
+
+        {:error, _} = left_error ->
+          case Drops.Type.Validator.validate(right, input) do
+            {:ok, value} ->
+              {:ok, value}
+
+            {:error, _} = right_error ->
+              {:error, {:or, {left_error, right_error}}}
+          end
+      end
     end
   end
 end

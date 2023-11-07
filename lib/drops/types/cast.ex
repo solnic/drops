@@ -21,11 +21,39 @@ defmodule Drops.Types.Cast do
       }
 
   """
+
+  alias Drops.Type.Validator
+  alias Drops.Casters
+
   use Drops.Type do
-    deftype [:input_type, :output_type, opts: []]
+    deftype([:input_type, :output_type, opts: []])
 
     def new(input_type, output_type, opts) do
       struct(__MODULE__, input_type: input_type, output_type: output_type, opts: opts)
+    end
+  end
+
+  defimpl Validator do
+    def validate(
+          %{input_type: input_type, output_type: output_type, opts: cast_opts},
+          value
+        ) do
+      caster = cast_opts[:caster] || Casters
+
+      case Validator.validate(input_type, value) do
+        {:ok, result} ->
+          casted_value =
+            apply(
+              caster,
+              :cast,
+              [input_type.primitive, output_type.primitive, result] ++ cast_opts
+            )
+
+          Validator.validate(output_type, casted_value)
+
+        {:error, error} ->
+          {:error, {:cast, error}}
+      end
     end
   end
 end

@@ -43,6 +43,12 @@ defmodule Drops.Type do
       end
 
       defoverridable new: 1
+
+      defimpl Drops.Type.Validator, for: __MODULE__ do
+        def validate(type, value) do
+          Drops.Predicates.Helpers.apply_predicates(value, type.constraints)
+        end
+      end
     end
   end
 
@@ -57,6 +63,8 @@ defmodule Drops.Type do
 
   defmacro deftype(attributes) when is_list(attributes) do
     quote do
+      alias __MODULE__
+
       @type t :: %__MODULE__{}
 
       defstruct(unquote(attributes))
@@ -79,6 +87,10 @@ defmodule Drops.Type do
 
   def infer_constraints([]), do: []
   def infer_constraints(type) when is_atom(type), do: [predicate(:type?, [type])]
+
+  def infer_constraints(predicates) when is_list(predicates) do
+    Enum.map(predicates, &predicate/1)
+  end
 
   def infer_constraints({:type, {type, predicates}}) when length(predicates) > 0 do
     {:and, [predicate(:type?, type) | Enum.map(predicates, &predicate/1)]}
