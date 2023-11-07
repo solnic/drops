@@ -52,7 +52,7 @@ defmodule Drops.Type.Compiler do
     mod.new(opts)
   end
 
-  def visit(spec, opts) when is_tuple(spec) do
-    Primitive.new(spec, opts)
+  def visit(spec, _opts) when is_tuple(spec) do
+    Primitive.new(spec)
   end
 end
