@@ -407,7 +407,7 @@ defmodule Drops.Contract do
         Map.put(
           schemas,
           unquote(name),
-          Drops.Types.from_spec(unquote(block), unquote(opts))
+          Drops.Type.Compiler.visit(unquote(block), unquote(opts))
         )
       )
     end

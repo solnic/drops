@@ -5,10 +5,10 @@ defmodule Drops.Types.List do
 
   ## Examples
 
-      iex> Drops.Types.from_spec({:type, {:list, []}}, [])
+      iex> Drops.Type.Compiler.visit({:type, {:list, []}}, [])
       %Drops.Types.Primitive{primitive: :list, constraints: [predicate: {:type?, :list}]}
 
-      iex> Drops.Types.from_spec({:type, {:list, {:type, {:integer, []}}}}, [])
+      iex> Drops.Type.Compiler.visit({:type, {:list, {:type, {:integer, []}}}}, [])
       %Drops.Types.List{
         primitive: :list,
         constraints: [predicate: {:type?, :list}],

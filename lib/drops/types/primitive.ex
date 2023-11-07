@@ -4,13 +4,13 @@ defmodule Drops.Types.Primitive do
 
   ## Examples
 
-      iex> Drops.Types.from_spec({:type, {:string, []}}, [])
+      iex> Drops.Type.Compiler.visit({:type, {:string, []}}, [])
       %Drops.Types.Primitive{
         primitive: :string,
         constraints: [predicate: {:type?, :string}]
       }
 
-      iex> Drops.Types.from_spec({:type, {:string, [:filled?]}}, [])
+      iex> Drops.Type.Compiler.visit({:type, {:string, [:filled?]}}, [])
       %Drops.Types.Primitive{
         primitive: :string,
         constraints: {:and, [predicate: {:type?, :string}, predicate: {:filled?, []}]}

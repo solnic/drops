@@ -4,7 +4,7 @@ defmodule Drops.Types.Sum do
 
   ## Examples
 
-      iex> Drops.Types.from_spec([{:type, {:string, []}}, {:type, {:integer, []}}], [])
+      iex> Drops.Type.Compiler.visit([{:type, {:string, []}}, {:type, {:integer, []}}], [])
       %Drops.Types.Sum{
         left: %Drops.Types.Primitive{
           primitive: :string,
