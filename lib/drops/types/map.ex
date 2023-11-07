@@ -4,10 +4,10 @@ defmodule Drops.Types.Map do
 
   ## Examples
 
-      iex> Drops.Types.from_spec({:type, {:map, []}}, [])
+      iex> Drops.Type.Compiler.visit({:type, {:map, []}}, [])
       %Drops.Types.Primitive{primitive: :map, constraints: [predicate: {:type?, :map}]}
 
-      iex> Drops.Types.from_spec(%{
+      iex> Drops.Type.Compiler.visit(%{
       ...>   {:required, :name} => {:type, {:string, []}},
       ...>   {:optional, :age} => {:type, {:integer, []}}
       ...> }, [])

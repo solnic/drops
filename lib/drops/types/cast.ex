@@ -4,7 +4,7 @@ defmodule Drops.Types.Cast do
 
   ## Examples
 
-      iex> Drops.Types.from_spec(
+      iex> Drops.Type.Compiler.visit(
       ...>   {:cast, {{:type, {:integer, []}}, {:type, {:date_time, []}}, [:miliseconds]}},
       ...>   []
       ...> )
