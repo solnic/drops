@@ -20,7 +20,8 @@ defmodule Drops.MixProject do
       links: %{"GitHub" => @source_url},
       package: package(),
       docs: docs(),
-      source_url: @source_url
+      source_url: @source_url,
+      consolidate_protocols: Mix.env() != :test
     ]
   end
 
