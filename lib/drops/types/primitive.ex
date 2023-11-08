@@ -22,19 +22,19 @@ defmodule Drops.Types.Primitive do
   use Drops.Type
 
   defimpl Drops.Type.Validator, for: Primitive do
-    def validate(type, value, opts) do
-      apply_predicates(value, type.constraints, opts)
+    def validate(type, value) do
+      apply_predicates(value, type.constraints)
     end
 
-    defp apply_predicates(value, {:and, predicates}, path: path) do
-      apply_predicates(value, predicates, path: path)
+    defp apply_predicates(value, {:and, predicates}) do
+      apply_predicates(value, predicates)
     end
 
-    defp apply_predicates(value, predicates, path: path) do
-      Enum.reduce(predicates, {:ok, {path, value}}, &apply_predicate(&1, &2))
+    defp apply_predicates(value, predicates) do
+      Enum.reduce(predicates, {:ok, value}, &apply_predicate(&1, &2))
     end
 
-    defp apply_predicate({:predicate, {name, args}}, {:ok, {path, value}}) do
+    defp apply_predicate({:predicate, {name, args}}, {:ok, value}) do
       apply_args =
         case args do
           [arg] -> [arg, value]
@@ -43,9 +43,9 @@ defmodule Drops.Types.Primitive do
         end
 
       if apply(Predicates, name, apply_args) do
-        {:ok, {path, value}}
+        {:ok, value}
       else
-        {:error, {path, name, apply_args}}
+        {:error, {value, predicate: name, args: apply_args}}
       end
     end
 

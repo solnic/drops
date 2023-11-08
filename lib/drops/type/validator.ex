@@ -3,6 +3,6 @@ defprotocol Drops.Type.Validator do
   Protocol for validating input using types
   """
 
-  @spec validate(struct(), any(), Keyword.t()) :: {:ok, any()} | {:error, any()}
-  def validate(type, value, opts)
+  @spec validate(struct(), any()) :: {:ok, any()} | {:error, {any(), keyword()}}
+  def validate(type, value)
 end

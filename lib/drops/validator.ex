@@ -52,7 +52,13 @@ defmodule Drops.Validator do
       end
 
       def validate(value, %Types.Primitive{} = type, path: path) do
-        Drops.Type.Validator.validate(type, value, path: path)
+        case Drops.Type.Validator.validate(type, value) do
+          {:ok, _} ->
+            {:ok, {path, value}}
+
+          {:error, {value, meta}} ->
+            {:error, {path, meta[:predicate], meta[:args]}}
+        end
       end
 
       def validate(value, predicates, path: path) when is_list(predicates) do
