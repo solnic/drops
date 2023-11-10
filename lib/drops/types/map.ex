@@ -37,14 +37,64 @@ defmodule Drops.Types.Map do
 
   """
 
+  alias Drops.Predicates
   alias Drops.Types.Map.Key
 
   use Drops.Type do
-    deftype :map, [keys: [], atomize: false]
+    deftype(:map, keys: [], atomize: false)
 
     def new(keys, opts) when is_list(keys) do
       atomize = opts[:atomize] || false
       struct(__MODULE__, keys: keys, atomize: atomize)
+    end
+  end
+
+  defimpl Drops.Type.Validator, for: Map do
+    def validate(%{atomize: true, keys: keys} = type, data) do
+      case apply_predicates(Map.atomize(data, keys), type.constraints) do
+        {:ok, result} ->
+          Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
+
+        {:error, errors} ->
+          {:error, errors}
+      end
+    end
+
+    def validate(type, data) do
+      case apply_predicates(data, type.constraints) do
+        {:ok, result} ->
+          Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
+
+        {:error, errors} ->
+          {:error, errors}
+      end
+    end
+
+    defp apply_predicates(value, {:and, predicates}) do
+      apply_predicates(value, predicates)
+    end
+
+    defp apply_predicates(value, predicates) do
+      Enum.reduce(predicates, {:ok, value}, &apply_predicate(&1, &2))
+    end
+
+    defp apply_predicate({:predicate, {name, args}}, {:ok, value}) do
+      apply_args =
+        case args do
+          [arg] -> [arg, value]
+          [] -> [value]
+          arg -> [arg, value]
+        end
+
+      if apply(Predicates, name, apply_args) do
+        {:ok, value}
+      else
+        {:error, {value, predicate: name, args: apply_args}}
+      end
+    end
+
+    defp apply_predicate(_, {:error, _} = error) do
+      error
     end
   end
 

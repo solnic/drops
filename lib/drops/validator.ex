@@ -27,58 +27,18 @@ defmodule Drops.Validator do
         end
       end
 
-      def validate(input, %Types.Map{} = type) do
-        validate(input, type.constraints, path: [])
-      end
-
-      def validate(data, keys) when is_list(keys) do
-        Enum.map(keys, &validate(data, &1)) |> List.flatten()
-      end
-
-      def validate(data, %Key{presence: :required, path: path} = key) do
-        if Key.present?(data, key) do
-          validate(get_in(data, path), key.type, path: path)
-        else
-          {:error, {[], :has_key?, path}}
-        end
-      end
-
-      def validate(data, %Key{presence: :optional, path: path} = key) do
-        if Key.present?(data, key) do
-          validate(get_in(data, path), key.type, path: path)
-        else
-          :ok
-        end
-      end
-
-      def validate(value, %Types.Primitive{} = type, path: path) do
-        case Drops.Type.Validator.validate(type, value) do
-          {:ok, _} ->
+      def validate(data, %Types.Map{} = type, path: path) do
+        case Drops.Type.Validator.validate(type, data) do
+          {:ok, value} ->
             {:ok, {path, value}}
 
           {:error, {value, meta}} ->
-            {:error, {path, meta[:predicate], meta[:args]}}
+            {:error, {path, {value, meta}}}
         end
       end
 
-      def validate(value, predicates, path: path) when is_list(predicates) do
-        apply_predicates(value, predicates, path: path)
-      end
-
-      def validate(value, %Types.Sum{} = type, path: path) do
-        case validate(value, type.left, path: path) do
-          {:ok, _} = success ->
-            success
-
-          {:error, _} = left_error ->
-            case validate(value, type.right, path: path) do
-              {:ok, _} = success ->
-                success
-
-              {:error, _} = right_error ->
-                {:error, [{:or, {left_error, right_error}}]}
-            end
-        end
+      def validate(data, keys) when is_list(keys) do
+        Enum.map(keys, &Drops.Type.Validator.validate(&1, data)) |> List.flatten()
       end
 
       def validate(value, %Types.List{member_type: member_type} = type, path: path) do

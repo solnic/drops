@@ -70,7 +70,7 @@ defmodule Drops.Validator.Messages.Backend do
       defp error(%{path: path} = error), do: error
       defp error(%Error.Sum{} = error), do: error
 
-      defp error({:error, {path, :has_key?, [value]}}) do
+      defp error({:error, {path, {input, [predicate: :has_key?, args: [value]] = meta}}}) do
         %Error.Key{
           path: path ++ [value],
           text: text(:has_key?, value),
@@ -81,34 +81,26 @@ defmodule Drops.Validator.Messages.Backend do
         }
       end
 
-      defp error({:error, {path, predicate, [value, input] = args}}) do
-        %Error.Type{
-          path: path,
-          text: text(predicate, value, input),
-          meta: %{
-            predicate: predicate,
-            args: args
-          }
-        }
+      defp error(
+             {:error,
+              {path, {input, [predicate: predicate, args: [value, _] = args] = meta}}}
+           ) do
+        %Error.Type{path: path, text: text(predicate, value, input), meta: meta}
       end
 
-      defp error({:error, {path, predicate, [input] = args}}) do
-        %Error.Type{
-          path: path,
-          text: text(predicate, input),
-          meta: %{
-            predicate: predicate,
-            args: args
-          }
-        }
+      defp error({:error, {path, {input, [predicate: predicate, args: _] = meta}}}) do
+        %Error.Type{path: path, text: text(predicate, input), meta: meta}
       end
 
       defp error({:error, results}) when is_list(results) do
         %Error.Set{errors: Enum.map(results, &error/1)}
       end
 
-      defp error({:or, {left, right}}) do
-        %Error.Sum{left: error(left), right: error(right)}
+      defp error({:error, {path, {:or, {left, right}}}}) do
+        %Error.Sum{
+          left: error({:error, {path, left}}),
+          right: error({:error, {path, right}})
+        }
       end
 
       defp error({:cast, error}) do
