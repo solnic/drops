@@ -41,30 +41,14 @@ defmodule Drops.Validator do
         Enum.map(keys, &Drops.Type.Validator.validate(&1, data)) |> List.flatten()
       end
 
-      def validate(value, %Types.List{member_type: member_type} = type, path: path) do
-        case validate(value, type.constraints, path: path) do
-          {:ok, {_, members}} ->
-            result =
-              List.flatten(
-                Enum.with_index(members, &validate(&1, member_type, path: path ++ [&2]))
-              )
-
-            errors = Enum.reject(result, &is_ok/1)
-
-            if Enum.empty?(errors), do: {:ok, {path, result}}, else: {:error, errors}
-
-          error ->
-            error
-        end
-      end
-
       def validate(value, {:and, predicates}, path: path) do
         validate(value, predicates, path: path)
       end
 
       def validate(value, %{primitive: primitive, constraints: constraints} = type,
             path: path
-          ) when primitive != :map do
+          )
+          when primitive != :map do
         apply_predicates(value, constraints, path: path)
       end
 
@@ -95,6 +79,7 @@ defmodule Drops.Validator do
         error
       end
 
+      defp is_ok(results) when is_list(results), do: Enum.all?(results, &is_ok/1)
       defp is_ok(:ok), do: true
       defp is_ok({:ok, _}), do: true
       defp is_ok(:error), do: false

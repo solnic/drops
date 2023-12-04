@@ -51,19 +51,19 @@ defmodule Drops.Validator.Messages.Backend do
 
       alias Drops.Validator.Messages.Error
 
-      def errors(results) when is_list(results) do
-        Enum.map(results, &error/1)
-      end
-
       def errors(results) when is_tuple(results) do
         [error(results)]
+      end
+
+      def errors(results) when is_list(results) do
+        Enum.map(results, &error/1)
       end
 
       defp error(text) when is_binary(text) do
         %Error.Rule{text: text}
       end
 
-      defp error({path, text}) when is_list(path) do
+      defp error({path, text}) when is_list(path) and is_binary(text) do
         %Error.Rule{text: text, path: path}
       end
 
@@ -92,6 +92,16 @@ defmodule Drops.Validator.Messages.Backend do
         %Error.Type{path: path, text: text(predicate, input), meta: meta}
       end
 
+      defp error({:error, {path, {:list, results}}}) when is_list(results) do
+        errors = Enum.map(results, &error/1) |> Enum.reject(&is_nil/1)
+        if Enum.empty?(errors), do: nil, else: %Error.Set{errors: errors}
+      end
+
+      defp error(results) when is_list(results) do
+        errors = Enum.map(results, &error/1) |> Enum.reject(&is_nil/1)
+        if Enum.empty?(errors), do: nil, else: %Error.Set{errors: errors}
+      end
+
       defp error({:error, results}) when is_list(results) do
         %Error.Set{errors: Enum.map(results, &error/1)}
       end
@@ -106,6 +116,8 @@ defmodule Drops.Validator.Messages.Backend do
       defp error({:cast, error}) do
         %Error.Caster{error: error(error)}
       end
+
+      defp error({:ok, _}), do: nil
     end
   end
 end

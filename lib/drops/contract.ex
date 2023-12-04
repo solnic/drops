@@ -60,7 +60,7 @@ defmodule Drops.Contract do
 
       def conform(data, %Types.Map{} = schema, path: path) do
         results = Drops.Type.Validator.validate(schema, data)
-        output = to_output(results)
+        output = to_output(results, %{})
         errors = Enum.reject(results, &is_ok/1)
 
         all_errors = if Enum.empty?(path), do: errors ++ apply_rules(output), else: errors
@@ -289,29 +289,52 @@ defmodule Drops.Contract do
     end
   end
 
-  def map_list_results(members) do
-    Enum.map(members, fn member ->
-      case member do
-        {:ok, {_, value}} ->
-          if is_list(value), do: map_list_results(value), else: value
-
-        value ->
-          value
-      end
-    end)
+  def to_output({:list, results}) do
+    Enum.map(results, &to_output/1)
   end
 
-  def to_output(results), do: to_output(results, %{})
+  def to_output({:ok, {:list, results}}) do
+    Enum.map(results, &to_output/1)
+  end
+
+  def to_output([head | tail]) do
+    if Enum.empty?(tail) do
+      to_output(head)
+    else
+      [to_output(head) | to_output(tail)]
+    end
+  end
+
+  def to_output({:ok, {path, value}}) do
+    put_in(%{}, Enum.map(path, &Access.key(&1, %{})), to_output(value))
+  end
+
+  def to_output({:ok, value}) do
+    to_output(value)
+  end
+
+  def to_output(value) do
+    value
+  end
 
   def to_output([head | tail], output) do
     case head do
-      {:ok, {path, value}} ->
-        to_output(tail, put_in(output, Enum.map(path, &Access.key(&1, %{})), value))
+      {:ok, {path, results}} when is_list(results) ->
+        to_output(
+          tail,
+          put_in(output, Enum.map(path, &Access.key(&1, %{})), to_output(results))
+        )
 
-      {:error, _} ->
-        to_output(tail, output)
+      {:ok, {path, value}} ->
+        to_output(
+          tail,
+          put_in(output, Enum.map(path, &Access.key(&1, %{})), to_output(value))
+        )
 
       :ok ->
+        to_output(tail, output)
+
+      {:error, _} ->
         to_output(tail, output)
     end
   end
