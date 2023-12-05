@@ -6,27 +6,6 @@ defmodule Drops.Validator do
       alias Drops.Types
       alias Drops.Types.Map.Key
 
-      def validate(value, %Types.Cast{} = type, path: path) do
-        %{input_type: input_type, output_type: output_type, opts: cast_opts} = type
-
-        caster = cast_opts[:caster] || Casters
-
-        case validate(value, input_type, path: path) do
-          {:ok, _} ->
-            casted_value =
-              apply(
-                caster,
-                :cast,
-                [input_type.primitive, output_type.primitive, value] ++ cast_opts
-              )
-
-            validate(casted_value, output_type, path: path)
-
-          {:error, _} = error ->
-            {:error, {:cast, error}}
-        end
-      end
-
       def validate(data, %Types.Map{} = type, path: path) do
         case Drops.Type.Validator.validate(type, data) do
           {:ok, value} ->

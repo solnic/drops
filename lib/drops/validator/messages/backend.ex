@@ -113,8 +113,8 @@ defmodule Drops.Validator.Messages.Backend do
         }
       end
 
-      defp error({:cast, error}) do
-        %Error.Caster{error: error(error)}
+      defp error({:error, {path, {:cast, error}}}) do
+        %Error.Caster{error: error({:error, {path, error}})}
       end
 
       defp error({:ok, _}), do: nil
