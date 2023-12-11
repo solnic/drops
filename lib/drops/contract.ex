@@ -59,9 +59,10 @@ defmodule Drops.Contract do
       end
 
       def conform(data, %Types.Map{} = schema, path: path) do
-        results = Drops.Type.Validator.validate(schema, data)
-        output = to_output(results, %{})
-        errors = Enum.reject(results, &is_ok/1)
+        {outcome, {:map, items}} = result = Drops.Type.Validator.validate(schema, data)
+
+        output = to_output(result)
+        errors = if outcome == :ok, do: [], else: Enum.reject(items, &is_ok/1)
 
         all_errors = if Enum.empty?(path), do: errors ++ apply_rules(output), else: errors
 
@@ -289,24 +290,24 @@ defmodule Drops.Contract do
     end
   end
 
-  def to_output({:list, results}) do
-    Enum.map(results, &to_output/1)
+  def to_output({_, {:map, [head | tail]}}) do
+    to_output(tail, to_output(head, %{}))
   end
 
-  def to_output({:ok, {:list, results}}) do
-    Enum.map(results, &to_output/1)
+  def to_output({_, {:list, results}}) do
+    to_output(results)
+  end
+
+  def to_output({:list, results}) do
+    to_output(results)
+  end
+
+  def to_output({:map, results}) do
+    to_output(results, %{})
   end
 
   def to_output([head | tail]) do
-    if Enum.empty?(tail) do
-      to_output(head)
-    else
-      [to_output(head) | to_output(tail)]
-    end
-  end
-
-  def to_output({:ok, {path, value}}) do
-    put_in(%{}, Enum.map(path, &Access.key(&1, %{})), to_output(value))
+    [to_output(head) | to_output(tail)]
   end
 
   def to_output({:ok, value}) do
@@ -317,29 +318,29 @@ defmodule Drops.Contract do
     value
   end
 
-  def to_output([head | tail], output) do
-    case head do
-      {:ok, {path, results}} when is_list(results) ->
-        to_output(
-          tail,
-          put_in(output, Enum.map(path, &Access.key(&1, %{})), to_output(results))
-        )
-
-      {:ok, {path, value}} ->
-        to_output(
-          tail,
-          put_in(output, Enum.map(path, &Access.key(&1, %{})), to_output(value))
-        )
-
-      :ok ->
-        to_output(tail, output)
-
-      {:error, _} ->
-        to_output(tail, output)
-    end
+  def to_output(:ok, output) do
+    output
   end
 
-  def to_output([], output), do: output
+  def to_output([], output) do
+    output
+  end
+
+  def to_output({:ok, {path, result}}, output) do
+    put_in(output, Enum.map(path, &Access.key(&1, %{})), to_output(result))
+  end
+
+  def to_output({:error, _}, output) do
+    output
+  end
+
+  def to_output({:list, results}, output) do
+    to_output(results, output)
+  end
+
+  def to_output([head | tail], output) do
+    to_output(tail, to_output(head, output))
+  end
 
   defp set_schema(_caller, name, opts, block) do
     quote do

@@ -53,7 +53,12 @@ defmodule Drops.Types.Map do
     def validate(%{atomize: true, keys: keys} = type, data) do
       case apply_predicates(Map.atomize(data, keys), type.constraints) do
         {:ok, result} ->
-          Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
+          results = Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
+          errors = Enum.reject(results, &is_ok/1)
+
+          if Enum.empty?(errors),
+            do: {:ok, {:map, results}},
+            else: {:error, {:map, results}}
 
         {:error, errors} ->
           {:error, errors}
@@ -63,7 +68,12 @@ defmodule Drops.Types.Map do
     def validate(type, data) do
       case apply_predicates(data, type.constraints) do
         {:ok, result} ->
-          Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
+          results = Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
+          errors = Enum.reject(results, &is_ok/1)
+
+          if Enum.empty?(errors),
+            do: {:ok, {:map, results}},
+            else: {:error, {:map, results}}
 
         {:error, errors} ->
           {:error, errors}
@@ -96,6 +106,12 @@ defmodule Drops.Types.Map do
     defp apply_predicate(_, {:error, _} = error) do
       error
     end
+
+    defp is_ok(results) when is_list(results), do: Enum.all?(results, &is_ok/1)
+    defp is_ok(:ok), do: true
+    defp is_ok({:ok, _}), do: true
+    defp is_ok(:error), do: false
+    defp is_ok({:error, _}), do: false
   end
 
   def atomize(data, keys, initial \\ %{}) do

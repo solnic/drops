@@ -31,12 +31,12 @@ defmodule Drops.Validator.Messages.Backend do
           %Drops.Validator.Messages.Error.Type{
             path: [:email],
             text: "312 received but it must be a string",
-            meta: %{args: [:string, 312], predicate: :type?}
+            meta: [predicate: :type?, args: [:string, 312]]
           },
           %Drops.Validator.Messages.Error.Type{
             path: [:name],
             text: "cannot be empty",
-            meta: %{args: [""], predicate: :filled?}
+            meta: [predicate: :filled?, args: [""]]
           }
         ]
       }
@@ -92,6 +92,15 @@ defmodule Drops.Validator.Messages.Backend do
         %Error.Type{path: path, text: text(predicate, input), meta: meta}
       end
 
+      defp error({:error, {path, {:map, errors}}}) do
+        Error.Conversions.nest(
+          %Error.Set{
+            errors: Enum.reject(Enum.map(errors, &error/1), &is_nil/1)
+          },
+          path
+        )
+      end
+
       defp error({:error, {path, {:list, results}}}) when is_list(results) do
         errors = Enum.map(results, &error/1) |> Enum.reject(&is_nil/1)
         if Enum.empty?(errors), do: nil, else: %Error.Set{errors: errors}
@@ -117,6 +126,7 @@ defmodule Drops.Validator.Messages.Backend do
         %Error.Caster{error: error({:error, {path, error}})}
       end
 
+      defp error(:ok), do: nil
       defp error({:ok, _}), do: nil
     end
   end
