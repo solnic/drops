@@ -20,7 +20,8 @@ defmodule Drops.MixProject do
       links: %{"GitHub" => @source_url},
       package: package(),
       docs: docs(),
-      source_url: @source_url
+      source_url: @source_url,
+      consolidate_protocols: Mix.env() != :test
     ]
   end
 
@@ -61,11 +62,11 @@ defmodule Drops.MixProject do
         ],
         Types: [
           Drops.Types,
-          Drops.Types.Type,
+          Drops.Types.Primitive,
           Drops.Types.List,
           Drops.Types.Map,
           Drops.Types.Map.Key,
-          Drops.Types.Map.DSL,
+          Drops.Type.DSL,
           Drops.Types.Sum,
           Drops.Types.Cast
         ]

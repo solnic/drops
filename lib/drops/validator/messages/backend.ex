@@ -31,12 +31,12 @@ defmodule Drops.Validator.Messages.Backend do
           %Drops.Validator.Messages.Error.Type{
             path: [:email],
             text: "312 received but it must be a string",
-            meta: %{args: [:string, 312], predicate: :type?}
+            meta: [predicate: :type?, args: [:string, 312]]
           },
           %Drops.Validator.Messages.Error.Type{
             path: [:name],
             text: "cannot be empty",
-            meta: %{args: [""], predicate: :filled?}
+            meta: [predicate: :filled?, args: [""]]
           }
         ]
       }
@@ -51,26 +51,26 @@ defmodule Drops.Validator.Messages.Backend do
 
       alias Drops.Validator.Messages.Error
 
-      def errors(results) when is_list(results) do
-        Enum.map(results, &error/1)
-      end
-
       def errors(results) when is_tuple(results) do
         [error(results)]
+      end
+
+      def errors(results) when is_list(results) do
+        Enum.map(results, &error/1)
       end
 
       defp error(text) when is_binary(text) do
         %Error.Rule{text: text}
       end
 
-      defp error({path, text}) when is_list(path) do
+      defp error({path, text}) when is_list(path) and is_binary(text) do
         %Error.Rule{text: text, path: path}
       end
 
       defp error(%{path: path} = error), do: error
       defp error(%Error.Sum{} = error), do: error
 
-      defp error({:error, {path, :has_key?, [value]}}) do
+      defp error({:error, {path, {input, [predicate: :has_key?, args: [value]] = meta}}}) do
         %Error.Key{
           path: path ++ [value],
           text: text(:has_key?, value),
@@ -81,39 +81,53 @@ defmodule Drops.Validator.Messages.Backend do
         }
       end
 
-      defp error({:error, {path, predicate, [value, input] = args}}) do
-        %Error.Type{
-          path: path,
-          text: text(predicate, value, input),
-          meta: %{
-            predicate: predicate,
-            args: args
-          }
-        }
+      defp error(
+             {:error,
+              {path, {input, [predicate: predicate, args: [value, _] = args] = meta}}}
+           ) do
+        %Error.Type{path: path, text: text(predicate, value, input), meta: meta}
       end
 
-      defp error({:error, {path, predicate, [input] = args}}) do
-        %Error.Type{
-          path: path,
-          text: text(predicate, input),
-          meta: %{
-            predicate: predicate,
-            args: args
-          }
-        }
+      defp error({:error, {path, {input, [predicate: predicate, args: _] = meta}}}) do
+        %Error.Type{path: path, text: text(predicate, input), meta: meta}
+      end
+
+      defp error({:error, {path, {:map, errors}}}) do
+        Error.Conversions.nest(
+          %Error.Set{
+            errors: Enum.reject(Enum.map(errors, &error/1), &is_nil/1)
+          },
+          path
+        )
+      end
+
+      defp error({:error, {path, {:list, results}}}) when is_list(results) do
+        errors = Enum.map(results, &error/1) |> Enum.reject(&is_nil/1)
+        if Enum.empty?(errors), do: nil, else: %Error.Set{errors: errors}
+      end
+
+      defp error(results) when is_list(results) do
+        errors = Enum.map(results, &error/1) |> Enum.reject(&is_nil/1)
+        if Enum.empty?(errors), do: nil, else: %Error.Set{errors: errors}
       end
 
       defp error({:error, results}) when is_list(results) do
         %Error.Set{errors: Enum.map(results, &error/1)}
       end
 
-      defp error({:or, {left, right}}) do
-        %Error.Sum{left: error(left), right: error(right)}
+      defp error({:error, {path, {:or, {left, right}}}}) do
+        %Error.Sum{
+          left: error({:error, {path, left}}),
+          right: error({:error, {path, right}})
+        }
       end
 
-      defp error({:cast, error}) do
-        %Error.Caster{error: error(error)}
+      defp error({:error, {path, {:cast, error}}}) do
+        %Error.Caster{error: error({:error, {path, error}})}
       end
+
+      defp error(:ok), do: nil
+      defp error({:ok, _}), do: nil
     end
   end
 end
