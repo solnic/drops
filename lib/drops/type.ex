@@ -82,6 +82,10 @@ defmodule Drops.Type do
   def infer_constraints([]), do: []
   def infer_constraints(type) when is_atom(type), do: [predicate(:type?, [type])]
 
+  def infer_constraints(predicates) when is_list(predicates) do
+    Enum.map(predicates, &predicate/1)
+  end
+
   def infer_constraints({:type, {type, predicates}}) when length(predicates) > 0 do
     {:and, [predicate(:type?, type) | Enum.map(predicates, &predicate/1)]}
   end

@@ -12,7 +12,8 @@ defmodule Drops.Types.Map.Key do
 
   def validate(%Key{presence: presence, path: path} = key, data) do
     if present?(data, key) do
-      nest_result(Validator.validate(key.type, get_in(data, path)), path)
+      result = Validator.validate(key.type, get_in(data, path))
+      nest_result(result, path)
     else
       case presence do
         :required -> {:error, {path, {data, [predicate: :has_key?, args: []]}}}
@@ -41,15 +42,23 @@ defmodule Drops.Types.Map.Key do
     Map.has_key?(map, key) and present?(map[key], tail)
   end
 
-  defp nest_result({:error, {:list, results}}, root),
-    do:
-      {:error, {root, {:list, Enum.with_index(results, &nest_result(&1, root ++ [&2]))}}}
+  defp nest_result({:error, {:list, results}}, root) when is_list(results) do
+    {:error, {root, {:list, Enum.with_index(results, &nest_result(&1, root ++ [&2]))}}}
+  end
 
-  defp nest_result(results, root) when is_list(results),
-    do: Enum.map(results, &nest_result(&1, root))
+  defp nest_result({:error, {:list, result}}, root) when is_tuple(result) do
+    {:error, {root, result}}
+  end
 
-  defp nest_result({outcome, {path, result}}, root) when is_list(path),
-    do: {outcome, {root ++ path, result}}
+  defp nest_result(results, root) when is_list(results) do
+    Enum.map(results, &nest_result(&1, root))
+  end
 
-  defp nest_result({outcome, value}, root), do: {outcome, {root, value}}
+  defp nest_result({outcome, {path, result}}, root) when is_list(path) do
+    {outcome, {root ++ path, result}}
+  end
+
+  defp nest_result({outcome, value}, root) do
+    {outcome, {root, value}}
+  end
 end

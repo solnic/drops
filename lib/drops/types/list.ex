@@ -25,8 +25,11 @@ defmodule Drops.Types.List do
   use Drops.Type do
     deftype(:list, member_type: nil)
 
-    def new(member_type) when is_struct(member_type) do
-      struct(__MODULE__, member_type: member_type)
+    def new(member_type, constraints \\ []) when is_struct(member_type) do
+      struct(__MODULE__,
+        member_type: member_type,
+        constraints: Drops.Type.infer_constraints(:list) ++ infer_constraints(constraints)
+      )
     end
   end
 
@@ -41,8 +44,8 @@ defmodule Drops.Types.List do
             do: {:ok, {:list, results}},
             else: {:error, {:list, results}}
 
-        error ->
-          error
+        {:error, result} ->
+          {:error, {:list, result}}
       end
     end
 
