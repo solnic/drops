@@ -1,16 +1,16 @@
-Drops.Types.from_spec({:type, {:string, []}}, [])
+Drops.Type.Compiler.visit({:type, {:string, []}}, [])
 
-Drops.Types.from_spec({:type, {:string, [:filled?]}}, [])
+Drops.Type.Compiler.visit({:type, {:string, [:filled?]}}, [])
 
-Drops.Types.from_spec({:type, {:list, []}}, [])
+Drops.Type.Compiler.visit({:type, {:list, []}}, [])
 
-Drops.Types.from_spec({:type, {:list, {:type, {:integer, []}}}}, [])
+Drops.Type.Compiler.visit({:type, {:list, {:type, {:integer, []}}}}, [])
 
-Drops.Types.from_spec([{:type, {:string, []}}, {:type, {:integer, []}}], [])
+Drops.Type.Compiler.visit([{:type, {:string, []}}, {:type, {:integer, []}}], [])
 
-Drops.Types.from_spec({:type, {:map, []}}, [])
+Drops.Type.Compiler.visit({:type, {:map, []}}, [])
 
-Drops.Types.from_spec(
+Drops.Type.Compiler.visit(
   %{
     {:required, :name} => {:type, {:string, []}},
     {:optional, :age} => {:type, {:string, []}}
@@ -18,7 +18,7 @@ Drops.Types.from_spec(
   []
 )
 
-Drops.Types.from_spec(
+Drops.Type.Compiler.visit(
   {:cast, {{:type, {:integer, []}}, {:type, {:date_time, []}}, [:miliseconds]}},
   []
 )

@@ -18,7 +18,7 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{name: "Jane Doe"})
 
       assert path == [:age]
-      assert meta == %{predicate: :has_key?, args: [:age]}
+      assert meta == [predicate: :has_key?, args: []]
       assert to_string(error) == "age key must be present"
     end
   end
@@ -40,7 +40,7 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{name: "Jane Doe", age: "twenty"})
 
       assert path == [:age]
-      assert meta == %{predicate: :type?, args: [:integer, "twenty"]}
+      assert meta == [predicate: :type?, args: [:integer, "twenty"]]
       assert to_string(error) == "age must be an integer"
     end
 
@@ -49,7 +49,7 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{name: "", age: 21})
 
       assert path == [:name]
-      assert meta == %{predicate: :filled?, args: [""]}
+      assert meta == [predicate: :filled?, args: [""]]
       assert to_string(error) == "name must be filled"
     end
 
@@ -58,7 +58,7 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{name: "Jane", age: 12})
 
       assert path == [:age]
-      assert meta == %{predicate: :gt?, args: [18, 12]}
+      assert meta == [predicate: :gt?, args: [18, 12]]
       assert to_string(error) == "age must be greater than 18"
     end
 
@@ -67,7 +67,7 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{name: "Jane", age: 19, role: "oops"})
 
       assert path == [:role]
-      assert meta == %{predicate: :in?, args: [["admin", "user"], "oops"]}
+      assert meta == [predicate: :in?, args: [["admin", "user"], "oops"]]
       assert to_string(error) == "role must be one of: admin, user"
     end
 
@@ -76,10 +76,10 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{birthday: "oops"})
 
       assert left_error.path == [:birthday]
-      assert left_error.meta == %{predicate: :type?, args: [nil, "oops"]}
+      assert left_error.meta == [predicate: :type?, args: [nil, "oops"]]
 
       assert right_error.path == [:birthday]
-      assert right_error.meta == %{predicate: :type?, args: [:date, "oops"]}
+      assert right_error.meta == [predicate: :type?, args: [:date, "oops"]]
 
       assert to_string(error) == "birthday must be nil or birthday must be a date"
     end
@@ -103,16 +103,16 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{user: %{age: "twenty"}})
 
       assert path == [:user, :age]
-      assert meta == %{predicate: :type?, args: [:integer, "twenty"]}
+      assert meta == [predicate: :type?, args: [:integer, "twenty"]]
       assert to_string(error) == "user.age must be an integer"
     end
 
     test "returns errors from a list type", %{contract: contract} do
-      assert {:error, [error = %{path: path, meta: meta}]} =
+      assert {:error, [%{errors: [error = %{path: path, meta: meta}]}]} =
                contract.conform(%{user: %{roles: ["admin", 312, "moderator"]}})
 
       assert path == [:user, :roles, 1]
-      assert meta == %{predicate: :type?, args: [:string, 312]}
+      assert meta == [predicate: :type?, args: [:string, 312]]
       assert to_string(error) == "user.roles.1 must be a string"
     end
   end

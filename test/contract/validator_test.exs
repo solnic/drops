@@ -4,13 +4,17 @@ defmodule Drops.ValidatorTest do
 
   describe "validate/3" do
     test "validates a string" do
-      assert validate("foo", Types.from_spec({:type, {:string, []}}, []), path: []) ==
+      assert validate("foo", Types.Primitive.new(:string), path: []) ==
                {:ok, {[], "foo"}}
     end
 
     test "validates an integer with constraints" do
-      assert validate(11, Types.from_spec({:type, {:integer, [:odd?]}}, []), path: []) ==
-               {:ok, {[], 11}}
+      type = Types.Primitive.new(:integer, [:odd?])
+
+      assert validate(11, type, path: []) == {:ok, {[], 11}}
+
+      assert validate("foo", type, path: []) == {:error, {[], :type?, [:integer, "foo"]}}
+      assert validate(12, type, path: []) == {:error, {[], :odd?, [12]}}
     end
   end
 end
