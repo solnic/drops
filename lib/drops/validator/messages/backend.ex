@@ -70,9 +70,11 @@ defmodule Drops.Validator.Messages.Backend do
       defp error(%{path: path} = error), do: error
       defp error(%Error.Sum{} = error), do: error
 
-      defp error({:error, {path, {input, [predicate: :has_key?, args: [value]] = meta}}}) do
+      defp error({:error, {path, [input: value, predicate: :has_key?, args: [value]]}}) do
+        dbg()
+
         %Error.Key{
-          path: path ++ [value],
+          path: path ++ value,
           text: text(:has_key?, value),
           meta: %{
             predicate: :has_key?,
@@ -83,17 +85,23 @@ defmodule Drops.Validator.Messages.Backend do
 
       defp error(
              {:error,
-              {path, {input, [predicate: predicate, args: [value, _] = args] = meta}}}
-           ) do
-        %Error.Type{path: path, text: text(predicate, value, input), meta: meta}
+              {path, [input: input, predicate: predicate, args: [value, _]] = meta}}
+           )
+           when is_list(path) do
+        %Error.Type{
+          path: path,
+          text: text(predicate, value, input),
+          meta: Keyword.drop(meta, [:input])
+        }
       end
 
-      defp error({:error, {path, [input: input, predicate: predicate, args: [value, _] = args] = meta}}) do
-        %Error.Type{path: path, text: text(predicate, value, input), meta: meta}
-      end
-
-      defp error({:error, {path, {input, [predicate: predicate, args: _] = meta}}}) do
-        %Error.Type{path: path, text: text(predicate, input), meta: meta}
+      defp error({:error, {path, [input: value, predicate: predicate, args: _] = meta}})
+           when is_list(path) do
+        %Error.Type{
+          path: path,
+          text: text(predicate, value),
+          meta: Keyword.drop(meta, [:input])
+        }
       end
 
       defp error({:error, {path, {:map, results}}}) do
@@ -107,10 +115,6 @@ defmodule Drops.Validator.Messages.Backend do
         %Error.Set{
           errors: Enum.reject(Enum.map(results, &error/1), &is_nil/1)
         }
-      end
-
-      defp error({:error, {value, [predicate: predicate, args: _] = meta}}) do
-        %Error.Type{text: text(predicate, value), meta: meta}
       end
 
       defp error({:error, {path, {:list, results}}}) when is_list(results) do

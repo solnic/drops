@@ -18,7 +18,7 @@ defmodule Drops.Validator.MessagesTest do
                contract.conform(%{name: "Jane Doe"})
 
       assert path == [:age]
-      assert meta == [predicate: :has_key?, args: []]
+      assert meta == [predicate: :has_key?, args: [[:age]]]
       assert to_string(error) == "age key must be present"
     end
   end
