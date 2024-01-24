@@ -38,7 +38,7 @@ defmodule Drops.Types.List do
       case Predicates.Helpers.apply_predicates(data, constraints) do
         {:ok, members} ->
           results = Enum.map(members, &Validator.validate(member_type, &1))
-          errors = Enum.reject(results, &Predicates.Helpers.is_ok/1)
+          errors = Enum.reject(results, &Predicates.Helpers.ok?/1)
 
           if Enum.empty?(errors),
             do: {:ok, {:list, results}},

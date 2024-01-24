@@ -62,7 +62,7 @@ defmodule Drops.Contract do
         case Drops.Type.Validator.validate(schema, data) do
           {outcome, {:map, items}} = result ->
             output = to_output(result)
-            errors = if outcome == :ok, do: [], else: Enum.reject(items, &is_ok/1)
+            errors = if outcome == :ok, do: [], else: Enum.reject(items, &ok?/1)
 
             all_errors = if Enum.empty?(path), do: errors ++ apply_rules(output), else: errors
 

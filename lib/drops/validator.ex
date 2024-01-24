@@ -58,11 +58,11 @@ defmodule Drops.Validator do
         error
       end
 
-      defp is_ok(results) when is_list(results), do: Enum.all?(results, &is_ok/1)
-      defp is_ok(:ok), do: true
-      defp is_ok({:ok, _}), do: true
-      defp is_ok(:error), do: false
-      defp is_ok({:error, _}), do: false
+      defp ok?(results) when is_list(results), do: Enum.all?(results, &ok?/1)
+      defp ok?(:ok), do: true
+      defp ok?({:ok, _}), do: true
+      defp ok?(:error), do: false
+      defp ok?({:error, _}), do: false
     end
   end
 end

@@ -54,7 +54,7 @@ defmodule Drops.Types.Map do
       case Predicates.Helpers.apply_predicates(Map.atomize(data, keys), type.constraints) do
         {:ok, result} ->
           results = Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
-          errors = Enum.reject(results, &Predicates.Helpers.is_ok/1)
+          errors = Enum.reject(results, &Predicates.Helpers.ok?/1)
 
           if Enum.empty?(errors),
             do: {:ok, {:map, results}},
@@ -69,7 +69,7 @@ defmodule Drops.Types.Map do
       case Predicates.Helpers.apply_predicates(data, type.constraints) do
         {:ok, result} ->
           results = Enum.map(type.keys, &Key.validate(&1, result)) |> List.flatten()
-          errors = Enum.reject(results, &Predicates.Helpers.is_ok/1)
+          errors = Enum.reject(results, &Predicates.Helpers.ok?/1)
 
           if Enum.empty?(errors),
             do: {:ok, {:map, results}},

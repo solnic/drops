@@ -28,9 +28,9 @@ defmodule Drops.Predicates.Helpers do
     error
   end
 
-  def is_ok(results) when is_list(results), do: Enum.all?(results, &is_ok/1)
-  def is_ok(:ok), do: true
-  def is_ok({:ok, _}), do: true
-  def is_ok(:error), do: false
-  def is_ok({:error, _}), do: false
+  def ok?(results) when is_list(results), do: Enum.all?(results, &ok?/1)
+  def ok?(:ok), do: true
+  def ok?({:ok, _}), do: true
+  def ok?(:error), do: false
+  def ok?({:error, _}), do: false
 end
