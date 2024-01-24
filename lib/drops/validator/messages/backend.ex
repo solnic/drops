@@ -68,20 +68,6 @@ defmodule Drops.Validator.Messages.Backend do
       end
 
       defp error(%{path: path} = error), do: error
-      defp error(%Error.Sum{} = error), do: error
-
-      defp error({:error, {path, [input: value, predicate: :has_key?, args: [value]]}}) do
-        dbg()
-
-        %Error.Key{
-          path: path ++ value,
-          text: text(:has_key?, value),
-          meta: %{
-            predicate: :has_key?,
-            args: [value]
-          }
-        }
-      end
 
       defp error(
              {:error,
