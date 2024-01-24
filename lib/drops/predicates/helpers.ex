@@ -1,4 +1,6 @@
 defmodule Drops.Predicates.Helpers do
+  @moduledoc false
+
   alias Drops.Predicates
 
   def apply_predicates(value, {:and, predicates}) do
