@@ -20,15 +20,17 @@ defmodule Drops.Predicates.Helpers do
     if apply(Predicates, name, apply_args) do
       {:ok, value}
     else
-      if is_list(value) do
-        {:error, [input: value, predicate: name, args: apply_args]}
-      else
-        {:error, {value, predicate: name, args: apply_args}}
-      end
+      {:error, [input: value, predicate: name, args: apply_args]}
     end
   end
 
   def apply_predicate(_, {:error, _} = error) do
     error
   end
+
+  def is_ok(results) when is_list(results), do: Enum.all?(results, &is_ok/1)
+  def is_ok(:ok), do: true
+  def is_ok({:ok, _}), do: true
+  def is_ok(:error), do: false
+  def is_ok({:error, _}), do: false
 end

@@ -16,7 +16,7 @@ defmodule Drops.Types.Map.Key do
       nest_result(result, path)
     else
       case presence do
-        :required -> {:error, {path, {data, [predicate: :has_key?, args: []]}}}
+        :required -> {:error, {path, [input: data, predicate: :has_key?, args: [path]]}}
         :optional -> :ok
       end
     end

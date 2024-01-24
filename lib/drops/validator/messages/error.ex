@@ -51,7 +51,8 @@ defmodule Drops.Validator.Messages.Error do
     defstruct [:left, :right]
 
     defimpl String.Chars, for: Sum do
-      def to_string(%Error.Sum{left: left, right: right}) when is_list(left) and is_list(right) do
+      def to_string(%Error.Sum{left: left, right: right})
+          when is_list(left) and is_list(right) do
         "#{Enum.map(left, &Kernel.to_string/1)} or #{Enum.map(right, &Kernel.to_string/1)}"
       end
 
