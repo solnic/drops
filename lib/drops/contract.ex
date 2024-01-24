@@ -54,10 +54,12 @@ defmodule Drops.Contract do
 
       @before_compile Drops.Contract
 
+      @impl true
       def conform(data) do
         conform(data, schema(), path: [])
       end
 
+      @impl true
       def conform(data, %Types.Map{} = schema, path: path) do
         case Drops.Type.Validator.validate(schema, data) do
           {outcome, {:map, items}} = result ->
@@ -77,6 +79,7 @@ defmodule Drops.Contract do
         end
       end
 
+      @impl true
       def conform(data, %Types.Sum{} = type, path: path) do
         case conform(data, type.left, path: path) do
           {:ok, output} = success ->
