@@ -36,8 +36,6 @@ defmodule Drops.Contract do
   """
   @doc since: "0.1.0"
   @callback conform(data :: map()) :: {:ok, map()} | {:error, list()}
-  @callback conform(data :: map(), keys :: list()) :: {:ok, map()} | {:error, list()}
-  @callback conform(data :: map(), schema :: Types.Map) :: {:ok, map()} | {:error, list()}
 
   defmacro __using__(opts) do
     quote do
@@ -59,7 +57,6 @@ defmodule Drops.Contract do
         conform(data, schema(), path: [])
       end
 
-      @impl true
       def conform(data, %Types.Map{} = schema, path: path) do
         case Drops.Type.Validator.validate(schema, data) do
           {outcome, {:map, items}} = result ->
@@ -79,7 +76,6 @@ defmodule Drops.Contract do
         end
       end
 
-      @impl true
       def conform(data, %Types.Sum{} = type, path: path) do
         case conform(data, type.left, path: path) do
           {:ok, output} = success ->
