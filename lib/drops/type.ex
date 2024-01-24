@@ -4,6 +4,8 @@ defmodule Drops.Type do
   """
 
   alias __MODULE__
+  alias Drops.Type.Compiler
+  alias Drops.Types.Map.Key
 
   defmacro __using__(do: block) do
     quote do
@@ -11,6 +13,20 @@ defmodule Drops.Type do
       import Drops.Type.DSL
 
       unquote(block)
+    end
+  end
+
+  defmacro __using__({:%{}, _, _} = spec) do
+    quote do
+      import Drops.Type
+      import Drops.Type.DSL
+
+      keys =
+        Enum.map(unquote(spec), fn {{presence, name}, type_spec} ->
+          %Key{path: [name], presence: presence, type: Compiler.visit(type_spec, [])}
+        end)
+
+      use Drops.Types.Map, keys: keys
     end
   end
 
@@ -82,10 +98,12 @@ defmodule Drops.Type do
   end
 
   def infer_primitive([]), do: :any
+  def infer_primitive(map) when is_map(map), do: :map
   def infer_primitive(name) when is_atom(name), do: name
   def infer_primitive({:type, {name, _}}), do: name
 
   def infer_constraints([]), do: []
+  def infer_constraints(map) when is_map(map), do: []
   def infer_constraints(type) when is_atom(type), do: [predicate(:type?, [type])]
 
   def infer_constraints(predicates) when is_list(predicates) do

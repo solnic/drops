@@ -37,19 +37,11 @@ defmodule Drops.Types.Map do
 
   """
 
+  alias __MODULE__
   alias Drops.Predicates
   alias Drops.Types.Map.Key
 
-  use Drops.Type do
-    deftype(:map, keys: [], atomize: false)
-
-    def new(keys, opts) when is_list(keys) do
-      atomize = opts[:atomize] || false
-      struct(__MODULE__, keys: keys, atomize: atomize)
-    end
-  end
-
-  defimpl Drops.Type.Validator, for: Map do
+  defmodule Validator do
     def validate(%{atomize: true, keys: keys} = type, data) do
       case Predicates.Helpers.apply_predicates(Map.atomize(data, keys), type.constraints) do
         {:ok, result} ->
@@ -82,6 +74,37 @@ defmodule Drops.Types.Map do
           {:error, errors}
       end
     end
+  end
+
+  defmacro __using__(opts) do
+    quote do
+      use Drops.Type do
+        deftype(:map, keys: unquote(opts[:keys]), atomize: false)
+
+        import Drops.Types.Map
+
+        def new(opts) do
+          struct(__MODULE__, opts)
+        end
+
+        defimpl Drops.Type.Validator, for: __MODULE__ do
+          def validate(type, data), do: Validator.validate(type, data)
+        end
+      end
+    end
+  end
+
+  use Drops.Type do
+    deftype(:map, keys: [], atomize: false)
+  end
+
+  defimpl Drops.Type.Validator, for: Map do
+    def validate(type, data), do: Validator.validate(type, data)
+  end
+
+  def new(keys, opts) when is_list(keys) do
+    atomize = opts[:atomize] || false
+    struct(__MODULE__, keys: keys, atomize: atomize)
   end
 
   def atomize(data, keys, initial \\ %{}) do
