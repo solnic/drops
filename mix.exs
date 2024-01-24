@@ -79,7 +79,8 @@ defmodule Drops.MixProject do
     [
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
-      {:doctor, "~> 0.21.0", only: :dev}
+      {:doctor, "~> 0.21.0", only: :dev},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 end
