@@ -90,7 +90,7 @@ defmodule Drops.Contract do
               {:error, right_error} ->
                 {:error,
                  @message_backend.errors(
-                   {:error, {path, {:or, {left_error, right_error}}}}
+                   {:error, {path, {:or, {left_error, right_error, type.opts}}}}
                  )}
             end
         end

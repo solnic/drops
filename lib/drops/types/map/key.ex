@@ -42,8 +42,10 @@ defmodule Drops.Types.Map.Key do
     Map.has_key?(map, key) and present?(map[key], tail)
   end
 
-  defp nest_result({:error, {:or, {left, right}}}, root) do
-    {:error, {:or, {nest_result(left, root), nest_result(right, root)}}}
+  defp nest_result({:error, {:or, {left, right, opts}}}, root) do
+    {:error,
+     {:or,
+      {nest_result(left, root), nest_result(right, root), Keyword.merge(opts, path: root)}}}
   end
 
   defp nest_result({:error, {:list, results}}, root) when is_list(results) do

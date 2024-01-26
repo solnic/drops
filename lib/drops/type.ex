@@ -89,14 +89,18 @@ defmodule Drops.Type do
 
       @type t :: %__MODULE__{}
 
-      defstruct(unquote(attributes))
+      Module.register_attribute(__MODULE__, :type_spec, accumulate: false)
+      Module.register_attribute(__MODULE__, :opts, accumulate: false)
+
+      @opts []
+
+      defstruct(unquote(attributes) ++ [opts: @opts])
     end
   end
 
   defmacro deftype(primitive, attributes) when is_atom(primitive) do
     all_attrs =
-      [primitive: primitive, constraints: Type.infer_constraints(primitive)] ++
-        attributes
+      [primitive: primitive, constraints: Type.infer_constraints(primitive)] ++ attributes
 
     quote do
       deftype(unquote(all_attrs))

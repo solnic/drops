@@ -34,8 +34,16 @@ defmodule Drops.Validator.Messages.DefaultBackend do
     includes?: "must include %input%",
     excludes?: "must exclude %input%",
     in?: "must be one of: %input%",
-    not_in?: "must not be one of: %input%"
+    not_in?: "must not be one of: %input%",
+
+    # built-in types
+    number: "must be a number"
   }
+
+  @impl true
+  def text(:number, _opts) do
+    @text_mapping[:number]
+  end
 
   @impl true
   def text(predicate, _input) do

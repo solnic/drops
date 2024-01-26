@@ -6,6 +6,7 @@ defmodule Drops.Type.Compiler do
   alias Drops.Types.{
     Primitive,
     Union,
+    Number,
     List,
     Cast,
     Map,
@@ -25,6 +26,10 @@ defmodule Drops.Type.Compiler do
 
   def visit({:union, {left, right}}, opts) do
     Union.new(visit(left, opts), visit(right, opts))
+  end
+
+  def visit({:type, {:number, predicates}}, opts) do
+    Number.new(predicates, opts)
   end
 
   def visit({:type, {:list, member_type}}, opts)
