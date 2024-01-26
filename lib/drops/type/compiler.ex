@@ -5,7 +5,7 @@ defmodule Drops.Type.Compiler do
   """
   alias Drops.Types.{
     Primitive,
-    Sum,
+    Union,
     List,
     Cast,
     Map,
@@ -23,8 +23,8 @@ defmodule Drops.Type.Compiler do
     Map.new(keys, opts)
   end
 
-  def visit({:sum, {left, right}}, opts) do
-    Sum.new(visit(left, opts), visit(right, opts))
+  def visit({:union, {left, right}}, opts) do
+    Union.new(visit(left, opts), visit(right, opts))
   end
 
   def visit({:type, {:list, member_type}}, opts)
@@ -41,15 +41,15 @@ defmodule Drops.Type.Compiler do
   end
 
   def visit([left, right], opts) when is_tuple(left) and is_tuple(right) do
-    Sum.new(visit(left, opts), visit(right, opts))
+    Union.new(visit(left, opts), visit(right, opts))
   end
 
   def visit([left, right], opts) when is_map(left) and is_map(right) do
-    Sum.new(visit(left, opts), visit(right, opts))
+    Union.new(visit(left, opts), visit(right, opts))
   end
 
   def visit([left, right], _opts) do
-    Sum.new(left, right)
+    Union.new(left, right)
   end
 
   def visit(mod, opts) when is_atom(mod) do

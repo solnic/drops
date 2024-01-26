@@ -1,11 +1,11 @@
-defmodule Drops.Types.Sum do
+defmodule Drops.Types.Union do
   @moduledoc ~S"""
-  Drops.Types.Sum is a struct that represents a sum type with left and right types.
+  Drops.Types.Union is a struct that represents a union type with left and right types.
 
   ## Examples
 
       iex> Drops.Type.Compiler.visit([{:type, {:string, []}}, {:type, {:integer, []}}], [])
-      %Drops.Types.Sum{
+      %Drops.Types.Union{
         left: %Drops.Types.Primitive{
           primitive: :string,
           constraints: [predicate: {:type?, :string}]
@@ -18,15 +18,8 @@ defmodule Drops.Types.Sum do
       }
 
   """
-  use Drops.Type do
-    deftype([:left, :right, :opts])
 
-    def new(left, right) when is_struct(left) and is_struct(right) do
-      struct(__MODULE__, left: left, right: right)
-    end
-  end
-
-  defimpl Drops.Type.Validator, for: Sum do
+  defmodule Validator do
     def validate(%{left: left, right: right}, input) do
       case Drops.Type.Validator.validate(left, input) do
         {:ok, value} ->
@@ -42,5 +35,42 @@ defmodule Drops.Types.Sum do
           end
       end
     end
+  end
+
+  defmacro __using__(spec) do
+    quote do
+      use Drops.Type do
+        deftype([:left, :right, :opts])
+
+        alias Drops.Type.Compiler
+        import Drops.Types.Union
+
+        def new(opts) do
+          {:union, {left, right}} = unquote(spec)
+
+          struct(__MODULE__, %{
+            left: Compiler.visit(left, opts),
+            right: Compiler.visit(right, opts),
+            opts: opts
+          })
+        end
+
+        defimpl Drops.Type.Validator, for: __MODULE__ do
+          def validate(type, data), do: Validator.validate(type, data)
+        end
+      end
+    end
+  end
+
+  use Drops.Type do
+    deftype([:left, :right, :opts])
+
+    def new(left, right) when is_struct(left) and is_struct(right) do
+      struct(__MODULE__, left: left, right: right)
+    end
+  end
+
+  defimpl Drops.Type.Validator, for: Union do
+    def validate(type, input), do: Validator.validate(type, input)
   end
 end

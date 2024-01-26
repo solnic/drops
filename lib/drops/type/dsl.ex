@@ -85,15 +85,12 @@ defmodule Drops.Type.DSL do
     type(type, predicates)
   end
 
-  def type([type | rest]) do
-    case rest do
-      [] -> type(type)
-      _ -> {:sum, {type(type), type(rest)}}
-    end
+  def type(type) when is_atom(type) do
+    {:type, {type, []}}
   end
 
-  def type(type) do
-    {:type, {type, []}}
+  def type([type | rest]) do
+    union([type | rest])
   end
 
   @doc ~S"""
@@ -113,14 +110,20 @@ defmodule Drops.Type.DSL do
   @spec type(atom(), []) :: type()
   @spec type({:cast, {atom(), []}}, type()) :: type()
 
-  def type([type | rest], predicates) when is_list(predicates) do
-    case rest do
-      [] -> type(type, predicates)
-      _ -> {:sum, {type(type, predicates), type(rest, predicates)}}
-    end
+  def type([type | rest], predicates) do
+    union([type | rest], predicates)
   end
 
-  def type(type, predicates) when is_list(predicates) do
+  def type({type, predicates}, more_predicates)
+      when is_atom(type) and is_list(predicates) do
+    {:type, {type, predicates ++ more_predicates}}
+  end
+
+  def type(type, predicates) when is_atom(type) and is_list(predicates) do
+    {:type, {type, predicates}}
+  end
+
+  def type({:type, {type, []}}, predicates) when is_atom(type) and is_list(predicates) do
     {:type, {type, predicates}}
   end
 
@@ -138,6 +141,23 @@ defmodule Drops.Type.DSL do
   end
 
   @doc ~S"""
+  Returns a union type specification.
+
+  ## Examples
+
+      # either a nil or a string
+      union([:nil, :string])
+
+  """
+
+  def union([type | rest], predicates \\ []) do
+    case rest do
+      [] -> type(type, predicates)
+      _ -> {:union, {type(type, predicates), type(rest, predicates)}}
+    end
+  end
+
+  @doc ~S"""
   Returns a list type specification.
 
   ## Examples
@@ -145,7 +165,7 @@ defmodule Drops.Type.DSL do
       # a list with a specified member type
       list(:string)
 
-      # a list with a specified sum member type
+      # a list with a specified union member type
       list([:string, :integer])
 
   """
@@ -207,7 +227,7 @@ defmodule Drops.Type.DSL do
   @spec maybe(map()) :: [type()]
 
   def maybe(schema) when is_map(schema) do
-    {:sum, {type(nil), schema}}
+    {:union, {type(nil), schema}}
   end
 
   @doc ~S"""

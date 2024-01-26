@@ -71,7 +71,7 @@ defmodule Drops.Validator.MessagesTest do
       assert to_string(error) == "role must be one of: admin, user"
     end
 
-    test "returns errors from a sum type", %{contract: contract} do
+    test "returns errors from a union type", %{contract: contract} do
       assert {:error, [error = %{left: left_error, right: right_error}]} =
                contract.conform(%{birthday: "oops"})
 
