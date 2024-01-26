@@ -370,7 +370,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "nested sum of schemas" do
+  describe "nested union of schemas" do
     contract do
       schema do
         %{
@@ -395,7 +395,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "nested sum of schemas when atomized" do
+  describe "nested union of schemas when atomized" do
     contract do
       schema(atomize: true) do
         %{
@@ -423,7 +423,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "using list shortcut for sum types" do
+  describe "using list shortcut for union types" do
     contract do
       schema(:left) do
         %{required(:name) => string()}
@@ -453,7 +453,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "sum of lists" do
+  describe "union of lists" do
     contract do
       schema do
         %{
@@ -480,7 +480,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "sum of list of schemas" do
+  describe "union of list of schemas" do
     contract do
       schema(:left) do
         %{required(:name) => string()}
@@ -513,7 +513,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "sum of list of schemas nested" do
+  describe "union of list of schemas nested" do
     contract do
       schema(:left) do
         %{required(:name) => string()}
@@ -560,7 +560,7 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
-  describe "sum of schemas" do
+  describe "union of schemas" do
     contract do
       schema(:left) do
         %{required(:name) => string()}

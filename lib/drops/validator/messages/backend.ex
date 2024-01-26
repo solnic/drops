@@ -137,7 +137,7 @@ defmodule Drops.Validator.Messages.Backend do
       end
 
       defp error({:error, {:or, {left, right}}}) do
-        %Error.Sum{left: error(left), right: error(right)}
+        %Error.Union{left: error(left), right: error(right)}
       end
 
       defp error({:error, {path, {:or, {left, right}}}}) do

@@ -44,33 +44,33 @@ defmodule Drops.Validator.Messages.Error do
     end
   end
 
-  defmodule Sum do
+  defmodule Union do
     @moduledoc false
     @type t :: %__MODULE__{}
 
     defstruct [:left, :right]
 
-    defimpl String.Chars, for: Sum do
-      def to_string(%Error.Sum{left: left, right: right})
+    defimpl String.Chars, for: Union do
+      def to_string(%Error.Union{left: left, right: right})
           when is_list(left) and is_list(right) do
         "#{Enum.map(left, &Kernel.to_string/1)} or #{Enum.map(right, &Kernel.to_string/1)}"
       end
 
-      def to_string(%Error.Sum{left: left, right: right}) when is_list(left) do
+      def to_string(%Error.Union{left: left, right: right}) when is_list(left) do
         "#{Enum.map(left, &Kernel.to_string/1)} or #{right}"
       end
 
-      def to_string(%Error.Sum{left: left, right: right}) when is_list(right) do
+      def to_string(%Error.Union{left: left, right: right}) when is_list(right) do
         "#{left} or #{Enum.map(right, &Kernel.to_string/1)}"
       end
 
-      def to_string(%Error.Sum{left: left, right: right}) do
+      def to_string(%Error.Union{left: left, right: right}) do
         "#{left} or #{right}"
       end
     end
 
-    defimpl Error.Conversions, for: Sum do
-      def nest(%Error.Sum{left: left, right: right} = error, root) do
+    defimpl Error.Conversions, for: Union do
+      def nest(%Error.Union{left: left, right: right} = error, root) do
         Map.merge(error, %{
           left: Error.Conversions.nest(left, root),
           right: Error.Conversions.nest(right, root)

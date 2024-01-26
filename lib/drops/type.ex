@@ -32,7 +32,7 @@ defmodule Drops.Type do
 
   defmacro __using__({:union, _, _} = spec) do
     quote do
-      use Drops.Types.Sum, unquote(spec)
+      use Drops.Types.Union, unquote(spec)
     end
   end
 

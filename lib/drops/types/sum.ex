@@ -1,11 +1,11 @@
-defmodule Drops.Types.Sum do
+defmodule Drops.Types.Union do
   @moduledoc ~S"""
-  Drops.Types.Sum is a struct that represents a sum type with left and right types.
+  Drops.Types.Union is a struct that represents a union type with left and right types.
 
   ## Examples
 
       iex> Drops.Type.Compiler.visit([{:type, {:string, []}}, {:type, {:integer, []}}], [])
-      %Drops.Types.Sum{
+      %Drops.Types.Union{
         left: %Drops.Types.Primitive{
           primitive: :string,
           constraints: [predicate: {:type?, :string}]
@@ -43,10 +43,10 @@ defmodule Drops.Types.Sum do
         deftype([:left, :right, :opts])
 
         alias Drops.Type.Compiler
-        import Drops.Types.Sum
+        import Drops.Types.Union
 
         def new(opts) do
-          {:sum, {left, right}} = unquote(spec)
+          {:union, {left, right}} = unquote(spec)
 
           struct(__MODULE__, %{
             left: Compiler.visit(left, opts),
@@ -70,7 +70,7 @@ defmodule Drops.Types.Sum do
     end
   end
 
-  defimpl Drops.Type.Validator, for: Sum do
+  defimpl Drops.Type.Validator, for: Union do
     def validate(type, input), do: Validator.validate(type, input)
   end
 end

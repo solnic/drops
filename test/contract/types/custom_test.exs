@@ -42,7 +42,7 @@ defmodule Drops.Contract.Types.CustomTest do
     end
   end
 
-  describe "defining a sum type using atoms" do
+  describe "defining a union type using atoms" do
     defmodule Number do
       use Drops.Type, union([:integer, :float])
     end
@@ -66,7 +66,7 @@ defmodule Drops.Contract.Types.CustomTest do
     end
   end
 
-  describe "defining a sum type using types" do
+  describe "defining a union type using types" do
     defmodule PositiveNumber do
       use Drops.Type, union([integer(), float()], gt?: 0)
     end
