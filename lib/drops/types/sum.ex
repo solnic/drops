@@ -18,15 +18,8 @@ defmodule Drops.Types.Sum do
       }
 
   """
-  use Drops.Type do
-    deftype([:left, :right, :opts])
 
-    def new(left, right) when is_struct(left) and is_struct(right) do
-      struct(__MODULE__, left: left, right: right)
-    end
-  end
-
-  defimpl Drops.Type.Validator, for: Sum do
+  defmodule Validator do
     def validate(%{left: left, right: right}, input) do
       case Drops.Type.Validator.validate(left, input) do
         {:ok, value} ->
@@ -42,5 +35,42 @@ defmodule Drops.Types.Sum do
           end
       end
     end
+  end
+
+  defmacro __using__(spec) do
+    quote do
+      use Drops.Type do
+        deftype([:left, :right, :opts])
+
+        alias Drops.Type.Compiler
+        import Drops.Types.Sum
+
+        def new(opts) do
+          {:sum, {left, right}} = unquote(spec)
+
+          struct(__MODULE__, %{
+            left: Compiler.visit(left, opts),
+            right: Compiler.visit(right, opts),
+            opts: opts
+          })
+        end
+
+        defimpl Drops.Type.Validator, for: __MODULE__ do
+          def validate(type, data), do: Validator.validate(type, data)
+        end
+      end
+    end
+  end
+
+  use Drops.Type do
+    deftype([:left, :right, :opts])
+
+    def new(left, right) when is_struct(left) and is_struct(right) do
+      struct(__MODULE__, left: left, right: right)
+    end
+  end
+
+  defimpl Drops.Type.Validator, for: Sum do
+    def validate(type, input), do: Validator.validate(type, input)
   end
 end

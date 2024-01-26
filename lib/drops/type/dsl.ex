@@ -85,15 +85,12 @@ defmodule Drops.Type.DSL do
     type(type, predicates)
   end
 
-  def type([type | rest]) do
-    case rest do
-      [] -> type(type)
-      _ -> {:sum, {type(type), type(rest)}}
-    end
+  def type(type) when is_atom(type) do
+    {:type, {type, []}}
   end
 
-  def type(type) do
-    {:type, {type, []}}
+  def type([type | rest]) do
+    union([type | rest])
   end
 
   @doc ~S"""
@@ -113,14 +110,20 @@ defmodule Drops.Type.DSL do
   @spec type(atom(), []) :: type()
   @spec type({:cast, {atom(), []}}, type()) :: type()
 
-  def type([type | rest], predicates) when is_list(predicates) do
-    case rest do
-      [] -> type(type, predicates)
-      _ -> {:sum, {type(type, predicates), type(rest, predicates)}}
-    end
+  def type([type | rest], predicates) do
+    union([type | rest], predicates)
   end
 
-  def type(type, predicates) when is_list(predicates) do
+  def type({type, predicates}, more_predicates)
+      when is_atom(type) and is_list(predicates) do
+    {:type, {type, predicates ++ more_predicates}}
+  end
+
+  def type(type, predicates) when is_atom(type) and is_list(predicates) do
+    {:type, {type, predicates}}
+  end
+
+  def type({:type, {type, []}}, predicates) when is_atom(type) and is_list(predicates) do
     {:type, {type, predicates}}
   end
 
@@ -135,6 +138,23 @@ defmodule Drops.Type.DSL do
 
   def type({:cast, {input_type, cast_opts}}, output_type) do
     {:cast, {type(input_type), output_type, cast_opts}}
+  end
+
+  @doc ~S"""
+  Returns a union type specification.
+
+  ## Examples
+
+      # either a nil or a string
+      union([:nil, :string])
+
+  """
+
+  def union([type | rest], predicates \\ []) do
+    case rest do
+      [] -> type(type, predicates)
+      _ -> {:sum, {type(type, predicates), type(rest, predicates)}}
+    end
   end
 
   @doc ~S"""

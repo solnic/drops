@@ -42,6 +42,59 @@ defmodule Drops.Contract.Types.CustomTest do
     end
   end
 
+  describe "defining a sum type using atoms" do
+    defmodule Number do
+      use Drops.Type, union([:integer, :float])
+    end
+
+    contract do
+      schema do
+        %{required(:test) => Number}
+      end
+    end
+
+    test "returns success with a valid input", %{contract: contract} do
+      assert {:ok, %{test: 1}} = contract.conform(%{test: 1})
+      assert {:ok, %{test: 1.0}} = contract.conform(%{test: 1.0})
+    end
+
+    test "returns errors with invalid input", %{contract: contract} do
+      assert_errors(
+        ["test must be an integer or test must be a float"],
+        contract.conform(%{test: "Hello World"})
+      )
+    end
+  end
+
+  describe "defining a sum type using types" do
+    defmodule PositiveNumber do
+      use Drops.Type, union([integer(), float()], gt?: 0)
+    end
+
+    contract do
+      schema do
+        %{required(:test) => PositiveNumber}
+      end
+    end
+
+    test "returns success with a valid input", %{contract: contract} do
+      assert {:ok, %{test: 1}} = contract.conform(%{test: 1})
+      assert {:ok, %{test: 1.0}} = contract.conform(%{test: 1.0})
+    end
+
+    test "returns errors with invalid input", %{contract: contract} do
+      assert_errors(
+        ["test must be an integer or test must be a float"],
+        contract.conform(%{test: "Hello World"})
+      )
+
+      assert_errors(
+        ["test must be greater than 0 or test must be a float"],
+        contract.conform(%{test: -1})
+      )
+    end
+  end
+
   describe "using a custom map type" do
     defmodule User do
       use Drops.Type, %{

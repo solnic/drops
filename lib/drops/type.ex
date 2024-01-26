@@ -30,6 +30,12 @@ defmodule Drops.Type do
     end
   end
 
+  defmacro __using__({:union, _, _} = spec) do
+    quote do
+      use Drops.Types.Sum, unquote(spec)
+    end
+  end
+
   defmacro __using__(spec) do
     quote do
       import Drops.Type
@@ -101,6 +107,7 @@ defmodule Drops.Type do
   def infer_primitive(map) when is_map(map), do: :map
   def infer_primitive(name) when is_atom(name), do: name
   def infer_primitive({:type, {name, _}}), do: name
+  def infer_primitive(_), do: nil
 
   def infer_constraints([]), do: []
   def infer_constraints(map) when is_map(map), do: []
