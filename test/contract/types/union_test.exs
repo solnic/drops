@@ -1,4 +1,4 @@
-defmodule Drops.Contract.Types.StringTest do
+defmodule Drops.Contract.Types.UnionTest do
   use Drops.ContractCase
 
   describe "a union of two primitive types" do
@@ -40,10 +40,7 @@ defmodule Drops.Contract.Types.StringTest do
     end
 
     test "returns error when left side is a failure", %{contract: contract} do
-      assert_errors(
-        ["test size must be 5 or test must be an integer"],
-        contract.conform(%{test: "Hello World"})
-      )
+      assert_errors(["test size must be 5"], contract.conform(%{test: "Hello World"}))
     end
 
     test "returns error when left side and right are failures", %{contract: contract} do
@@ -100,10 +97,7 @@ defmodule Drops.Contract.Types.StringTest do
     end
 
     test "returns error when left side is a failure", %{contract: contract} do
-      assert_errors(
-        ["test size must be 5 or test must be an integer"],
-        contract.conform(%{test: "Hello World"})
-      )
+      assert_errors(["test size must be 5"], contract.conform(%{test: "Hello World"}))
     end
 
     test "returns success when right side is a failure", %{contract: contract} do

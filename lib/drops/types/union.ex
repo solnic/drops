@@ -20,6 +20,26 @@ defmodule Drops.Types.Union do
   """
 
   defmodule Validator do
+    def validate(%{left: %{primitive: _} = left, right: %{primitive: _} = right}, input) do
+      case Drops.Type.Validator.validate(left, input) do
+        {:ok, value} ->
+          {:ok, value}
+
+        {:error, meta} = left_error ->
+          if is_list(meta) and meta[:predicate] != :type? do
+            left_error
+          else
+            case Drops.Type.Validator.validate(right, input) do
+              {:ok, value} ->
+                {:ok, value}
+
+              {:error, _} = right_error ->
+                {:error, {:or, {left_error, right_error}}}
+            end
+          end
+      end
+    end
+
     def validate(%{left: left, right: right}, input) do
       case Drops.Type.Validator.validate(left, input) do
         {:ok, value} ->
