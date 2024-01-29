@@ -6,6 +6,7 @@ defmodule Drops.Type.DSL do
   """
 
   @type type() :: {:type, {atom(), keyword()}}
+  @type opts() :: {:opts, {type(), keyword()}}
 
   @doc ~S"""
   Returns a required key specification.
@@ -431,5 +432,21 @@ defmodule Drops.Type.DSL do
 
   def map(predicates) when is_list(predicates) do
     type(:map, predicates)
+  end
+
+  @doc ~S"""
+  Add options to a type specification.
+
+  ## Examples
+
+      # a string with a custom name
+      opts(string(:filled?), name: :email)
+  """
+  @doc since: "0.2.0"
+
+  @spec opts(type(), Keyword.t()) :: opts()
+
+  def opts(type, opts) do
+    {:opts, {type, opts}}
   end
 end

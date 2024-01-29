@@ -32,4 +32,19 @@ defmodule Drops.Contract.Types.StringTest do
       assert_errors(["test must be filled"], contract.conform(%{test: ""}))
     end
   end
+
+  describe "string/1 with a type atom and options" do
+    contract do
+      schema do
+        %{required(:test) => opts(string(:filled?), name: :test_name)}
+      end
+    end
+
+    test "returns success with valid data", %{contract: contract} do
+      [key] = contract.schema().keys
+      %{opts: opts} = key.type
+
+      assert Keyword.get(opts, :name) == :test_name
+    end
+  end
 end
