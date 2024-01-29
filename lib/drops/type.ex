@@ -43,7 +43,8 @@ defmodule Drops.Type do
 
       deftype(
         primitive: Type.infer_primitive(unquote(spec)),
-        constraints: Type.infer_constraints(unquote(spec))
+        constraints: Type.infer_constraints(unquote(spec)),
+        opts: []
       )
 
       def new(attributes) when is_list(attributes) do
@@ -78,7 +79,8 @@ defmodule Drops.Type do
     quote do
       deftype(
         primitive: unquote(primitive),
-        constraints: type(unquote(primitive))
+        constraints: type(unquote(primitive)),
+        opts: []
       )
     end
   end

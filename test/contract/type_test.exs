@@ -86,4 +86,19 @@ defmodule Drops.Contract.TypeTest do
       )
     end
   end
+
+  describe "type/1 with a type atom and options" do
+    contract do
+      schema do
+        %{required(:test) => opts(type(:string, [:filled?]), name: :test_name)}
+      end
+    end
+
+    test "returns success with valid data", %{contract: contract} do
+      [key] = contract.schema().keys
+      %{opts: opts} = key.type
+
+      assert Keyword.get(opts, :name) == :test_name
+    end
+  end
 end

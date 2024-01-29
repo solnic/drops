@@ -24,7 +24,7 @@ defmodule Drops.Type.Compiler do
   end
 
   def visit({:union, {left, right}}, opts) do
-    Union.new(visit(left, opts), visit(right, opts))
+    Union.new(visit(left, opts), visit(right, opts), opts)
   end
 
   def visit({:type, {:list, member_type}}, opts)
@@ -56,7 +56,11 @@ defmodule Drops.Type.Compiler do
     mod.new(opts)
   end
 
-  def visit(spec, _opts) when is_tuple(spec) do
-    Primitive.new(spec)
+  def visit({:opts, {type, opts}}, more_opts) do
+    visit(type, Keyword.merge(more_opts, opts))
+  end
+
+  def visit(spec, opts) when is_tuple(spec) do
+    Elixir.Map.merge(Primitive.new(spec), %{opts: opts})
   end
 end
