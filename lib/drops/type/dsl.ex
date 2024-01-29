@@ -123,8 +123,8 @@ defmodule Drops.Type.DSL do
     {:type, {type, predicates}}
   end
 
-  def type({:type, {type, []}}, predicates) when is_atom(type) and is_list(predicates) do
-    {:type, {type, predicates}}
+  def type({:type, {type, predicates}}, more_predicates) when is_atom(type) do
+    {:type, {type, predicates ++ more_predicates}}
   end
 
   def type({:cast, {input_type, cast_opts}}, output_type)

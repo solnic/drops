@@ -76,10 +76,7 @@ defmodule Drops.Contract.TypeTest do
     end
 
     test "returns error from left predicates", %{contract: contract} do
-      assert_errors(
-        ["test must be filled or test must be a map"],
-        contract.conform(%{test: []})
-      )
+      assert_errors(["test must be filled"], contract.conform(%{test: []}))
     end
 
     test "returns errors from right predicates", %{contract: contract} do

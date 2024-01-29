@@ -88,10 +88,7 @@ defmodule Drops.Contract.Types.CustomTest do
         contract.conform(%{test: "Hello World"})
       )
 
-      assert_errors(
-        ["test must be greater than 0 or test must be a float"],
-        contract.conform(%{test: -1})
-      )
+      assert_errors(["test must be greater than 0"], contract.conform(%{test: -1}))
     end
   end
 
