@@ -85,8 +85,8 @@ defmodule Drops.Types.Union do
   use Drops.Type do
     deftype([:left, :right, :opts])
 
-    def new(left, right, opts \\ []) when is_struct(left) and is_struct(right) do
-      struct(__MODULE__, left: left, right: right, opts: opts)
+    def new(left, right) when is_struct(left) and is_struct(right) do
+      struct(__MODULE__, left: left, right: right)
     end
   end
 

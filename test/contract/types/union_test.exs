@@ -114,22 +114,4 @@ defmodule Drops.Contract.Types.UnionTest do
       )
     end
   end
-
-  describe "a union of two primitive types and with opts" do
-    contract do
-      schema do
-        %{
-          required(:test) =>
-            union([string(size?: 5), integer(gt?: 0)]) |> opts(name: :str_or_int)
-        }
-      end
-    end
-
-    test "returns success when left side is a success", %{contract: contract} do
-      [key] = contract.schema().keys
-      %{opts: opts} = key.type
-
-      assert Keyword.get(opts, :name) == :str_or_int
-    end
-  end
 end
