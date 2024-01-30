@@ -1,6 +1,8 @@
 defmodule Drops.Contract.Types.NumberTest do
   use Drops.ContractCase
 
+  doctest Drops.Types.Number
+
   describe "number/0" do
     contract do
       schema do
