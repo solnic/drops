@@ -26,7 +26,7 @@ defmodule Drops.Types.Cast do
   alias Drops.Casters
 
   use Drops.Type do
-    deftype([:input_type, :output_type, opts: []])
+    deftype([:input_type, :output_type])
 
     def new(input_type, output_type, opts) do
       struct(__MODULE__, input_type: input_type, output_type: output_type, opts: opts)

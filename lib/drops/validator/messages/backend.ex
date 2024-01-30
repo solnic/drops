@@ -136,12 +136,26 @@ defmodule Drops.Validator.Messages.Backend do
         %Error.Rule{path: path, text: text}
       end
 
-      defp error({:error, {:or, {left, right}}}) do
-        %Error.Union{left: error(left), right: error(right)}
+      defp error({:error, {:or, {left, right, opts}}}) do
+        if not is_nil(opts[:name]) and not is_nil(opts[:path]) do
+          meta = Keyword.drop(opts, [:name, :path])
+
+          %Error.Type{path: opts[:path], text: text(opts[:name], opts), meta: meta}
+        else
+          %Error.Union{left: error(left), right: error(right)}
+        end
       end
 
-      defp error({:error, {path, {:or, {left, right}}}}) do
-        nest(error({:error, {:or, {left, right}}}), path)
+      defp error({:error, {path, {:or, {left, right, opts}}}}) do
+        nest(
+          error(
+            {:error,
+             {:or,
+              {left, right,
+               Keyword.merge(opts, path: Keyword.get(opts, :path, []) ++ path)}}}
+          ),
+          path
+        )
       end
 
       defp error({:error, {path, {:cast, error}}}) do

@@ -378,6 +378,33 @@ defmodule Drops.Type.DSL do
   end
 
   @doc ~S"""
+  Returns a number type specification.
+
+  ## Examples
+
+      # a number with no constraints
+      number()
+
+      # a number with constraints
+      number(gt?: 1.0)
+
+  """
+
+  @spec number() :: type()
+
+  def number() do
+    type(:number)
+  end
+
+  def number(predicate) when is_atom(predicate) do
+    type(:number, [predicate])
+  end
+
+  def number(predicates) when is_list(predicates) do
+    type(:number, predicates)
+  end
+
+  @doc ~S"""
   Returns a boolean type specification.
 
   ## Examples
