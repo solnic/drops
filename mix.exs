@@ -21,8 +21,17 @@ defmodule Drops.MixProject do
       package: package(),
       docs: docs(),
       source_url: @source_url,
-      consolidate_protocols: Mix.env() != :test
+      consolidate_protocols: Mix.env() == :prod,
+      elixir_paths: elixir_paths(Mix.env()),
     ]
+  end
+
+  def elixir_paths(:examples) do
+    elixir_paths("dev") ++ ["examples"]
+  end
+
+  def elixir_paths(_) do
+    ["lib"]
   end
 
   # Run "mix help compile.app" to learn about applications.
