@@ -1,7 +1,91 @@
 defmodule Drops.Type do
   @moduledoc ~S"""
-  Type behaviour
+  Type behaviour and definition macros.
+
+  ## Defining a basic primitive type
+
+    defmodule Email do
+      use Drops.Type, string()
+    end
+
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:email) => Email
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{email: "jane@doe.org"})
+      {:ok, %{email: "jane@doe.org"}}
+      iex> {:error, errors} = UserContract.conform(%{email: 1})
+      {:error,
+       [
+         %Drops.Validator.Messages.Error.Type{
+           path: [:email],
+           text: "must be a string",
+           meta: [predicate: :type?, args: [:string, 1]]
+         }
+       ]}
+      iex> Enum.map(errors, &to_string/1)
+      ["email must be a string"]
+      iex> [%{type: type}]= UserContract.schema().keys
+      [
+        %Drops.Types.Map.Key{
+          path: [:email],
+          presence: :required,
+          type: %Email{
+            primitive: :string,
+            constraints: [predicate: {:type?, :string}],
+            opts: []
+          }
+        }
+      ]
+
+  ## Defining a custom constrained type
+
+    defmodule FilledEmail do
+      use Drops.Type, string(:filled?)
+    end
+
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:email) => FilledEmail
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{email: "jane@doe.org"})
+      {:ok, %{email: "jane@doe.org"}}
+      iex> {:error, errors} = UserContract.conform(%{email: ""})
+      {:error,
+       [
+         %Drops.Validator.Messages.Error.Type{
+           path: [:email],
+           text: "must be filled",
+           meta: [predicate: :filled?, args: [""]]
+         }
+       ]}
+      iex> Enum.map(errors, &to_string/1)
+      ["email must be filled"]
+      iex> [%{type: type}]= UserContract.schema().keys
+      [
+        %Drops.Types.Map.Key{
+          path: [:email],
+          presence: :required,
+          type: %FilledEmail{
+            primitive: :string,
+            constraints: {:and,
+             [predicate: {:type?, :string}, predicate: {:filled?, []}]},
+            opts: []
+          }
+        }
+      ]
   """
+  @moduledoc since: "0.2.0"
 
   alias __MODULE__
   alias Drops.Type.Compiler
