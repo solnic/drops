@@ -1,6 +1,24 @@
+## v0.2.0 - TBD
+
+### Features
+
+- `Drops.Type` module that allows you to define custom types (via #36)
+- `Drops.Type.Validator` protocol that allows you to define custom validators for your types
+- Added built-in `Drops.Types.Number` type (issue #33)
+- Added `union` to type definition DSL (issue #37)
+
+### Fixes
+
+- Warning about `conform` callback is gone (issue #34)
+
+### Changes
+
+- All built-in types have been refactored to use the validator protocol
+- `Drops.Types.Sum` was renamed to `Drops.Types.Union`
+
 ## v0.1.1 - 2023-10-27
 
-### Bug fixes
+### Fixes
 
 - [`Drops.Contract`] Rules are now correctly applied only to the root map (via #32)
 
