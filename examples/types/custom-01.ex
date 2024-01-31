@@ -1,5 +1,5 @@
 defmodule FilledString do
-  use Drops.Type, {:string, [:filled?]}
+  use Drops.Type, string(:filled?)
 end
 
 defmodule UserContract do
