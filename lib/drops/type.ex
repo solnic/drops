@@ -1,12 +1,21 @@
 defmodule Drops.Type do
   @moduledoc ~S"""
   Type behaviour and definition macros.
+  """
+  @moduledoc since: "0.2.0"
 
-  ## Defining a basic primitive type
+  alias __MODULE__
+  alias Drops.Type.Compiler
+  alias Drops.Types.Map.Key
 
-    defmodule Email do
-      use Drops.Type, string()
-    end
+  @doc ~S"""
+  Define a custom map type.
+
+  ## Basic primitive type
+
+      defmodule Email do
+        use Drops.Type, string()
+      end
 
       iex> defmodule UserContract do
       ...>   use Drops.Contract
@@ -30,24 +39,12 @@ defmodule Drops.Type do
        ]}
       iex> Enum.map(errors, &to_string/1)
       ["email must be a string"]
-      iex> [%{type: type}]= UserContract.schema().keys
-      [
-        %Drops.Types.Map.Key{
-          path: [:email],
-          presence: :required,
-          type: %Email{
-            primitive: :string,
-            constraints: [predicate: {:type?, :string}],
-            opts: []
-          }
-        }
-      ]
 
-  ## Defining a custom constrained type
+  ## Constrained primitive type
 
-    defmodule FilledEmail do
-      use Drops.Type, string(:filled?)
-    end
+      defmodule FilledEmail do
+        use Drops.Type, string(:filled?)
+      end
 
       iex> defmodule UserContract do
       ...>   use Drops.Contract
@@ -71,34 +68,75 @@ defmodule Drops.Type do
        ]}
       iex> Enum.map(errors, &to_string/1)
       ["email must be filled"]
-      iex> [%{type: type}]= UserContract.schema().keys
-      [
-        %Drops.Types.Map.Key{
-          path: [:email],
-          presence: :required,
-          type: %FilledEmail{
-            primitive: :string,
-            constraints: {:and,
-             [predicate: {:type?, :string}, predicate: {:filled?, []}]},
-            opts: []
-          }
+
+  ## Custom map
+
+      defmodule User do
+        use Drops.Type, %{
+          required(:name) => string(),
+          required(:email) => string()
         }
-      ]
+      end
+
+      iex> defmodule AccountContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:user) => User
+      ...>     }
+      ...>   end
+      ...> end
+      iex> AccountContract.conform(%{user: %{name: "Jane", email: "janedoe.org"}})
+      {:ok, %{user: %{name: "Jane", email: "janedoe.org"}}}
+      iex> {:error, errors} = AccountContract.conform(%{user: %{name: "Jane", email: 1}})
+      {:error,
+       [
+         %Drops.Validator.Messages.Error.Type{
+           path: [:user, :email],
+           text: "must be a string",
+           meta: [predicate: :type?, args: [:string, 1]]
+         }
+       ]}
+      iex> Enum.map(errors, &to_string/1)
+      ["user.email must be a string"]
+
+  ## Custom union
+
+      defmodule Price do
+        use Drops.Type, union([:integer, :float], gt?: 0)
+      end
+
+      iex> defmodule ProductContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema do
+      ...>     %{
+      ...>       required(:unit_price) => Price
+      ...>     }
+      ...>   end
+      ...> end
+      iex> ProductContract.conform(%{unit_price: 1})
+      {:ok, %{unit_price: 1}}
+      iex> {:ok, %{unit_price: 1}}
+      {:ok, %{unit_price: 1}}
+      iex> ProductContract.conform(%{unit_price: 1.5})
+      {:ok, %{unit_price: 1.5}}
+      iex> {:ok, %{unit_price: 1.5}}
+      {:ok, %{unit_price: 1.5}}
+      iex> {:error, errors} = ProductContract.conform(%{unit_price: -1})
+      {:error,
+       [
+         %Drops.Validator.Messages.Error.Type{
+           path: [:unit_price],
+           text: "must be greater than 0",
+           meta: [predicate: :gt?, args: [0, -1]]
+         }
+       ]}
+      iex> Enum.map(errors, &to_string/1)
+      ["unit_price must be greater than 0"]
   """
-  @moduledoc since: "0.2.0"
-
-  alias __MODULE__
-  alias Drops.Type.Compiler
-  alias Drops.Types.Map.Key
-
-  defmacro __using__(do: block) do
-    quote do
-      import Drops.Type
-      import Drops.Type.DSL
-
-      unquote(block)
-    end
-  end
+  @doc since: "0.2.0"
 
   defmacro __using__({:%{}, _, _} = spec) do
     quote do
@@ -117,6 +155,15 @@ defmodule Drops.Type do
   defmacro __using__({:union, _, _} = spec) do
     quote do
       use Drops.Types.Union, unquote(spec)
+    end
+  end
+
+  defmacro __using__(do: block) do
+    quote do
+      import Drops.Type
+      import Drops.Type.DSL
+
+      unquote(block)
     end
   end
 
