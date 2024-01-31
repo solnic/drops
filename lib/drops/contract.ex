@@ -39,10 +39,9 @@ defmodule Drops.Contract do
 
   defmacro __using__(opts) do
     quote do
-      use Drops.Validator
-
       import Drops.Contract
       import Drops.Type.DSL
+      import Drops.Predicates.Helpers, only: [ok?: 1]
 
       @behaviour Drops.Contract
 
