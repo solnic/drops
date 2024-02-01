@@ -14,8 +14,7 @@ defmodule Drops.MixProject do
       deps: deps(),
       licenses: [@license],
       description: ~S"""
-      Tools for working with data effectively - data contracts using schemas, \
-      domain validation rules, type-safe casting, and more.
+      Tools for working with data effectively - data contracts using types, schemas, domain validation rules, type-safe casting, and more.
       """,
       links: %{"GitHub" => @source_url},
       package: package(),
