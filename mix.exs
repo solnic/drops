@@ -66,7 +66,6 @@ defmodule Drops.MixProject do
           Drops.Contract,
           Drops.Casters,
           Drops.Predicates,
-          Drops.Validator,
           Drops.Validator.Messages.Backend
         ],
         Types: [
@@ -78,6 +77,11 @@ defmodule Drops.MixProject do
           Drops.Type.DSL,
           Drops.Types.Union,
           Drops.Types.Cast
+        ],
+        "Type DSL": [
+          Drops.Type,
+          Drops.Type.DSL,
+          Drops.Type.Validator
         ]
       ]
     ]

@@ -349,6 +349,106 @@ UserContract.conform(%{
 #  }}
 ```
 
+## Custom types
+
+If built-in types are not enough, or if you want to reuse schema definitions, you can define custom types using `Drops.Type`. Here's an example:
+
+```elixir
+defmodule Types.Age do
+  use Drops.Type, integer(gteq?: 0)
+end
+
+defmodule Types.Name do
+  use Drops.Type, string(:filled?)
+end
+
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:name) => Types.Name,
+      required(:age) => Types.Age
+    }
+  end
+end
+
+UserContract.conform(%{name: "Jane", age: 42})
+# {:ok, %{name: "Jane", age: 42}}
+
+{:error, errors} = UserContract.conform(%{name: "Jane", age: -42})
+Enum.map(errors, &to_string/1)
+# ["age must be greater than or equal to 0"]
+
+{:error, errors} = UserContract.conform(%{name: "Jane", age: "42"})
+Enum.map(errors, &to_string/1)
+# ["age must be an integer"]
+```
+
+You can also define reusable schemas, since they are represented as map type:
+
+```elixir
+defmodule Types.User do
+  use Drops.Type, %{
+    required(:name) => string(:filled?),
+    required(:age) => integer(gteq?: 0)
+  }
+end
+
+defmodule UserContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:user) => Types.User
+    }
+  end
+end
+
+UserContract.conform(%{user: %{name: "Jane", age: 42}})
+# {:ok, %{user: %{name: "Jane", age: 42}}}
+
+{:error, errors} = UserContract.conform(%{user: %{name: "Jane", age: -42}})
+Enum.map(errors, &to_string/1)
+# ["user.age must be greater than or equal to 0"]
+
+{:error, errors} = UserContract.conform(%{user: %{name: "Jane", age: "42"}})
+Enum.map(errors, &to_string/1)
+# ["user.age must be an integer"]
+```
+
+Another handy custom type is a union:
+
+```elixir
+defmodule Types.Price do
+  use Drops.Type, union([:integer, :float], gt?: 0)
+end
+
+defmodule ProductContract do
+  use Drops.Contract
+
+  schema do
+    %{
+      required(:price) => Types.Price
+    }
+  end
+end
+
+ProductContract.conform(%{price: 42})
+# {:ok, %{price: 42}}
+
+ProductContract.conform(%{price: 42.3})
+# {:ok, %{price: 42.3}}
+
+{:error, errors} = ProductContract.conform(%{price: -42})
+Enum.map(errors, &to_string/1)
+# ["price must be greater than 0"]
+
+{:error, errors} = ProductContract.conform(%{price: "42"})
+Enum.map(errors, &to_string/1)
+# ["price must be an integer or price must be a float"]
+```
+
 ## Rules
 
 You can define arbitrary rule functions using `rule` macro. These rules will be applied to the input data only if it passed schema validation. This way you can be sure that rules operate on data that's safe to work with.
