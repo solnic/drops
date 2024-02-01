@@ -22,7 +22,7 @@ defmodule Drops.MixProject do
       docs: docs(),
       source_url: @source_url,
       consolidate_protocols: Mix.env() == :prod,
-      elixir_paths: elixir_paths(Mix.env()),
+      elixir_paths: elixir_paths(Mix.env())
     ]
   end
 
