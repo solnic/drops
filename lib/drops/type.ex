@@ -205,6 +205,7 @@ defmodule Drops.Type do
     end
   end
 
+  @doc false
   defmacro deftype(primitive) when is_atom(primitive) do
     quote do
       deftype(
@@ -229,6 +230,7 @@ defmodule Drops.Type do
     end
   end
 
+  @doc false
   defmacro deftype(primitive, attributes) when is_atom(primitive) do
     all_attrs =
       [primitive: primitive, constraints: Type.infer_constraints(primitive)] ++ attributes
@@ -238,12 +240,14 @@ defmodule Drops.Type do
     end
   end
 
+  @doc false
   def infer_primitive([]), do: :any
   def infer_primitive(map) when is_map(map), do: :map
   def infer_primitive(name) when is_atom(name), do: name
   def infer_primitive({:type, {name, _}}), do: name
   def infer_primitive(_), do: nil
 
+  @doc false
   def infer_constraints([]), do: []
   def infer_constraints(map) when is_map(map), do: []
   def infer_constraints(type) when is_atom(type), do: [predicate(:type?, [type])]
@@ -260,6 +264,7 @@ defmodule Drops.Type do
     [predicate(:type?, type)]
   end
 
+  @doc false
   def predicate({name, args}) do
     predicate(name, args)
   end
@@ -268,6 +273,7 @@ defmodule Drops.Type do
     predicate(name, [])
   end
 
+  @doc false
   def predicate(name, args) do
     {:predicate, {name, args}}
   end
