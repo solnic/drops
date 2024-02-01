@@ -87,6 +87,15 @@ defmodule Drops.Types.Map do
           struct(__MODULE__, opts)
         end
 
+        def new(predicates, opts) do
+          type = new(opts)
+
+          Elixir.Map.merge(
+            type,
+            %{constraints: type.constraints ++ Drops.Type.infer_constraints(predicates)}
+          )
+        end
+
         defimpl Drops.Type.Validator, for: __MODULE__ do
           def validate(type, data), do: Validator.validate(type, data)
         end

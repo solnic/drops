@@ -196,6 +196,10 @@ defmodule Drops.Type.DSL do
     type(list: [type | predicates])
   end
 
+  # def list(type, predicates) when is_struct(type) do
+  #   {:type, {:list, {type, predicates}}}
+  # end
+
   @doc ~S"""
   Returns :any type specification.
 

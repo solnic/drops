@@ -13,6 +13,21 @@ defmodule Drops.Type.Compiler do
     Map.Key
   }
 
+  @primitives [
+    :any,
+    :atom,
+    :boolean,
+    :date,
+    :date_time,
+    :float,
+    :integer,
+    :list,
+    :map,
+    :nil,
+    :string,
+    :time
+  ]
+
   def visit(type, _opts) when is_struct(type), do: type
 
   def visit(%{} = spec, opts) do
@@ -57,11 +72,16 @@ defmodule Drops.Type.Compiler do
     Union.new(left, right)
   end
 
-  def visit(mod, opts) when is_atom(mod) do
-    mod.new(opts)
+  def visit({:type, {type, predicates}}, opts)
+      when is_atom(type) and type not in @primitives do
+    type.new(predicates, opts)
   end
 
-  def visit(spec, _opts) when is_tuple(spec) do
+  def visit(type, opts) when is_atom(type) and type not in @primitives do
+    type.new(opts)
+  end
+
+  def visit(spec, _opts) do
     Primitive.new(spec)
   end
 end
