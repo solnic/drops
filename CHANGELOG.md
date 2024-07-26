@@ -1,3 +1,9 @@
+## v0.2.1 - 2024-07-26
+
+### Fixes
+
+- `in?` and `not_in?` works as expected when the accepted values are a single-item list (issue #55 fixed via #58)
+
 ## v0.2.0 - 2024-02-01
 
 ### Features
