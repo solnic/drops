@@ -652,7 +652,26 @@ defmodule Drops.PredicatesTest do
     end
   end
 
-  describe "in?/2" do
+  describe "in?/2 with a single value" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, in?: ["Hello"])}
+      end
+    end
+
+    test "returns success when the value is in the list", %{contract: contract} do
+      assert {:ok, %{test: "Hello"}} = contract.conform(%{test: "Hello"})
+    end
+
+    test "returns error when the value is not in the list", %{contract: contract} do
+      assert_errors(
+        ["test must be one of: Hello"],
+        contract.conform(%{test: "312"})
+      )
+    end
+  end
+
+  describe "in?/2 with multiple values" do
     contract do
       schema do
         %{required(:test) => type(:string, in?: ["Hello", "World"])}
@@ -671,7 +690,26 @@ defmodule Drops.PredicatesTest do
     end
   end
 
-  describe "not_in?/2" do
+  describe "not_in?/2 with a single value" do
+    contract do
+      schema do
+        %{required(:test) => type(:string, not_in?: ["Hello"])}
+      end
+    end
+
+    test "returns success when the value is not in the list", %{contract: contract} do
+      assert {:ok, %{test: "312"}} = contract.conform(%{test: "312"})
+    end
+
+    test "returns error when the value is in the list", %{contract: contract} do
+      assert_errors(
+        ["test must not be one of: Hello"],
+        contract.conform(%{test: "Hello"})
+      )
+    end
+  end
+
+  describe "not_in?/2 with multiple values" do
     contract do
       schema do
         %{required(:test) => type(:string, not_in?: ["Hello", "World"])}
