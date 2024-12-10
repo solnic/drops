@@ -15,7 +15,7 @@ defmodule Drops.Casters do
       ...>   use Drops.Contract
       ...>
       ...>   schema do
-      ...>     %{required(:age) => cast(:string) |> type(:integer)}
+      ...>     %{age: cast(:string) |> type(:integer)}
       ...>   end
       ...> end
       iex> UserContract.conform(%{age: "20"})
@@ -27,7 +27,7 @@ defmodule Drops.Casters do
       ...>   use Drops.Contract
       ...>
       ...>   schema do
-      ...>     %{required(:num) => cast(:string) |> type(:float)}
+      ...>     %{num: cast(:string) |> type(:float)}
       ...>   end
       ...> end
       iex> UserContract.conform(%{num: "20.5"})
@@ -39,7 +39,7 @@ defmodule Drops.Casters do
       ...>   use Drops.Contract
       ...>
       ...>   schema do
-      ...>     %{required(:id) => cast(:integer) |> type(:string)}
+      ...>     %{id: cast(:integer) |> type(:string)}
       ...>   end
       ...> end
       iex> UserContract.conform(%{id: 312})
@@ -51,7 +51,7 @@ defmodule Drops.Casters do
       ...>   use Drops.Contract
       ...>
       ...>   schema do
-      ...>     %{required(:date) => cast(:integer) |> type(:date_time)}
+      ...>     %{date: cast(:integer) |> type(:date_time)}
       ...>   end
       ...> end
       iex> UserContract.conform(%{date: 1614556800})

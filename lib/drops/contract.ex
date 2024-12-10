@@ -19,8 +19,8 @@ defmodule Drops.Contract do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:name) => type(:string),
-      ...>       required(:age) => type(:integer)
+      ...>       name: type(:string),
+      ...>       age: type(:integer)
       ...>     }
       ...>   end
       ...> end
@@ -126,8 +126,8 @@ defmodule Drops.Contract do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:name) => type(:string),
-      ...>       required(:age) => type(:integer)
+      ...>       name: type(:string),
+      ...>       age: type(:integer)
       ...>     }
       ...>   end
       ...> end
@@ -148,13 +148,13 @@ defmodule Drops.Contract do
       ...>
       ...>   schema(atomize: true) do
       ...>     %{
-      ...>       required(:user) => %{
-      ...>         required(:name) => type(:string, [:filled?]),
-      ...>         required(:age) => type(:integer),
-      ...>         required(:address) => %{
-      ...>           required(:city) => type(:string, [:filled?]),
-      ...>           required(:street) => type(:string, [:filled?]),
-      ...>           required(:zipcode) => type(:string, [:filled?])
+      ...>       user: %{
+      ...>         name: type(:string, [:filled?]),
+      ...>         age: type(:integer),
+      ...>         address: %{
+      ...>           city: type(:string, [:filled?]),
+      ...>           street: type(:string, [:filled?]),
+      ...>           zipcode: type(:string, [:filled?])
       ...>         }
       ...>       }
       ...>     }
@@ -200,18 +200,18 @@ defmodule Drops.Contract do
       ...>
       ...>   schema(:address) do
       ...>     %{
-      ...>       required(:street) => string(:filled?),
-      ...>       required(:city) => string(:filled?),
-      ...>       required(:zip) => string(:filled?),
-      ...>       required(:country) => string(:filled?)
+      ...>       street: string(:filled?),
+      ...>       city: string(:filled?),
+      ...>       zip: string(:filled?),
+      ...>       country: string(:filled?)
       ...>     }
       ...>   end
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:name) => string(),
-      ...>       required(:age) => integer(),
-      ...>       required(:address) => @schemas.address
+      ...>       name: string(),
+      ...>       age: integer(),
+      ...>       address: @schemas.address
       ...>     }
       ...>   end
       ...> end
@@ -271,8 +271,8 @@ defmodule Drops.Contract do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:email) => maybe(:string),
-      ...>       required(:login) => maybe(:string)
+      ...>       email: maybe(:string),
+      ...>       login: maybe(:string)
       ...>     }
       ...>   end
       ...>

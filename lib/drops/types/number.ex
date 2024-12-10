@@ -10,8 +10,8 @@ defmodule Drops.Types.Number do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:name) => string(:filled?),
-      ...>       required(:price) => number()
+      ...>       name: string(:filled?),
+      ...>       price: number()
       ...>     }
       ...>   end
       ...> end
