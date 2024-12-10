@@ -25,19 +25,11 @@ defmodule Drops.ContractCase do
           unquote(body)
         end
 
-        on_exit(fn ->
-          :code.purge(__MODULE__.TestContract)
-          :code.delete(__MODULE__.TestContract)
-
-          # Defined in doctests
-          :code.purge(__MODULE__.UserContract)
-          :code.delete(__MODULE__.UserContract)
-        end)
-
         {:ok, contract: TestContract}
       end
     end
   end
 end
 
+Code.put_compiler_option(:ignore_module_conflict, true)
 ExUnit.start()
