@@ -20,8 +20,8 @@ defmodule Drops.Validator.Messages.Backend do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:name) => string(:filled?),
-      ...>       required(:email) => string(:filled?)
+      ...>       name: string(:filled?),
+      ...>       email: string(:filled?)
       ...>     }
       ...>   end
       ...> end
@@ -29,14 +29,14 @@ defmodule Drops.Validator.Messages.Backend do
       {:error,
         [
           %Drops.Validator.Messages.Error.Type{
-            path: [:email],
-            text: "312 received but it must be a string",
-            meta: [predicate: :type?, args: [:string, 312]]
-          },
-          %Drops.Validator.Messages.Error.Type{
             path: [:name],
             text: "cannot be empty",
             meta: [predicate: :filled?, args: [""]]
+          },
+          %Drops.Validator.Messages.Error.Type{
+            path: [:email],
+            text: "312 received but it must be a string",
+            meta: [predicate: :type?, args: [:string, 312]]
           }
         ]
       }

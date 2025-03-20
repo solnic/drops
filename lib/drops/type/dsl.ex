@@ -14,6 +14,12 @@ defmodule Drops.Type.DSL do
       %{
         required(:email) => type(:string)
       }
+
+  Note that attributes are required by default, so the above is equivalent to:
+
+      %{
+        email: type(:string)
+      }
   """
   @doc since: "0.1.0"
   @spec required(atom()) :: {:required, atom()}

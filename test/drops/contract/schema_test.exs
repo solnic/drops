@@ -124,6 +124,44 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
+  describe "bare required keys with types" do
+    contract do
+      schema do
+        %{
+          :name => type(:string),
+          :age => type(:integer),
+          optional(:aliases) =>
+            list(%{
+              name: type(:string)
+            })
+        }
+      end
+    end
+
+    test "returns success with valid data", %{contract: contract} do
+      assert {:ok, %{name: "Jane", age: 21}} = contract.conform(%{name: "Jane", age: 21})
+    end
+
+    test "defining required keys with types", %{contract: contract} do
+      assert_errors(["age key must be present"], contract.conform(%{name: "Jane"}))
+    end
+
+    test "returns error with invalid data", %{contract: contract} do
+      assert_errors(["name must be a string"], contract.conform(%{name: 312, age: 21}))
+    end
+
+    test "returns multiple errors with invalid data", %{contract: contract} do
+      assert_errors(
+        [
+          "age must be an integer",
+          "aliases.0.name key must be present",
+          "name must be a string"
+        ],
+        contract.conform(%{name: 312, age: "21", aliases: [%{}]})
+      )
+    end
+  end
+
   describe "required and optionals keys with types" do
     contract do
       schema do

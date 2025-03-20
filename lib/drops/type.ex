@@ -22,7 +22,7 @@ defmodule Drops.Type do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:email) => Email
+      ...>       email: Email
       ...>     }
       ...>   end
       ...> end
@@ -51,7 +51,7 @@ defmodule Drops.Type do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:email) => FilledEmail
+      ...>       email: FilledEmail
       ...>     }
       ...>   end
       ...> end
@@ -73,8 +73,8 @@ defmodule Drops.Type do
 
       defmodule User do
         use Drops.Type, %{
-          required(:name) => string(),
-          required(:email) => string()
+          name: string(),
+          email: string()
         }
       end
 
@@ -83,7 +83,7 @@ defmodule Drops.Type do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:user) => User
+      ...>       user: User
       ...>     }
       ...>   end
       ...> end
@@ -112,7 +112,7 @@ defmodule Drops.Type do
       ...>
       ...>   schema do
       ...>     %{
-      ...>       required(:unit_price) => Price
+      ...>       unit_price: Price
       ...>     }
       ...>   end
       ...> end
