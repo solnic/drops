@@ -276,7 +276,13 @@ defmodule Drops.Predicates do
 
   """
   @spec match?(regexp :: Regex.t(), input :: binary()) :: boolean()
-  def match?(regexp, input), do: String.match?(input, regexp)
+  def match?(%Regex{} = regexp, input), do: String.match?(input, regexp)
+
+  # Handle serialized regex format for OTP 28 compatibility
+  def match?({:regex, source, opts}, input) do
+    regexp = Regex.compile!(source, opts)
+    String.match?(input, regexp)
+  end
 
   @doc ~S"""
   Checks if a given map, list or string size is less than or equal to a given size
