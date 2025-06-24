@@ -16,20 +16,23 @@ jobs:
 
     strategy:
       matrix:
-        elixir:
-          - "1.14.5"
-          - "1.15.7"
-          - "1.16.3"
-          - "1.17.2"
-        otp:
-          - "26.2"
-          - "26.1"
-          - "25.3"
+        include:
+          - elixir: "1.15"
+            otp: "25.3"
+
+          - elixir: "1.16"
+            otp: "26.2"
+
+          - elixir: "1.17"
+            otp: "27.1"
+
+          - elixir: "1.18.4-otp-27"
+            otp: "28.0"
 
     steps:
       - uses: actions/checkout@v3
       - name: Set up Elixir
-        uses: erlef/setup-beam@61e01a43a562a89bfc54c7f9a378ff67b03e4a21 # v1.16.0
+        uses: erlef/setup-beam@main # v1.16.0
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
