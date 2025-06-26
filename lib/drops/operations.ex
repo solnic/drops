@@ -82,9 +82,81 @@ defmodule Drops.Operations do
     # Extract context and params from input
     context = normalize_input(input)
 
+    # Check if operation-level telemetry is configured
+    operation_telemetry_config = Map.get(uow, :operation_telemetry_config)
+
+    if operation_telemetry_config do
+      # Wrap entire operation with telemetry
+      Drops.Operations.Extensions.Telemetry.emit_operation_telemetry(
+        operation_module,
+        context,
+        operation_telemetry_config,
+        fn -> execute_operation(operation_module, uow, context, operation_type) end
+      )
+    else
+      # No operation-level telemetry
+      execute_operation(operation_module, uow, context, operation_type)
+    end
+  end
+
+  # Pattern match on Success struct - extract result and continue with pipeline
+  def call(operation_module, {:ok, %__MODULE__.Success{result: previous_result}}, input) do
+    operation_type = operation_module.__operation_type__()
+    uow = operation_module.__unit_of_work__()
+
+    # Extract context and params from input
+    context = normalize_input(input)
+
+    # Check if operation-level telemetry is configured
+    operation_telemetry_config = Map.get(uow, :operation_telemetry_config)
+
+    if operation_telemetry_config do
+      # Wrap entire operation with telemetry
+      Drops.Operations.Extensions.Telemetry.emit_operation_telemetry(
+        operation_module,
+        context,
+        operation_telemetry_config,
+        fn ->
+          execute_operation_with_previous(
+            operation_module,
+            uow,
+            previous_result,
+            context,
+            operation_type
+          )
+        end
+      )
+    else
+      # No operation-level telemetry
+      execute_operation_with_previous(
+        operation_module,
+        uow,
+        previous_result,
+        context,
+        operation_type
+      )
+    end
+  end
+
+  # Pattern match on Failure struct - return as-is to short-circuit pipeline
+  def call(_operation_module, {:error, %__MODULE__.Failure{} = failure}, _input) do
+    {:error, failure}
+  end
+
+  # Normalize input to ensure we have a context map with at least params
+  defp normalize_input(%{params: _params} = context) when is_map(context) do
+    context
+  end
+
+  defp normalize_input(params) do
+    %{params: params}
+  end
+
+  # Helper function to execute operation without previous result
+  defp execute_operation(operation_module, uow, context, operation_type) do
     case process(uow, context, operation_type) do
       {:ok, pipeline_result} ->
-        # Check if execute telemetry is configured
+        # Check if execute telemetry is configured (for step-level telemetry)
         execute_result =
           if Map.has_key?(uow, :execute_telemetry_config) do
             # Wrap execute call with telemetry
@@ -128,17 +200,17 @@ defmodule Drops.Operations do
     end
   end
 
-  # Pattern match on Success struct - extract result and continue with pipeline
-  def call(operation_module, {:ok, %__MODULE__.Success{result: previous_result}}, input) do
-    operation_type = operation_module.__operation_type__()
-    uow = operation_module.__unit_of_work__()
-
-    # Extract context and params from input
-    context = normalize_input(input)
-
+  # Helper function to execute operation with previous result
+  defp execute_operation_with_previous(
+         operation_module,
+         uow,
+         previous_result,
+         context,
+         operation_type
+       ) do
     case process(uow, context, operation_type) do
       {:ok, pipeline_result} ->
-        # Check if execute telemetry is configured
+        # Check if execute telemetry is configured (for step-level telemetry)
         execute_result =
           if Map.has_key?(uow, :execute_telemetry_config) do
             # Wrap execute call with telemetry
@@ -182,20 +254,6 @@ defmodule Drops.Operations do
            type: operation_type
          }}
     end
-  end
-
-  # Pattern match on Failure struct - return as-is to short-circuit pipeline
-  def call(_operation_module, {:error, %__MODULE__.Failure{} = failure}, _input) do
-    {:error, failure}
-  end
-
-  # Normalize input to ensure we have a context map with at least params
-  defp normalize_input(%{params: _params} = context) when is_map(context) do
-    context
-  end
-
-  defp normalize_input(params) do
-    %{params: params}
   end
 
   def process(uow, context, _operation_type) do
