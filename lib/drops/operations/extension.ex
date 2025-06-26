@@ -141,7 +141,8 @@ defmodule Drops.Operations.Extension do
   """
   def available_extensions do
     [
-      Drops.Operations.Extensions.Ecto
+      Drops.Operations.Extensions.Ecto,
+      Drops.Operations.Extensions.Telemetry
     ]
   end
 

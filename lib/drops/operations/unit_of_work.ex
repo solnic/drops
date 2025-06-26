@@ -36,12 +36,19 @@ defmodule Drops.Operations.UnitOfWork do
 
   @type step :: atom()
   @type step_definition :: {module(), atom()}
+  @type callback_type :: :before | :after | :around
+  @type callback_definition :: {module(), atom(), any()}
   @type t :: %__MODULE__{
           steps: %{step() => step_definition()},
-          operation_module: module()
+          operation_module: module(),
+          callbacks: %{callback_type() => %{step() => [callback_definition()]}}
         }
 
-  defstruct [:steps, :operation_module]
+  defstruct [
+    :steps,
+    :operation_module,
+    callbacks: %{before: %{}, after: %{}, around: %{}}
+  ]
 
   @doc """
   Creates a new UnitOfWork for the given operation module.
@@ -89,6 +96,82 @@ defmodule Drops.Operations.UnitOfWork do
   @spec inject_step(t(), step(), module(), atom()) :: t()
   def inject_step(%__MODULE__{} = uow, step, module, function) do
     %{uow | steps: Map.put(uow.steps, step, {module, function})}
+  end
+
+  @doc """
+  Registers a before callback for a specific step.
+
+  Before callbacks are executed before the step function is called.
+
+  ## Parameters
+
+  - `uow` - The UnitOfWork to modify
+  - `step` - The step name to attach the callback to
+  - `module` - The module containing the callback function
+  - `function` - The function name to call for this callback
+  - `config` - Optional configuration data passed to the callback
+
+  ## Returns
+
+  Returns the modified UnitOfWork.
+  """
+  @spec register_before_callback(t(), step(), module(), atom(), any()) :: t()
+  def register_before_callback(%__MODULE__{} = uow, step, module, function, config \\ nil) do
+    callback = {module, function, config}
+    before_callbacks = Map.get(uow.callbacks.before, step, [])
+    updated_before = Map.put(uow.callbacks.before, step, [callback | before_callbacks])
+    %{uow | callbacks: %{uow.callbacks | before: updated_before}}
+  end
+
+  @doc """
+  Registers an after callback for a specific step.
+
+  After callbacks are executed after the step function completes successfully.
+
+  ## Parameters
+
+  - `uow` - The UnitOfWork to modify
+  - `step` - The step name to attach the callback to
+  - `module` - The module containing the callback function
+  - `function` - The function name to call for this callback
+  - `config` - Optional configuration data passed to the callback
+
+  ## Returns
+
+  Returns the modified UnitOfWork.
+  """
+  @spec register_after_callback(t(), step(), module(), atom(), any()) :: t()
+  def register_after_callback(%__MODULE__{} = uow, step, module, function, config \\ nil) do
+    callback = {module, function, config}
+    after_callbacks = Map.get(uow.callbacks.after, step, [])
+    updated_after = Map.put(uow.callbacks.after, step, [callback | after_callbacks])
+    %{uow | callbacks: %{uow.callbacks | after: updated_after}}
+  end
+
+  @doc """
+  Registers an around callback for a specific step.
+
+  Around callbacks wrap the step function execution and can control
+  whether the step is executed and modify its result.
+
+  ## Parameters
+
+  - `uow` - The UnitOfWork to modify
+  - `step` - The step name to attach the callback to
+  - `module` - The module containing the callback function
+  - `function` - The function name to call for this callback
+  - `config` - Optional configuration data passed to the callback
+
+  ## Returns
+
+  Returns the modified UnitOfWork.
+  """
+  @spec register_around_callback(t(), step(), module(), atom(), any()) :: t()
+  def register_around_callback(%__MODULE__{} = uow, step, module, function, config \\ nil) do
+    callback = {module, function, config}
+    around_callbacks = Map.get(uow.callbacks.around, step, [])
+    updated_around = Map.put(uow.callbacks.around, step, [callback | around_callbacks])
+    %{uow | callbacks: %{uow.callbacks | around: updated_around}}
   end
 
   @doc """
@@ -238,6 +321,42 @@ defmodule Drops.Operations.UnitOfWork do
   end
 
   defp call_step(uow, step, context, _original_params) do
+    # Execute around callbacks if any exist
+    around_callbacks = Map.get(uow.callbacks.around, step, [])
+
+    if around_callbacks != [] do
+      # Execute around callbacks (they control the step execution)
+      execute_around_callbacks(uow, step, context, around_callbacks)
+    else
+      # No around callbacks, execute step with before/after callbacks
+      execute_step_with_callbacks(uow, step, context)
+    end
+  rescue
+    error ->
+      {:error, error}
+  end
+
+  defp execute_step_with_callbacks(uow, step, context) do
+    # Execute before callbacks
+    before_callbacks = Map.get(uow.callbacks.before, step, [])
+    execute_before_callbacks(uow, step, context, before_callbacks)
+
+    # Execute the actual step
+    result = execute_step_function(uow, step, context)
+
+    case result do
+      {:ok, step_result} ->
+        # Execute after callbacks on success
+        after_callbacks = Map.get(uow.callbacks.after, step, [])
+        execute_after_callbacks(uow, step, context, step_result, after_callbacks)
+        result
+
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  defp execute_step_function(uow, step, context) do
     {module, function} = uow.steps[step]
 
     case step do
@@ -275,9 +394,58 @@ defmodule Drops.Operations.UnitOfWork do
           other -> {:ok, other}
         end
     end
-  rescue
-    error ->
-      {:error, error}
+  end
+
+  # Callback execution helpers
+
+  defp execute_before_callbacks(_uow, _step, _context, []), do: :ok
+
+  defp execute_before_callbacks(uow, step, context, [{module, function, config} | rest]) do
+    try do
+      apply(module, function, [step, context, config])
+      execute_before_callbacks(uow, step, context, rest)
+    rescue
+      error ->
+        # Log error but continue with other callbacks
+        require Logger
+        Logger.warning("Before callback failed: #{inspect(error)}")
+        execute_before_callbacks(uow, step, context, rest)
+    end
+  end
+
+  defp execute_after_callbacks(_uow, _step, _context, _result, []), do: :ok
+
+  defp execute_after_callbacks(uow, step, context, result, [
+         {module, function, config} | rest
+       ]) do
+    try do
+      apply(module, function, [step, context, result, config])
+      execute_after_callbacks(uow, step, context, result, rest)
+    rescue
+      error ->
+        # Log error but continue with other callbacks
+        require Logger
+        Logger.warning("After callback failed: #{inspect(error)}")
+        execute_after_callbacks(uow, step, context, result, rest)
+    end
+  end
+
+  defp execute_around_callbacks(uow, step, context, [{module, function, config} | rest]) do
+    try do
+      # Around callbacks receive a function to call the next callback or the step
+      next_fn = fn ->
+        if rest == [] do
+          execute_step_with_callbacks(uow, step, context)
+        else
+          execute_around_callbacks(uow, step, context, rest)
+        end
+      end
+
+      apply(module, function, [step, context, next_fn, config])
+    rescue
+      error ->
+        {:error, error}
+    end
   end
 
   # Helper function to get function arity

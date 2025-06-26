@@ -97,7 +97,8 @@ defmodule Drops.MixProject do
       {:ecto_sql, "~> 3.10", optional: true},
       {:ecto_sqlite3, "~> 0.12", only: [:test, :dev]},
       {:phoenix_html, "~> 4.0", only: [:test], runtime: false, optional: true},
-      {:phoenix_ecto, "~> 4.0", only: [:test], runtime: false, optional: true}
+      {:phoenix_ecto, "~> 4.0", only: [:test], runtime: false, optional: true},
+      {:telemetry, "~> 1.0", optional: true}
     ]
   end
 end
