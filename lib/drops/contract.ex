@@ -134,131 +134,49 @@ defmodule Drops.Contract do
       iex> UserContract.conform(%{name: "John", age: 21})
       {:ok, %{name: "John", age: 21}}
   """
+
+  # schema/1 macros
+  # Handle do: block schemas (these take precedence over atom-only patterns)
   defmacro schema(do: block) do
     set_schema(__CALLER__, :default, [], block)
   end
 
-  @doc ~S"""
-  Define schemas for the contract.
+  # Handle Ecto schema modules (module references) - MUST come after all block patterns
+  defmacro schema({:__aliases__, _, _} = ecto_schema_module) do
+    set_inferred_schema(__CALLER__, :default, [], ecto_schema_module)
+  end
 
-  ## Nested atomized schema
-
-      iex> defmodule UserContract do
-      ...>   use Drops.Contract
-      ...>
-      ...>   schema(atomize: true) do
-      ...>     %{
-      ...>       required(:user) => %{
-      ...>         required(:name) => type(:string, [:filled?]),
-      ...>         required(:age) => type(:integer),
-      ...>         required(:address) => %{
-      ...>           required(:city) => type(:string, [:filled?]),
-      ...>           required(:street) => type(:string, [:filled?]),
-      ...>           required(:zipcode) => type(:string, [:filled?])
-      ...>         }
-      ...>       }
-      ...>     }
-      ...>   end
-      ...> end
-      iex> {:error, errors} = UserContract.conform(%{
-      ...>  "user" => %{
-      ...>    "name" => "John",
-      ...>    "age" => 21,
-      ...>    "address" => %{
-      ...>      "city" => "New York",
-      ...>      "street" => "",
-      ...>      "zipcode" => "10001"
-      ...>    }
-      ...>  }
-      ...> })
-      iex> Enum.map(errors, &to_string/1)
-      ["user.address.street must be filled"]
-      iex> UserContract.conform(%{
-      ...>  "user" => %{
-      ...>    "name" => "John",
-      ...>    "age" => 21,
-      ...>    "address" => %{
-      ...>      "city" => "New York",
-      ...>      "street" => "Central Park",
-      ...>      "zipcode" => "10001"
-      ...>    }
-      ...>  }
-      ...> })
-      {:ok,
-       %{
-         user: %{
-           name: "John",
-           address: %{city: "New York", street: "Central Park", zipcode: "10001"},
-           age: 21
-         }
-       }}
-
-  ## Reusing schemas
-
-      iex> defmodule UserContract do
-      ...>   use Drops.Contract
-      ...>
-      ...>   schema(:address) do
-      ...>     %{
-      ...>       required(:street) => string(:filled?),
-      ...>       required(:city) => string(:filled?),
-      ...>       required(:zip) => string(:filled?),
-      ...>       required(:country) => string(:filled?)
-      ...>     }
-      ...>   end
-      ...>
-      ...>   schema do
-      ...>     %{
-      ...>       required(:name) => string(),
-      ...>       required(:age) => integer(),
-      ...>       required(:address) => @schemas.address
-      ...>     }
-      ...>   end
-      ...> end
-      iex> UserContract.conform(%{
-      ...>   name: "John",
-      ...>   age: 21,
-      ...>   address: %{
-      ...>     street: "Main St.",
-      ...>     city: "New York",
-      ...>     zip: "10001",
-      ...>     country: "USA"
-      ...>   }
-      ...> })
-      {:ok,
-       %{
-         name: "John",
-         address: %{
-           zip: "10001",
-           street: "Main St.",
-           city: "New York",
-           country: "USA"
-         },
-         age: 21
-       }}
-      iex> {:error, errors} = UserContract.conform(%{
-      ...>   name: "John",
-      ...>   age: "21",
-      ...>   address: %{
-      ...>     street: "Main St.",
-      ...>     city: "",
-      ...>     zip: "10001",
-      ...>     country: "USA"
-      ...>   }
-      ...> })
-      iex> Enum.map(errors, &to_string/1)
-      ["address.city must be filled", "age must be an integer"]
-  """
+  # schema/2 macros
+  # Handle named schemas with blocks - MUST come before single atom patterns
   defmacro schema(name, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, [], block)
   end
 
-  defmacro schema(opts, do: block) do
+  # Handle options with block (non-Ecto schema)
+  defmacro schema(opts, do: block) when is_list(opts) do
     set_schema(__CALLER__, :default, opts, block)
   end
 
-  defmacro schema(name, opts, do: block) when is_atom(name) do
+  # Handle Ecto schema modules with block (for schema merging) - only for module aliases
+  defmacro schema({:__aliases__, _, _} = ecto_schema_module, do: block) do
+    set_merged_schema(__CALLER__, :default, [], ecto_schema_module, block)
+  end
+
+  # Handle Ecto schema modules with options
+  defmacro schema({:__aliases__, _, _} = ecto_schema_module, opts) when is_list(opts) do
+    set_inferred_schema(__CALLER__, :default, opts, ecto_schema_module)
+  end
+
+  # schema/3 macros
+  # Handle named schema with options and block
+  defmacro schema(name, opts, do: block) when is_atom(name) and is_list(opts) do
     set_schema(__CALLER__, name, opts, block)
+  end
+
+  # Handle Ecto schema modules with options and block
+  defmacro schema({:__aliases__, _, _} = ecto_schema_module, opts, do: block)
+           when is_list(opts) do
+    set_merged_schema(__CALLER__, :default, opts, ecto_schema_module, block)
   end
 
   @doc ~S"""
@@ -370,15 +288,144 @@ defmodule Drops.Contract do
 
       schemas = Module.get_attribute(mod, :schemas, %{})
 
+      # Get default schema options from module attribute if present
+      default_opts = Module.get_attribute(mod, :schema_opts, [])
+
+      # Merge provided options with defaults (provided options take precedence)
+      merged_opts = Keyword.merge(default_opts, unquote(opts))
+
       Module.put_attribute(
         mod,
         :schemas,
         Map.put(
           schemas,
           unquote(name),
-          Drops.Type.Compiler.visit(unquote(block), unquote(opts))
+          Drops.Type.Compiler.visit(unquote(block), merged_opts)
         )
       )
+
+      # Store schema metadata for compile-time access
+      schema_meta = Module.get_attribute(mod, :schema_meta, %{})
+      new_meta = %{type: :block, ecto_schema: false}
+
+      Module.put_attribute(
+        mod,
+        :schema_meta,
+        Map.put(schema_meta, unquote(name), new_meta)
+      )
+
+      # Mark that schema was set for potential Operations callback
+      schema_callbacks = Module.get_attribute(mod, :schema_callbacks, [])
+
+      Module.put_attribute(mod, :schema_callbacks, [
+        {unquote(name), new_meta} | schema_callbacks
+      ])
+    end
+  end
+
+  defp set_inferred_schema(_caller, name, opts, input) do
+    quote do
+      mod = __MODULE__
+
+      schemas = Module.get_attribute(mod, :schemas, %{})
+
+      # Get default schema options from module attribute if present
+      default_opts = Module.get_attribute(mod, :schema_opts, [])
+
+      # Merge provided options with defaults (provided options take precedence)
+      merged_opts = Keyword.merge(default_opts, unquote(opts))
+
+      # Use the new protocol-based schema inference
+      compiled_schema = Drops.Schema.infer_and_compile(unquote(input), merged_opts)
+
+      Module.put_attribute(
+        mod,
+        :schemas,
+        Map.put(schemas, unquote(name), compiled_schema)
+      )
+
+      # Store schema metadata for compile-time access
+      schema_meta = Module.get_attribute(mod, :schema_meta, %{})
+
+      new_meta = %{
+        type: :inferred,
+        ecto_schema: true,
+        source_module: unquote(input)
+      }
+
+      Module.put_attribute(
+        mod,
+        :schema_meta,
+        Map.put(schema_meta, unquote(name), new_meta)
+      )
+
+      # Mark that schema was set for potential Operations callback
+      schema_callbacks = Module.get_attribute(mod, :schema_callbacks, [])
+
+      Module.put_attribute(mod, :schema_callbacks, [
+        {unquote(name), new_meta} | schema_callbacks
+      ])
+    end
+  end
+
+  defp set_merged_schema(_caller, name, opts, ecto_schema_module, block) do
+    quote do
+      mod = __MODULE__
+
+      schemas = Module.get_attribute(mod, :schemas, %{})
+
+      # Get default schema options from module attribute if present
+      default_opts = Module.get_attribute(mod, :schema_opts, [])
+
+      # Merge provided options with defaults (provided options take precedence)
+      merged_opts = Keyword.merge(default_opts, unquote(opts))
+
+      # Infer schema from Ecto module
+      inferred_schema_ast =
+        Drops.Schema.Inference.infer_schema(unquote(ecto_schema_module), merged_opts)
+
+      # Get the block schema AST
+      block_schema_ast = unquote(block)
+
+      # Merge the schemas - block schema takes precedence
+      merged_schema_ast = Map.merge(inferred_schema_ast, block_schema_ast)
+
+      # Compile the merged schema using the custom compiler for Ecto schemas
+      # This preserves the source_schema meta information
+      compiled_schema =
+        Drops.Schema.Compiler.compile(
+          unquote(ecto_schema_module),
+          merged_schema_ast,
+          merged_opts
+        )
+
+      Module.put_attribute(
+        mod,
+        :schemas,
+        Map.put(schemas, unquote(name), compiled_schema)
+      )
+
+      # Store schema metadata for compile-time access
+      schema_meta = Module.get_attribute(mod, :schema_meta, %{})
+
+      new_meta = %{
+        type: :merged,
+        ecto_schema: true,
+        source_module: unquote(ecto_schema_module)
+      }
+
+      Module.put_attribute(
+        mod,
+        :schema_meta,
+        Map.put(schema_meta, unquote(name), new_meta)
+      )
+
+      # Mark that schema was set for potential Operations callback
+      schema_callbacks = Module.get_attribute(mod, :schema_callbacks, [])
+
+      Module.put_attribute(mod, :schema_callbacks, [
+        {unquote(name), new_meta} | schema_callbacks
+      ])
     end
   end
 end

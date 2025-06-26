@@ -423,6 +423,211 @@ defmodule Drops.Contract.SchemaTest do
     end
   end
 
+  describe "schema(atomize: true) - comprehensive string and atom key support" do
+    contract do
+      schema(atomize: true) do
+        %{
+          required(:name) => string(),
+          required(:email) => string(),
+          optional(:age) => integer()
+        }
+      end
+    end
+
+    test "converts string keys to atom keys", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          "name" => "John Doe",
+          "email" => "john@example.com",
+          "age" => 30
+        })
+
+      assert result == %{
+               name: "John Doe",
+               email: "john@example.com",
+               age: 30
+             }
+    end
+
+    test "preserves atom keys as-is", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          name: "Jane Doe",
+          email: "jane@example.com",
+          age: 25
+        })
+
+      assert result == %{
+               name: "Jane Doe",
+               email: "jane@example.com",
+               age: 25
+             }
+    end
+
+    test "handles mixed string and atom keys (atom keys take precedence)", %{
+      contract: contract
+    } do
+      # Create mixed data where atom keys should take precedence
+      mixed_data =
+        Map.merge(
+          %{"name" => "String Name", "email" => "string@example.com"},
+          %{name: "Atom Name", email: "atom@example.com"}
+        )
+
+      {:ok, result} = contract.conform(mixed_data)
+
+      assert result == %{
+               name: "Atom Name",
+               email: "atom@example.com"
+             }
+    end
+
+    test "ignores unexpected string keys", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          "name" => "John Doe",
+          "email" => "john@example.com",
+          "unexpected" => "value",
+          "another_unexpected" => "value"
+        })
+
+      assert result == %{
+               name: "John Doe",
+               email: "john@example.com"
+             }
+    end
+
+    test "ignores unexpected atom keys", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          name: "Jane Doe",
+          email: "jane@example.com",
+          unexpected: "value",
+          another_unexpected: "value"
+        })
+
+      assert result == %{
+               name: "Jane Doe",
+               email: "jane@example.com"
+             }
+    end
+
+    test "validates required fields with string keys", %{contract: contract} do
+      assert_errors(
+        ["email key must be present"],
+        contract.conform(%{"name" => "John Doe"})
+      )
+    end
+
+    test "validates required fields with atom keys", %{contract: contract} do
+      assert_errors(
+        ["email key must be present"],
+        contract.conform(%{name: "Jane Doe"})
+      )
+    end
+
+    test "handles optional fields correctly", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          "name" => "John Doe",
+          "email" => "john@example.com"
+          # age is optional and omitted
+        })
+
+      assert result == %{
+               name: "John Doe",
+               email: "john@example.com"
+             }
+    end
+  end
+
+  describe "nested schema(atomize: true) - string and atom key support" do
+    contract do
+      schema(atomize: true) do
+        %{
+          required(:user) => %{
+            required(:name) => string(),
+            required(:email) => string()
+          },
+          required(:settings) => %{
+            required(:theme) => string(),
+            optional(:notifications) => boolean()
+          }
+        }
+      end
+    end
+
+    test "atomizes nested maps with string keys", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          "user" => %{
+            "name" => "John Doe",
+            "email" => "john@example.com"
+          },
+          "settings" => %{
+            "theme" => "dark",
+            "notifications" => true
+          }
+        })
+
+      assert result == %{
+               user: %{
+                 name: "John Doe",
+                 email: "john@example.com"
+               },
+               settings: %{
+                 theme: "dark",
+                 notifications: true
+               }
+             }
+    end
+
+    test "atomizes nested maps with atom keys", %{contract: contract} do
+      {:ok, result} =
+        contract.conform(%{
+          user: %{
+            name: "Jane Doe",
+            email: "jane@example.com"
+          },
+          settings: %{
+            theme: "light"
+          }
+        })
+
+      assert result == %{
+               user: %{
+                 name: "Jane Doe",
+                 email: "jane@example.com"
+               },
+               settings: %{
+                 theme: "light"
+               }
+             }
+    end
+
+    test "handles mixed keys in nested structures", %{contract: contract} do
+      # Create nested data with mixed keys
+      user_data = Map.merge(%{"email" => "mixed@example.com"}, %{name: "Mixed User"})
+      settings_data = %{"theme" => "mixed"}
+
+      {:ok, result} =
+        contract.conform(%{
+          "user" => user_data,
+          settings: settings_data
+        })
+
+      assert result == %{
+               user: %{
+                 name: "Mixed User",
+                 email: "mixed@example.com"
+               },
+               settings: %{
+                 theme: "mixed"
+               }
+             }
+    end
+  end
+
   describe "using list shortcut for union types" do
     contract do
       schema(:left) do
@@ -585,6 +790,50 @@ defmodule Drops.Contract.SchemaTest do
         ["name key must be present or login key must be present"],
         contract.conform(%{})
       )
+    end
+  end
+
+  describe "Ecto schema inference with default required fields" do
+    contract do
+      schema(Test.Ecto.UserSchema)
+    end
+
+    test "infers schema with required fields by default", %{contract: contract} do
+      assert {:ok, %{name: "John", email: "john@example.com"}} =
+               contract.conform(%{name: "John", email: "john@example.com"})
+
+      # Should fail when required fields are missing
+      assert {:error, errors} = contract.conform(%{name: "John"})
+      assert Enum.any?(errors, &String.contains?(to_string(&1), "email"))
+    end
+  end
+
+  describe "Ecto schema inference with custom default_presence" do
+    contract do
+      schema(Test.Ecto.UserSchema, default_presence: :optional)
+    end
+
+    test "respects custom default_presence option", %{contract: contract} do
+      # Should succeed even with missing fields when default_presence is :optional
+      assert {:ok, %{name: "John"}} = contract.conform(%{name: "John"})
+
+      assert {:ok, %{email: "john@example.com"}} =
+               contract.conform(%{email: "john@example.com"})
+    end
+  end
+
+  describe "Ecto schema inference with field_presence override" do
+    contract do
+      schema(Test.Ecto.UserSchema, field_presence: %{name: :required, email: :optional})
+    end
+
+    test "respects field_presence overrides", %{contract: contract} do
+      # name is required, email is optional
+      assert {:ok, %{name: "John"}} = contract.conform(%{name: "John"})
+
+      # Should fail when required name is missing
+      assert {:error, errors} = contract.conform(%{email: "john@example.com"})
+      assert Enum.any?(errors, &String.contains?(to_string(&1), "name"))
     end
   end
 end
