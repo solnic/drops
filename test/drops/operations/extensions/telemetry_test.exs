@@ -263,6 +263,195 @@ defmodule Drops.Operations.Extensions.TelemetryTest do
     end
   end
 
+  describe "new telemetry configuration format" do
+    setup do
+      # Capture telemetry events with custom prefix
+      ref = make_ref()
+
+      handler_id = "test-new-config-telemetry-handler-#{System.unique_integer()}"
+
+      :telemetry.attach_many(
+        handler_id,
+        [
+          [:my_app, :commands, :step, :start],
+          [:my_app, :commands, :step, :stop]
+        ],
+        &TestTelemetryHandler.handle_event/4,
+        %{ref: ref, pid: self()}
+      )
+
+      on_exit(fn ->
+        :telemetry.detach(handler_id)
+      end)
+
+      {:ok, events_ref: ref}
+    end
+
+    operation name: :new_config_operation,
+              type: :command,
+              telemetry: [prefix: [:my_app, :commands], steps: [:execute]] do
+      schema do
+        %{
+          required(:name) => string(:filled?)
+        }
+      end
+
+      @impl true
+      def execute(%{params: params}) do
+        {:ok, %{greeting: "Hello, #{params.name}!"}}
+      end
+    end
+
+    test "emits telemetry events only for specified steps with custom prefix", %{
+      new_config_operation: operation,
+      events_ref: ref
+    } do
+      {:ok, _result} = operation.call(%{name: "Alice"})
+
+      # Should only receive events for the :execute step (start + stop)
+      events = collect_events(ref, 2)
+
+      assert length(events) == 2
+
+      # Verify all events use the custom prefix and are for the execute step
+      for {event, _measurements, metadata} <- events do
+        assert event in [
+                 [:my_app, :commands, :step, :start],
+                 [:my_app, :commands, :step, :stop]
+               ]
+
+        assert metadata.step == :execute
+      end
+
+      # Verify we have both start and stop events
+      start_events =
+        Enum.filter(events, fn {event, _, _} ->
+          List.last(event) == :start
+        end)
+
+      stop_events =
+        Enum.filter(events, fn {event, _, _} ->
+          List.last(event) == :stop
+        end)
+
+      assert length(start_events) == 1
+      assert length(stop_events) == 1
+    end
+
+    operation name: :multiple_steps_operation,
+              type: :command,
+              telemetry: [prefix: [:my_app, :commands], steps: [:prepare, :validate]] do
+      schema do
+        %{
+          required(:name) => string(:filled?)
+        }
+      end
+
+      @impl true
+      def execute(%{params: params}) do
+        {:ok, %{greeting: "Hello, #{params.name}!"}}
+      end
+    end
+
+    test "emits telemetry events for multiple specified steps", %{
+      multiple_steps_operation: operation,
+      events_ref: ref
+    } do
+      {:ok, _result} = operation.call(%{name: "Alice"})
+
+      # Should receive events for :prepare and :validate steps (start + stop each)
+      events = collect_events(ref, 4)
+
+      assert length(events) == 4
+
+      # Verify all events use the custom prefix
+      for {event, _measurements, _metadata} <- events do
+        assert event in [
+                 [:my_app, :commands, :step, :start],
+                 [:my_app, :commands, :step, :stop]
+               ]
+      end
+
+      # Verify we have events for the correct steps
+      steps = Enum.map(events, fn {_, _, metadata} -> metadata.step end) |> Enum.uniq()
+      assert :prepare in steps
+      assert :validate in steps
+      refute :execute in steps
+    end
+  end
+
+  describe "backward compatibility" do
+    setup do
+      # Capture telemetry events with default prefix
+      ref = make_ref()
+
+      handler_id = "test-backward-compat-telemetry-handler-#{System.unique_integer()}"
+
+      :telemetry.attach_many(
+        handler_id,
+        [
+          [:drops, :operations, :step, :start],
+          [:drops, :operations, :step, :stop]
+        ],
+        &TestTelemetryHandler.handle_event/4,
+        %{ref: ref, pid: self()}
+      )
+
+      on_exit(fn ->
+        :telemetry.detach(handler_id)
+      end)
+
+      {:ok, events_ref: ref}
+    end
+
+    operation name: :backward_compat_operation,
+              type: :command,
+              telemetry: true do
+      schema do
+        %{
+          required(:name) => string(:filled?)
+        }
+      end
+
+      @impl true
+      def execute(%{params: params}) do
+        {:ok, %{greeting: "Hello, #{params.name}!"}}
+      end
+    end
+
+    test "old boolean format still works with all steps", %{
+      backward_compat_operation: operation,
+      events_ref: ref
+    } do
+      {:ok, _result} = operation.call(%{name: "Alice"})
+
+      # Should receive events for all steps (conform, prepare, validate)
+      events = collect_events(ref, 6)
+
+      # Should have at least 2 start and 2 stop events (prepare and validate)
+      start_events =
+        Enum.filter(events, fn {event, _, _} ->
+          List.last(event) == :start
+        end)
+
+      stop_events =
+        Enum.filter(events, fn {event, _, _} ->
+          List.last(event) == :stop
+        end)
+
+      assert length(start_events) >= 2
+      assert length(stop_events) >= 2
+
+      # Verify all events use the default prefix
+      for {event, _measurements, _metadata} <- events do
+        assert event in [
+                 [:drops, :operations, :step, :start],
+                 [:drops, :operations, :step, :stop]
+               ]
+      end
+    end
+  end
+
   describe "telemetry extension disabled" do
     operation type: :command do
       schema do

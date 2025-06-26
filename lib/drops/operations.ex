@@ -84,7 +84,20 @@ defmodule Drops.Operations do
 
     case process(uow, context, operation_type) do
       {:ok, pipeline_result} ->
-        case operation_module.execute(pipeline_result.validated) do
+        # Check if execute telemetry is configured
+        execute_result =
+          if Map.has_key?(uow, :execute_telemetry_config) do
+            # Wrap execute call with telemetry
+            Drops.Operations.Extensions.Telemetry.emit_execute_telemetry(
+              fn -> operation_module.execute(pipeline_result.validated) end,
+              uow.execute_telemetry_config
+            )
+          else
+            # No telemetry for execute step
+            operation_module.execute(pipeline_result.validated)
+          end
+
+        case execute_result do
           {:ok, result} ->
             {:ok,
              %__MODULE__.Success{
@@ -125,7 +138,22 @@ defmodule Drops.Operations do
 
     case process(uow, context, operation_type) do
       {:ok, pipeline_result} ->
-        case operation_module.execute(previous_result, pipeline_result.validated) do
+        # Check if execute telemetry is configured
+        execute_result =
+          if Map.has_key?(uow, :execute_telemetry_config) do
+            # Wrap execute call with telemetry
+            Drops.Operations.Extensions.Telemetry.emit_execute_telemetry(
+              fn ->
+                operation_module.execute(previous_result, pipeline_result.validated)
+              end,
+              uow.execute_telemetry_config
+            )
+          else
+            # No telemetry for execute step
+            operation_module.execute(previous_result, pipeline_result.validated)
+          end
+
+        case execute_result do
           {:ok, result} ->
             {:ok,
              %__MODULE__.Success{
