@@ -122,21 +122,24 @@ defmodule Drops.Operations.UnitOfWork do
   ## Parameters
 
   - `uow` - The UnitOfWork defining the pipeline
-  - `params` - The initial parameters to process
+  - `context` - The context map containing params and other data
 
   ## Returns
 
   Returns `{:ok, %{original: original_params, prepared: prepared_params, validated: validated_params}}`
   on success or `{:error, error}` on failure.
   """
-  @spec process(t(), any()) ::
+  @spec process(t(), map()) ::
           {:ok, %{original: any(), prepared: any(), validated: any()}} | {:error, any()}
-  def process(%__MODULE__{} = uow, params) do
+  def process(%__MODULE__{} = uow, context) when is_map(context) do
     # Get the pipeline steps in order, excluding :execute
     pipeline = get_pipeline_steps(uow)
 
-    # Process through the pipeline, keeping track of original params and prepared params
-    process_pipeline(uow, pipeline, params, params, nil)
+    # Extract params from context for backward compatibility
+    params = Map.get(context, :params)
+
+    # Process through the pipeline, keeping track of original context and prepared params
+    process_pipeline(uow, pipeline, context, params, nil)
   end
 
   # Private functions
@@ -189,19 +192,42 @@ defmodule Drops.Operations.UnitOfWork do
   defp process_pipeline(
          uow,
          [step | remaining_steps],
-         params,
+         current_context,
          original_params,
          prepared_params
        ) do
-    case call_step(uow, step, params, original_params) do
+    case call_step(uow, step, current_context, original_params) do
       {:ok, result} ->
-        # Store prepared params after the :prepare step
-        new_prepared_params = if step == :prepare, do: result, else: prepared_params
+        # For conform step, result is params, so update context
+        # For other steps, result should be the updated context
+        updated_context =
+          case step do
+            :conform ->
+              # conform returns params, so update the context
+              Map.put(current_context, :params, result)
+
+            _other ->
+              # Other steps should return updated context
+              if is_map(result) do
+                result
+              else
+                # If step returns non-map, treat as params update
+                Map.put(current_context, :params, result)
+              end
+          end
+
+        # Store prepared context after the :prepare step
+        new_prepared_params =
+          if step == :prepare do
+            Map.get(updated_context, :params)
+          else
+            prepared_params
+          end
 
         process_pipeline(
           uow,
           remaining_steps,
-          result,
+          updated_context,
           original_params,
           new_prepared_params
         )
@@ -211,38 +237,35 @@ defmodule Drops.Operations.UnitOfWork do
     end
   end
 
-  defp call_step(uow, step, params, original_params) do
+  defp call_step(uow, step, context, _original_params) do
     {module, function} = uow.steps[step]
 
     case step do
       :conform ->
-        # conform returns {:ok, result} or {:error, errors}
+        # conform still works with params only
+        params = Map.get(context, :params)
         apply(module, function, [params])
 
       _other_step ->
-        # All other steps return the result directly
-        # Check the function arity to determine how to call it
+        # All other steps now work with context
         result =
           cond do
             module == uow.operation_module ->
-              # For operation module functions, check arity
-              case function_arity(module, function) do
-                1 -> apply(module, function, [params])
-                2 -> apply(module, function, [original_params, params])
-                _ -> apply(module, function, [params])
-              end
+              # For operation module functions, pass context
+              apply(module, function, [context])
 
             true ->
               # For extension functions, pass operation module as first arg
               case function_arity(module, function) do
                 2 ->
-                  apply(module, function, [uow.operation_module, params])
+                  apply(module, function, [uow.operation_module, context])
 
                 3 ->
-                  apply(module, function, [uow.operation_module, original_params, params])
+                  # For 3-arity functions, we might need original context
+                  apply(module, function, [uow.operation_module, context, context])
 
                 _ ->
-                  apply(module, function, [uow.operation_module, params])
+                  apply(module, function, [uow.operation_module, context])
               end
           end
 

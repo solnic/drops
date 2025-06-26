@@ -15,7 +15,7 @@ defmodule Drops.OperationsTest do
         use Test.Operations
 
         @impl true
-        def execute(_params) do
+        def execute(%{params: _params}) do
           {:ok, build_user()}
         end
       end
@@ -28,7 +28,7 @@ defmodule Drops.OperationsTest do
   describe "basic operations" do
     operation :command do
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         if params[:name] == nil do
           {:error, "name is required"}
         else
@@ -54,7 +54,7 @@ defmodule Drops.OperationsTest do
       end
 
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         if params[:name] != "Jane Doe" do
           {:error, "name is not expected"}
         else
@@ -88,12 +88,13 @@ defmodule Drops.OperationsTest do
       end
 
       @impl true
-      def prepare(%{template: true} = params) do
-        Map.put(params, :name, params.name <> ".template")
+      def prepare(%{params: %{template: true} = params} = context) do
+        updated_params = Map.put(params, :name, params.name <> ".template")
+        Map.put(context, :params, updated_params)
       end
 
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         {:ok, params}
       end
     end
@@ -116,7 +117,7 @@ defmodule Drops.OperationsTest do
       end
 
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         {:ok, Map.merge(params, %{id: :rand.uniform(1000)})}
       end
     end
@@ -129,7 +130,7 @@ defmodule Drops.OperationsTest do
       end
 
       @impl true
-      def execute(user, params) do
+      def execute(user, %{params: params}) do
         {:ok, Map.merge(user, params)}
       end
     end

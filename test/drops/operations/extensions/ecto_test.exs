@@ -31,8 +31,8 @@ defmodule Drops.Operations.Extensions.EctoTest do
       schema(Test.Ecto.UserSchema)
 
       @impl true
-      def execute(params) do
-        case persist(params) do
+      def execute(%{changeset: changeset}) do
+        case persist(changeset) do
           {:ok, user} -> {:ok, %{name: user.name}}
           {:error, changeset} -> {:error, changeset}
         end
@@ -98,11 +98,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       end
 
       @impl true
-      def execute(changeset) do
-        # The changeset.params contains the original input params
-        # But we need to merge the validated Ecto fields with any virtual fields
-        original_params = changeset.params
-
+      def execute(%{changeset: changeset, params: original_params}) do
         # Get the validated Ecto fields from changeset.changes
         ecto_fields = changeset.changes
 
@@ -117,15 +113,17 @@ defmodule Drops.Operations.Extensions.EctoTest do
       end
 
       # Override changeset to include original params
-      def changeset(params) do
+      def changeset(%{params: params} = context) do
         # Only cast Ecto fields, but preserve original params
         ecto_params = Map.drop(params, [:extra_field])
 
-        %Test.Ecto.UserSchema{}
-        |> cast(ecto_params, [:name, :email])
-        |> validate_required([:name, :email])
-        # Store original params
-        |> Map.put(:params, params)
+        changeset =
+          %Test.Ecto.UserSchema{}
+          |> cast(ecto_params, [:name, :email])
+          |> validate_required([:name, :email])
+
+        # Return updated context with changeset
+        Map.put(context, :changeset, changeset)
       end
     end
 
@@ -165,7 +163,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       schema(Test.Ecto.UserSchema, accept: [:name])
 
       @impl true
-      def execute(changeset) do
+      def execute(%{changeset: changeset}) do
         case persist(changeset) do
           {:ok, user} -> {:ok, %{name: user.name, email: user.email}}
           {:error, changeset} -> {:error, changeset}
@@ -233,14 +231,17 @@ defmodule Drops.Operations.Extensions.EctoTest do
       schema(Test.Ecto.UserSchema)
 
       @impl true
-      def prepare(params) do
-        case params do
-          %{email: email} when is_binary(email) ->
-            Map.put(params, :email, String.downcase(email))
+      def prepare(%{params: params} = context) do
+        updated_params =
+          case params do
+            %{email: email} when is_binary(email) ->
+              Map.put(params, :email, String.downcase(email))
 
-          _ ->
-            params
-        end
+            _ ->
+              params
+          end
+
+        Map.put(context, :params, updated_params)
       end
 
       @impl true
@@ -251,8 +252,8 @@ defmodule Drops.Operations.Extensions.EctoTest do
       end
 
       @impl true
-      def execute(params) do
-        case persist(params) do
+      def execute(%{changeset: changeset}) do
+        case persist(changeset) do
           {:ok, user} -> {:ok, %{id: user.id, name: user.name, email: user.email}}
           {:error, changeset} -> {:error, changeset}
         end
@@ -285,7 +286,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       end
 
       @impl true
-      def execute(changeset) do
+      def execute(%{changeset: changeset}) do
         case Drops.TestRepo.insert(changeset) do
           {:ok, user} ->
             user_with_groups = Drops.TestRepo.preload(user, :groups)
@@ -318,13 +319,17 @@ defmodule Drops.Operations.Extensions.EctoTest do
       end
 
       # Override changeset to exclude virtual fields like group_ids
-      def changeset(params) do
+      def changeset(%{params: params} = context) do
         # Filter out virtual fields that aren't part of the Ecto schema
         ecto_params = Map.drop(params, [:group_ids])
 
-        %Test.Ecto.UserGroupSchemas.User{}
-        |> cast(ecto_params, [:name, :email])
-        |> validate_required([:name, :email])
+        changeset =
+          %Test.Ecto.UserGroupSchemas.User{}
+          |> cast(ecto_params, [:name, :email])
+          |> validate_required([:name, :email])
+
+        # Return updated context with changeset
+        Map.put(context, :changeset, changeset)
       end
     end
 
@@ -427,7 +432,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       schema(Test.Ecto.UserSchema)
 
       @impl true
-      def execute(changeset) do
+      def execute(%{changeset: changeset}) do
         # Add error to the changeset to test error handling
         invalid_changeset =
           changeset
@@ -516,7 +521,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       schema(Test.Ecto.UserSchema)
 
       @impl true
-      def execute(changeset) do
+      def execute(%{changeset: changeset}) do
         case persist(changeset) do
           {:ok, user} -> {:ok, %{name: user.name}}
           {:error, changeset} -> {:error, changeset}

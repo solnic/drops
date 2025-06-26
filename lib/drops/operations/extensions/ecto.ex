@@ -91,15 +91,15 @@ defmodule Drops.Operations.Extensions.Ecto do
 
       # Always define these functions when Ecto extension is enabled
       # Default implementations that delegate to the extension module
-      def cast_changeset(params, changeset) do
-        Drops.Operations.Extensions.Ecto.cast_changeset(__MODULE__, params, changeset)
+      def cast_changeset(context) do
+        Drops.Operations.Extensions.Ecto.cast_changeset(__MODULE__, context)
       end
 
-      defoverridable cast_changeset: 2
+      defoverridable cast_changeset: 1
 
       # Step 1: Create changeset from prepared params
-      def changeset(params) do
-        Drops.Operations.Extensions.Ecto.changeset(__MODULE__, params)
+      def changeset(context) do
+        Drops.Operations.Extensions.Ecto.changeset(__MODULE__, context)
       end
 
       defoverridable changeset: 1
@@ -113,18 +113,25 @@ defmodule Drops.Operations.Extensions.Ecto do
       unquote(
         if opts[:repo] do
           quote do
-            def persist(params) do
-              Drops.Operations.Extensions.Ecto.persist(__MODULE__, params)
+            def persist(changeset_or_context) do
+              changeset =
+                case changeset_or_context do
+                  %{changeset: changeset} -> changeset
+                  %Ecto.Changeset{} = changeset -> changeset
+                  _ -> changeset_or_context
+                end
+
+              Drops.Operations.Extensions.Ecto.persist(__MODULE__, changeset)
             end
           end
         end
       )
 
       # Helper function to convert schema validation errors to changeset errors
-      defp convert_schema_errors_to_changeset(changeset, schema_errors) do
+      defp convert_schema_errors_to_changeset(params, schema_errors) do
         Drops.Operations.Extensions.Ecto.convert_schema_errors_to_changeset(
           __MODULE__,
-          changeset.params,
+          params,
           schema_errors
         )
       end
@@ -134,10 +141,10 @@ defmodule Drops.Operations.Extensions.Ecto do
   # Public API functions that operations delegate to
 
   @doc """
-  Default cast_changeset implementation that returns the changeset unchanged.
+  Default cast_changeset implementation that returns the context unchanged.
   """
-  def cast_changeset(_operation_module, _params, changeset) do
-    changeset
+  def cast_changeset(_operation_module, context) when is_map(context) do
+    context
   end
 
   @doc """
@@ -146,12 +153,17 @@ defmodule Drops.Operations.Extensions.Ecto do
 
   This function is used as the :validate step in the UnitOfWork pipeline.
   """
-  def validate_changeset(operation_module, changeset) do
+  def validate_changeset(operation_module, context) when is_map(context) do
+    changeset = Map.get(context, :changeset)
+
     # Call the operation's validate function (which may be overridden by the user)
     validated_changeset = operation_module.validate(changeset)
 
     # Check if the changeset is valid
-    validate(operation_module, validated_changeset)
+    case validate(operation_module, validated_changeset) do
+      {:error, _} = error -> error
+      valid_changeset -> Map.put(context, :changeset, valid_changeset)
+    end
   end
 
   @doc """
@@ -175,15 +187,19 @@ defmodule Drops.Operations.Extensions.Ecto do
   @doc """
   Creates a changeset from the operation's schema and provided parameters.
   """
-  def changeset(operation_module, params) do
+  def changeset(operation_module, context) when is_map(context) do
+    params = Map.get(context, :params)
     schema = operation_module.schema()
     source_schema = schema.meta[:source_schema]
 
     if source_schema do
-      # Create changeset and store original params for schema merging
-      struct(source_schema)
-      |> Ecto.Changeset.change(params)
-      |> Map.put(:params, params)
+      # Create changeset - we'll store the context separately
+      changeset =
+        struct(source_schema)
+        |> Ecto.Changeset.change(params)
+
+      # Return updated context with changeset
+      Map.put(context, :changeset, changeset)
     else
       # No Ecto schema - this shouldn't happen if UoW is set up correctly
       raise "changeset/1 called on operation without Ecto schema"
@@ -206,10 +222,11 @@ defmodule Drops.Operations.Extensions.Ecto do
   # Helper function to convert schema validation errors to changeset for form operations
   def convert_schema_errors_to_changeset(operation_module, params, errors) do
     # Convert string keys to atom keys for Ecto changeset compatibility
-    atom_params = atomize_keys(params)
+    atom_params = atomize_keys(params || %{})
 
     # Create an empty changeset and add the schema errors to it
-    changeset = operation_module.changeset(atom_params)
+    context = operation_module.changeset(%{params: atom_params})
+    changeset = Map.get(context, :changeset)
 
     Enum.reduce(errors, changeset, fn error, acc ->
       case error do

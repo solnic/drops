@@ -17,7 +17,7 @@ defmodule Drops.Operations.NoEctoTest do
       end
 
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         if params.name == "error" do
           {:error, "Name cannot be 'error'"}
         else
@@ -26,7 +26,7 @@ defmodule Drops.Operations.NoEctoTest do
       end
 
       @impl true
-      def execute(previous_result, params) do
+      def execute(previous_result, %{params: params}) do
         if params.name == "compose" do
           {:ok, "#{previous_result} + #{params.name}"}
         else
@@ -45,7 +45,7 @@ defmodule Drops.Operations.NoEctoTest do
       end
 
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         if params.id < 0 do
           {:error, "ID must be positive"}
         else
@@ -54,7 +54,7 @@ defmodule Drops.Operations.NoEctoTest do
       end
 
       @impl true
-      def execute(previous_result, params) do
+      def execute(previous_result, %{params: params}) do
         if params.id == 999 do
           {:ok, Map.put(previous_result, :updated_id, params.id)}
         else
@@ -127,12 +127,13 @@ defmodule Drops.Operations.NoEctoTest do
           }
         end
 
-        def prepare(params) do
-          Map.put(params, :prepared, true)
+        def prepare(%{params: params} = context) do
+          updated_params = Map.put(params, :prepared, true)
+          Map.put(context, :params, updated_params)
         end
 
         @impl true
-        def execute(params) do
+        def execute(%{params: params}) do
           {:ok, params}
         end
       end
@@ -187,7 +188,7 @@ defmodule Drops.Operations.NoEctoTest do
       end
 
       @impl true
-      def execute(params) do
+      def execute(%{params: params}) do
         if params.email == "invalid@test.com" do
           {:error, "Invalid email address"}
         else
@@ -196,7 +197,7 @@ defmodule Drops.Operations.NoEctoTest do
       end
 
       @impl true
-      def execute(previous_result, params) do
+      def execute(previous_result, %{params: params}) do
         if params.email == "compose@test.com" do
           {:ok, "#{previous_result} + composed"}
         else

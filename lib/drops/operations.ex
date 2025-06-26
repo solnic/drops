@@ -19,23 +19,29 @@ defmodule Drops.Operations do
   end
 
   @doc """
-  Callback for executing an operation with given parameters.
+  Callback for executing an operation with given context.
+  The context is a map that contains at least a :params key.
   """
-  @callback execute(params :: any()) :: {:ok, any()} | {:error, any()}
+  @callback execute(context :: map()) :: {:ok, any()} | {:error, any()}
 
   @doc """
-  Callback for executing an operation with a previous result and new parameters.
+  Callback for executing an operation with a previous result and new context.
   Used for composing operations with the pipeline operator.
   """
-  @callback execute(previous_result :: any(), params :: any()) ::
+  @callback execute(previous_result :: any(), context :: map()) ::
               {:ok, any()} | {:error, any()}
 
   @doc """
   Callback for preparing parameters before execution.
+  Receives context map and should return updated params.
   """
-  @callback prepare(params :: any()) :: any()
+  @callback prepare(context :: map()) :: any()
 
-  @callback validate(params :: any()) :: {:ok, any()} | {:error, any()}
+  @doc """
+  Callback for validating parameters.
+  Receives context map and should return validated params or error.
+  """
+  @callback validate(context :: map()) :: {:ok, any()} | {:error, any()}
 
   @doc """
   Before compile callback to extend UoW after all schema macros have been processed.
@@ -69,11 +75,14 @@ defmodule Drops.Operations do
   end
 
   # Public API functions that operations delegate to
-  def call(operation_module, params) do
+  def call(operation_module, input) do
     operation_type = operation_module.__operation_type__()
     uow = operation_module.__unit_of_work__()
 
-    case process(uow, params, operation_type) do
+    # Extract context and params from input
+    context = normalize_input(input)
+
+    case process(uow, context, operation_type) do
       {:ok, pipeline_result} ->
         case operation_module.execute(pipeline_result.validated) do
           {:ok, result} ->
@@ -100,18 +109,21 @@ defmodule Drops.Operations do
          %__MODULE__.Failure{
            operation: operation_module,
            result: errors,
-           params: params,
+           params: context.params,
            type: operation_type
          }}
     end
   end
 
   # Pattern match on Success struct - extract result and continue with pipeline
-  def call(operation_module, {:ok, %__MODULE__.Success{result: previous_result}}, params) do
+  def call(operation_module, {:ok, %__MODULE__.Success{result: previous_result}}, input) do
     operation_type = operation_module.__operation_type__()
     uow = operation_module.__unit_of_work__()
 
-    case process(uow, params, operation_type) do
+    # Extract context and params from input
+    context = normalize_input(input)
+
+    case process(uow, context, operation_type) do
       {:ok, pipeline_result} ->
         case operation_module.execute(previous_result, pipeline_result.validated) do
           {:ok, result} ->
@@ -138,35 +150,44 @@ defmodule Drops.Operations do
          %__MODULE__.Failure{
            operation: operation_module,
            result: errors,
-           params: params,
+           params: context.params,
            type: operation_type
          }}
     end
   end
 
   # Pattern match on Failure struct - return as-is to short-circuit pipeline
-  def call(_operation_module, {:error, %__MODULE__.Failure{} = failure}, _params) do
+  def call(_operation_module, {:error, %__MODULE__.Failure{} = failure}, _input) do
     {:error, failure}
   end
 
-  def process(uow, params, _operation_type) do
-    Drops.Operations.UnitOfWork.process(uow, params)
+  # Normalize input to ensure we have a context map with at least params
+  defp normalize_input(%{params: _params} = context) when is_map(context) do
+    context
   end
 
-  def execute(_operation_module, _params) do
+  defp normalize_input(params) do
+    %{params: params}
+  end
+
+  def process(uow, context, _operation_type) do
+    Drops.Operations.UnitOfWork.process(uow, context)
+  end
+
+  def execute(_operation_module, _context) do
     raise "execute/1 must be implemented"
   end
 
-  def execute(_operation_module, _previous_result, _params) do
+  def execute(_operation_module, _previous_result, _context) do
     raise "execute/2 must be implemented for operations that support composition"
   end
 
-  def prepare(_operation_module, params) do
-    params
+  def prepare(_operation_module, context) do
+    context
   end
 
-  def validate(_operation_module, params) do
-    params
+  def validate(_operation_module, context) do
+    context
   end
 
   defmacro __using__(opts) do
@@ -268,28 +289,28 @@ defmodule Drops.Operations do
       def __operation_type__, do: @operation_type
 
       # Always delegate to the main module to eliminate duplication
-      def call(params) do
-        Drops.Operations.call(__MODULE__, params)
+      def call(input) do
+        Drops.Operations.call(__MODULE__, input)
       end
 
-      def call(previous_result, params) do
-        Drops.Operations.call(__MODULE__, previous_result, params)
+      def call(previous_result, input) do
+        Drops.Operations.call(__MODULE__, previous_result, input)
       end
 
-      def execute(params) do
-        Drops.Operations.execute(__MODULE__, params)
+      def execute(context) do
+        Drops.Operations.execute(__MODULE__, context)
       end
 
-      def execute(previous_result, params) do
-        Drops.Operations.execute(__MODULE__, previous_result, params)
+      def execute(previous_result, context) do
+        Drops.Operations.execute(__MODULE__, previous_result, context)
       end
 
-      def prepare(params) do
-        Drops.Operations.prepare(__MODULE__, params)
+      def prepare(context) do
+        Drops.Operations.prepare(__MODULE__, context)
       end
 
-      def validate(params) when is_map(params) do
-        Drops.Operations.validate(__MODULE__, params)
+      def validate(context) when is_map(context) do
+        Drops.Operations.validate(__MODULE__, context)
       end
 
       # Apply extensions
