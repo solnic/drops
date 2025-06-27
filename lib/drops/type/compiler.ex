@@ -32,8 +32,12 @@ defmodule Drops.Type.Compiler do
 
   def visit(%{} = spec, opts) do
     keys =
-      Enum.map(spec, fn {{presence, name}, type_spec} ->
-        %Key{path: [name], presence: presence, type: visit(type_spec, opts)}
+      Enum.map(spec, fn
+        {key, type_spec} when is_atom(key) ->
+          %Key{path: [key], presence: :required, type: visit(type_spec, opts)}
+
+        {{presence, name}, type_spec} ->
+          %Key{path: [name], presence: presence, type: visit(type_spec, opts)}
       end)
 
     Map.new(keys, opts)

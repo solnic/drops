@@ -5,7 +5,7 @@ Elixir `Drops` is a collection of small modules that provide useful extensions a
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed by adding `drops` to your list of dependencies in `mix.exs`:
+This package can be installed by adding `drops` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -15,7 +15,7 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc) and published on [HexDocs](https://hexdocs.pm). Once published, the docs can be found at <https://hexdocs.pm/drops>.
+Documentation can be found at <https://hexdocs.pm/drops>.
 
 ## Contracts
 
@@ -29,8 +29,8 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:name) => string(),
-      required(:email) => string()
+      name: string(),
+      email: string()
     }
   end
 end
@@ -76,7 +76,7 @@ Contract's schemas are a powerful way of defining the exact shape of the data yo
 
 ### Required and optional keys
 
-A schema must explicitly define which keys are required and which are optional. This is done by using `required` and `optional` functions. Here's an example:
+Schema attributes are required by defaults and attributes that are optional must be marked explicitly using `optional`. Here's an example:
 
 ```elixir
 defmodule UserContract do
@@ -85,7 +85,7 @@ defmodule UserContract do
   schema do
     %{
       optional(:name) => string(),
-      required(:email) => string()
+      :name => string()
     }
   end
 end
@@ -95,6 +95,17 @@ UserContract.conform(%{email: "janedoe.org"})
 
 UserContract.conform(%{name: "Jane", email: "janedoe.org"})
 # {:ok, %{name: "Jane", email: "janedoe.org"}}
+```
+
+If preferred, you can also use `required` to be more explicit. This schema is equivalent to the above:
+
+```elixir
+schema do
+  %{
+    optional(:name) => string(),
+    required(:name) => string()
+  }
+end
 ```
 
 ### Types
@@ -107,12 +118,12 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:name) => string(),
-      required(:age) => integer(),
-      required(:active) => boolean(),
-      required(:tags) => list(:string),
-      required(:settings) => map(:string),
-      required(:address) => maybe(:string)
+      name: string(),
+      age: integer(),
+      active: boolean(),
+      tags: list(:string),
+      settings: map(:string),
+      address: maybe(:string)
     }
   end
 end
@@ -128,8 +139,8 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:name) => string(:filled?),
-      required(:age) => integer(gt?: 18)
+      name: string(:filled?),
+      age: integer(gt?: 18)
     }
   end
 end
@@ -169,18 +180,18 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:user) => %{
-        required(:name) => string(:filled?),
-        required(:age) => integer(),
-        required(:address) => %{
-          required(:city) => string(:filled?),
-          required(:street) => string(:filled?),
-          required(:zipcode) => string(:filled?)
+      user: %{
+        name: string(:filled?),
+        age: integer(),
+        address: %{
+          city: string(:filled?),
+          street: string(:filled?),
+          zipcode: string(:filled?)
         },
-        required(:tags) =>
+        tags:
           list(%{
-            required(:name) => string(:filled?),
-            required(:created_at) => integer()
+            name: string(:filled?),
+            created_at: integer()
           })
       }
     }
@@ -255,7 +266,7 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:count) => cast(:string) |> integer(gt?: 0)
+      count: cast(:string) |> integer(gt?: 0)
     }
   end
 end
@@ -301,7 +312,7 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:text) => cast(:string, caster: CustomCaster) |> string()
+      text: cast(:string, caster: CustomCaster) |> string()
     }
   end
 end
@@ -320,11 +331,11 @@ defmodule UserContract do
 
   schema(atomize: true) do
     %{
-      required(:name) => string(),
-      required(:age) => integer(),
-      required(:tags) =>
+      name: string(),
+      age: integer(),
+      tags:
         list(%{
-          required(:name) => string()
+          name: string()
         })
     }
   end
@@ -367,8 +378,8 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:name) => Types.Name,
-      required(:age) => Types.Age
+      name: Types.Name,
+      age: Types.Age
     }
   end
 end
@@ -390,8 +401,8 @@ You can also define reusable schemas, since they are represented as map type:
 ```elixir
 defmodule Types.User do
   use Drops.Type, %{
-    required(:name) => string(:filled?),
-    required(:age) => integer(gteq?: 0)
+    name: string(:filled?),
+    age: integer(gteq?: 0)
   }
 end
 
@@ -400,7 +411,7 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:user) => Types.User
+      user: Types.User
     }
   end
 end
@@ -429,7 +440,7 @@ defmodule ProductContract do
 
   schema do
     %{
-      required(:price) => Types.Price
+      price: Types.Price
     }
   end
 end
@@ -463,8 +474,8 @@ defmodule UserContract do
 
   schema do
     %{
-      required(:email) => maybe(:string),
-      required(:login) => maybe(:string)
+      email: maybe(:string),
+      login: maybe(:string)
     }
   end
 

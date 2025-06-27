@@ -8,7 +8,10 @@ defmodule Drops.ContractCase do
       import Drops.ContractCase
 
       def assert_errors(errors, {:error, messages}) do
-        assert errors == Enum.map(messages, &to_string/1)
+        assert errors ==
+                 messages
+                 |> Enum.map(&to_string/1)
+                 |> Enum.sort()
       end
     end
   end
