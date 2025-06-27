@@ -25,10 +25,6 @@ defmodule Drops.ContractCase do
         on_exit(fn ->
           :code.purge(__MODULE__.TestContract)
           :code.delete(__MODULE__.TestContract)
-
-          # Defined in doctests
-          :code.purge(__MODULE__.UserContract)
-          :code.delete(__MODULE__.UserContract)
         end)
 
         {:ok, contract: TestContract}
@@ -36,5 +32,7 @@ defmodule Drops.ContractCase do
     end
   end
 end
+
+Code.require_file("support/doctest_case.ex", __DIR__)
 
 ExUnit.start()

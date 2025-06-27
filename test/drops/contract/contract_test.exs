@@ -1,5 +1,6 @@
 defmodule Drops.ContractTest do
   use Drops.ContractCase
+  use Drops.DoctestCase
 
   doctest Drops.Contract
 

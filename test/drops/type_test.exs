@@ -1,5 +1,6 @@
 defmodule Drops.TypeTest do
   use Drops.ContractCase
+  use Drops.DoctestCase
 
   defmodule Email do
     use Drops.Type, string()
