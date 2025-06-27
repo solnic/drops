@@ -17,6 +17,9 @@ jobs:
     strategy:
       matrix:
         include:
+          - elixir: "1.14"
+            otp: "24.3"
+
           - elixir: "1.15"
             otp: "25.3"
 
@@ -24,7 +27,7 @@ jobs:
             otp: "26.2"
 
           - elixir: "1.17"
-            otp: "27.1"
+            otp: "27.3"
 
           - elixir: "1.18.4-otp-27"
             otp: "28.0"
