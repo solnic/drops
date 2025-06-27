@@ -95,6 +95,8 @@ defmodule Drops.Contract do
         end
       end
 
+      defoverridable conform: 1
+
       defp apply_rules(output) do
         Enum.map(rules(), fn name -> apply(__MODULE__, :rule, [name, output]) end)
         |> Enum.filter(fn

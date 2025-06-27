@@ -35,12 +35,4 @@ defmodule Test.Support.ManualExtension do
       def manual_extension_active?, do: true
     end
   end
-
-  @impl true
-  def extend_operation_definition(_opts) do
-    quote do
-      # Add a function to indicate this extension is active
-      def manual_extension_active?, do: true
-    end
-  end
 end

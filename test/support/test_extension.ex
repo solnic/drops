@@ -56,21 +56,6 @@ defmodule Test.Support.TestExtension do
   end
 
   @impl true
-  def extend_operation_definition(opts) do
-    if Keyword.get(opts, :test_logging) do
-      quote do
-        # Add logging to compile-time operations
-        def log_operation(message) do
-          IO.puts("[TestExtension] #{__MODULE__}: #{message}")
-        end
-      end
-    else
-      quote do
-      end
-    end
-  end
-
-  @impl true
   def extend_unit_of_work(uow, opts) do
     if Keyword.get(opts, :test_logging) do
       # Add a custom step to the UnitOfWork for logging

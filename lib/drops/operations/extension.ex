@@ -13,7 +13,6 @@ defmodule Drops.Operations.Extension do
   - `enabled?/1` - Determines if the extension should be loaded based on options
   - `extend_using_macro/1` - Returns quoted code to inject into the `__using__` macro
   - `extend_operation_runtime/1` - Returns quoted code for runtime operation modules
-  - `extend_operation_definition/1` - Returns quoted code for compile-time operation modules
 
   ## Example Extension
 
@@ -36,13 +35,6 @@ defmodule Drops.Operations.Extension do
         def extend_operation_runtime(opts) do
           quote do
             # Code to inject into runtime operation modules
-          end
-        end
-
-        @impl true
-        def extend_operation_definition(opts) do
-          quote do
-            # Code to inject into compile-time operation modules
           end
         end
       end
@@ -133,22 +125,6 @@ defmodule Drops.Operations.Extension do
   Returns quoted Elixir code to be injected.
   """
   @callback extend_operation_runtime(opts :: keyword()) :: Macro.t()
-
-  @doc """
-  Returns quoted code to inject into compile-time operation modules.
-
-  This is called when creating operation modules directly with options
-  (compile-time pattern).
-
-  ## Parameters
-
-  - `opts` - The options for the operation
-
-  ## Returns
-
-  Returns quoted Elixir code to be injected.
-  """
-  @callback extend_operation_definition(opts :: keyword()) :: Macro.t()
 
   @doc """
   Allows extensions to modify the UnitOfWork for an operation.
@@ -321,22 +297,6 @@ defmodule Drops.Operations.Extension do
   def extend_operation_runtime(opts) do
     enabled_extensions(opts)
     |> Enum.map(& &1.extend_operation_runtime(opts))
-  end
-
-  @doc """
-  Generate extension code for compile-time operation modules.
-
-  ## Parameters
-
-  - `opts` - The options for the operation
-
-  ## Returns
-
-  Returns quoted code from all enabled extensions.
-  """
-  def extend_operation_definition(opts) do
-    enabled_extensions(opts)
-    |> Enum.map(& &1.extend_operation_definition(opts))
   end
 
   @doc """

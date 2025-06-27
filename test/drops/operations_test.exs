@@ -20,7 +20,7 @@ defmodule Drops.OperationsTest do
         end
       end
 
-      {:ok, result} = Test.CreateUser.call(%{})
+      {:ok, result} = Test.CreateUser.call(%{params: %{}})
       assert result == %{name: "Jane Doe"}
     end
   end
@@ -38,7 +38,7 @@ defmodule Drops.OperationsTest do
     end
 
     test "it works without schema", %{operation: operation} do
-      {:ok, result} = operation.call(%{name: "Jane Doe"})
+      {:ok, result} = operation.call(%{params: %{name: "Jane Doe"}})
 
       assert result == %{name: "Jane Doe"}
     end
@@ -63,11 +63,11 @@ defmodule Drops.OperationsTest do
     end
 
     test "it works with a schema", %{operation: operation} do
-      {:ok, result} = operation.call(%{name: "Jane Doe"})
+      {:ok, result} = operation.call(%{params: %{name: "Jane Doe"}})
 
       assert result == %{name: "Jane Doe"}
 
-      {:error, result} = operation.call(%{name: ""})
+      {:error, result} = operation.call(%{params: %{name: ""}})
 
       assert_errors(["name must be filled"], {:error, result})
     end
@@ -85,7 +85,7 @@ defmodule Drops.OperationsTest do
       @impl true
       def prepare(%{params: %{template: true} = params} = context) do
         updated_params = Map.put(params, :name, params.name <> ".template")
-        Map.put(context, :params, updated_params)
+        {:ok, Map.put(context, :params, updated_params)}
       end
 
       @impl true
@@ -95,7 +95,7 @@ defmodule Drops.OperationsTest do
     end
 
     test "passes prepared params to execute", %{operation: operation} do
-      {:ok, result} = operation.call(%{name: "README.md", template: true})
+      {:ok, result} = operation.call(%{params: %{name: "README.md", template: true}})
 
       assert result == %{name: "README.md.template", template: true}
     end
@@ -123,7 +123,7 @@ defmodule Drops.OperationsTest do
       end
 
       @impl true
-      def execute(user, %{params: params}) do
+      def execute(%{execute_result: user, params: params}) do
         {:ok, Map.merge(user, params)}
       end
     end
@@ -132,17 +132,25 @@ defmodule Drops.OperationsTest do
       create_user: create_op,
       update_user: update_op
     } do
-      result = create_op.call(%{name: "Jane"}) |> update_op.call(%{name: "Jane Doe"})
+      result =
+        create_op.call(%{params: %{name: "Jane"}})
+        |> update_op.call(%{params: %{name: "Jane Doe"}})
 
       # Check the structure and that the ID is preserved from the first operation
       assert {:ok, %{id: id, name: "Jane Doe"}} = result
 
       assert is_integer(id) and id > 0
 
-      result = create_op.call(%{name: ""}) |> update_op.call(%{name: "Jane Doe"})
+      result =
+        create_op.call(%{params: %{name: ""}})
+        |> update_op.call(%{params: %{name: "Jane Doe"}})
+
       assert {:error, _error} = result
 
-      result = create_op.call(%{name: "Jane"}) |> update_op.call(%{name: ""})
+      result =
+        create_op.call(%{params: %{name: "Jane"}})
+        |> update_op.call(%{params: %{name: ""}})
+
       assert {:error, _error} = result
     end
   end
