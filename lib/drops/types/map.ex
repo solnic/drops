@@ -120,10 +120,15 @@ defmodule Drops.Types.Map do
     Enum.reduce(keys, initial, fn %{path: path} = key, acc ->
       stringified_key = Key.stringify(key)
 
-      if Key.present?(data, stringified_key) do
-        put_in(acc, path, get_in(data, stringified_key.path))
-      else
-        acc
+      cond do
+        Key.present?(data, key) ->
+          put_in(acc, path, get_in(data, key.path))
+
+        Key.present?(data, stringified_key) ->
+          put_in(acc, path, get_in(data, stringified_key.path))
+
+        true ->
+          acc
       end
     end)
   end
