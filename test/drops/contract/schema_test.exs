@@ -827,4 +827,110 @@ defmodule Drops.Contract.SchemaTest do
       )
     end
   end
+
+  describe "schema/1 with Ecto schema module" do
+    contract do
+      schema(Test.Ecto.TestSchemas.UserSchema)
+    end
+
+    test "infers schema from Ecto schema module", %{contract: contract} do
+      assert {:ok, %{name: "John", email: "john@example.com"}} =
+               contract.conform(%{name: "John", email: "john@example.com"})
+    end
+
+    test "validates required fields from Ecto schema", %{contract: contract} do
+      assert_errors(
+        ["name key must be present"],
+        contract.conform(%{email: "john@example.com"})
+      )
+    end
+
+    test "validates field types from Ecto schema", %{contract: contract} do
+      assert_errors(
+        ["name must be a string"],
+        contract.conform(%{name: 123, email: "john@example.com"})
+      )
+    end
+
+    test "excludes timestamp fields by default", %{contract: contract} do
+      # Should succeed without providing inserted_at/updated_at
+      assert {:ok, %{name: "John", email: "john@example.com"}} =
+               contract.conform(%{name: "John", email: "john@example.com"})
+    end
+  end
+
+  describe "schema/2 with Ecto schema module and options" do
+    contract do
+      schema(Test.Ecto.TestSchemas.UserSchema, atomize: true)
+    end
+
+    test "infers schema from Ecto schema module with atomize option", %{
+      contract: contract
+    } do
+      assert {:ok, %{name: "John", email: "john@example.com"}} =
+               contract.conform(%{"name" => "John", "email" => "john@example.com"})
+    end
+
+    test "converts string keys to atom keys", %{contract: contract} do
+      {:ok, result} = contract.conform(%{"name" => "Jane", "email" => "jane@example.com"})
+
+      assert result == %{name: "Jane", email: "jane@example.com"}
+    end
+
+    test "validates required fields with string input", %{contract: contract} do
+      assert_errors(
+        ["name key must be present"],
+        contract.conform(%{"email" => "john@example.com"})
+      )
+    end
+  end
+
+  describe "schema/2 with Ecto schema module and block extension" do
+    contract do
+      schema(Test.Ecto.TestSchemas.UserSchema) do
+        %{
+          required(:role) => string(),
+          optional(:bio) => string()
+        }
+      end
+    end
+
+    test "extends Ecto schema with additional fields", %{contract: contract} do
+      assert {:ok,
+              %{name: "John", email: "john@example.com", role: "admin", bio: "Developer"}} =
+               contract.conform(%{
+                 name: "John",
+                 email: "john@example.com",
+                 role: "admin",
+                 bio: "Developer"
+               })
+    end
+
+    test "validates Ecto schema fields", %{contract: contract} do
+      assert_errors(
+        ["name key must be present"],
+        contract.conform(%{email: "john@example.com", role: "admin"})
+      )
+    end
+
+    test "validates additional fields from block", %{contract: contract} do
+      assert_errors(
+        ["role key must be present"],
+        contract.conform(%{name: "John", email: "john@example.com"})
+      )
+    end
+
+    test "validates field types from both Ecto schema and block", %{contract: contract} do
+      assert_errors(
+        ["name must be a string", "role must be a string"],
+        contract.conform(%{name: 123, email: "john@example.com", role: 456})
+      )
+    end
+
+    test "handles optional fields from block correctly", %{contract: contract} do
+      # Should succeed without providing bio (optional field)
+      assert {:ok, %{name: "John", email: "john@example.com", role: "admin"}} =
+               contract.conform(%{name: "John", email: "john@example.com", role: "admin"})
+    end
+  end
 end
