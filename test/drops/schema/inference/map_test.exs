@@ -1,4 +1,4 @@
-defmodule Drops.Schema.InferenceTest do
+defmodule Drops.Schema.Inference.MapTest do
   use Drops.ContractCase
 
   alias Drops.Schema.Inference

@@ -133,9 +133,57 @@ defmodule Drops.Contract do
       ...> end
       iex> UserContract.conform(%{name: "John", age: 21})
       {:ok, %{name: "John", age: 21}}
+
+  ## Ecto schema inference
+
+      iex> defmodule UserSchema do
+      ...>   use Ecto.Schema
+      ...>
+      ...>   schema "users" do
+      ...>     field(:name, :string)
+      ...>     field(:email, :string)
+      ...>     field(:age, :integer)
+      ...>     timestamps()
+      ...>   end
+      ...> end
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema(UserSchema)
+      ...> end
+      iex> UserContract.conform(%{name: "John", email: "john@example.com", age: 30})
+      {:ok, %{name: "John", email: "john@example.com", age: 30}}
+
+  ## Extending Ecto schema with additional fields
+
+      iex> defmodule UserSchema do
+      ...>   use Ecto.Schema
+      ...>
+      ...>   schema "users" do
+      ...>     field(:name, :string)
+      ...>     field(:email, :string)
+      ...>     timestamps()
+      ...>   end
+      ...> end
+      iex> defmodule UserContract do
+      ...>   use Drops.Contract
+      ...>
+      ...>   schema(UserSchema) do
+      ...>     %{
+      ...>       required(:role) => string(),
+      ...>       optional(:bio) => string()
+      ...>     }
+      ...>   end
+      ...> end
+      iex> UserContract.conform(%{name: "John", email: "john@example.com", role: "admin", bio: "Developer"})
+      {:ok, %{name: "John", email: "john@example.com", role: "admin", bio: "Developer"}}
   """
   defmacro schema(do: block) do
     set_schema(__CALLER__, :default, [], block)
+  end
+
+  defmacro schema(ecto_schema_module) do
+    set_schema(__CALLER__, :default, [], ecto_schema_module)
   end
 
   @doc ~S"""
@@ -249,12 +297,63 @@ defmodule Drops.Contract do
       iex> Enum.map(errors, &to_string/1)
       ["address.city must be filled", "age must be an integer"]
   """
+  # Schema extension macro - matches module names (atoms or aliases) with do block
+  defmacro schema({:__aliases__, _, _} = ecto_schema_module, do: block) do
+    quote do
+      mod = __MODULE__
+
+      schemas = Module.get_attribute(mod, :schemas, %{})
+
+      # Check if this is an Ecto schema module at runtime
+      if Code.ensure_loaded?(unquote(ecto_schema_module)) and
+           function_exported?(unquote(ecto_schema_module), :__schema__, 1) do
+        # Infer schema from Ecto module
+        ecto_schema =
+          Drops.Schema.infer_and_compile(unquote(ecto_schema_module), [])
+
+        # Infer schema from block
+        block_schema = Drops.Schema.infer_and_compile(unquote(block), [])
+
+        # Merge the schemas by combining their keys
+        merged_keys = ecto_schema.keys ++ block_schema.keys
+        compiled_schema = %{ecto_schema | keys: merged_keys}
+
+        Module.put_attribute(
+          mod,
+          :schemas,
+          Map.put(
+            schemas,
+            :default,
+            compiled_schema
+          )
+        )
+      else
+        # Fall back to treating the first argument as a schema name
+        compiled_schema = Drops.Schema.infer_and_compile(unquote(block), [])
+
+        Module.put_attribute(
+          mod,
+          :schemas,
+          Map.put(
+            schemas,
+            unquote(ecto_schema_module),
+            compiled_schema
+          )
+        )
+      end
+    end
+  end
+
   defmacro schema(name, do: block) when is_atom(name) do
     set_schema(__CALLER__, name, [], block)
   end
 
-  defmacro schema(opts, do: block) do
+  defmacro schema(opts, do: block) when is_list(opts) do
     set_schema(__CALLER__, :default, opts, block)
+  end
+
+  defmacro schema(ecto_schema_module, opts) when is_list(opts) do
+    set_schema(__CALLER__, :default, opts, ecto_schema_module)
   end
 
   defmacro schema(name, opts, do: block) when is_atom(name) do
@@ -362,6 +461,35 @@ defmodule Drops.Contract do
 
   def to_output([head | tail], output) do
     to_output(tail, to_output(head, output))
+  end
+
+  defp set_schema(_caller, name, opts, {ecto_schema_module, block}) do
+    quote do
+      mod = __MODULE__
+
+      schemas = Module.get_attribute(mod, :schemas, %{})
+
+      # Infer schema from Ecto module
+      ecto_schema =
+        Drops.Schema.infer_and_compile(unquote(ecto_schema_module), unquote(opts))
+
+      # Infer schema from block
+      block_schema = Drops.Schema.infer_and_compile(unquote(block), unquote(opts))
+
+      # Merge the schemas by combining their keys
+      merged_keys = ecto_schema.keys ++ block_schema.keys
+      compiled_schema = %{ecto_schema | keys: merged_keys}
+
+      Module.put_attribute(
+        mod,
+        :schemas,
+        Map.put(
+          schemas,
+          unquote(name),
+          compiled_schema
+        )
+      )
+    end
   end
 
   defp set_schema(_caller, name, opts, block) do

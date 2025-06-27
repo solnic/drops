@@ -79,12 +79,13 @@ defmodule Drops.Types.Map do
   defmacro __using__(opts) do
     quote do
       use Drops.Type do
-        deftype(:map, keys: unquote(opts[:keys]), atomize: false)
+        deftype(:map, keys: unquote(opts[:keys]), atomize: false, meta: %{})
 
         import Drops.Types.Map
 
         def new(opts) do
-          struct(__MODULE__, opts)
+          opts_with_meta = Keyword.put_new(opts, :meta, %{})
+          struct(__MODULE__, opts_with_meta)
         end
 
         def new(predicates, opts) do
@@ -104,7 +105,7 @@ defmodule Drops.Types.Map do
   end
 
   use Drops.Type do
-    deftype(:map, keys: [], atomize: false)
+    deftype(:map, keys: [], atomize: false, meta: %{})
   end
 
   defimpl Drops.Type.Validator, for: Map do
@@ -113,7 +114,8 @@ defmodule Drops.Types.Map do
 
   def new(keys, opts) when is_list(keys) do
     atomize = opts[:atomize] || false
-    struct(__MODULE__, keys: keys, atomize: atomize)
+    meta = opts[:meta] || %{}
+    struct(__MODULE__, keys: keys, atomize: atomize, meta: meta)
   end
 
   def atomize(data, keys, initial \\ %{}) do

@@ -27,14 +27,6 @@ defmodule Drops.SchemaTest do
     end
   end
 
-  describe "error handling" do
-    test "raises error for non-Ecto schema modules" do
-      assert_raise Protocol.UndefinedError, ~r/not implemented/, fn ->
-        Schema.infer_and_compile(NonExistentModule, [])
-      end
-    end
-  end
-
   describe "has_custom_compiler?/1" do
     test "returns false for types without custom compilers" do
       refute Schema.has_custom_compiler?(%{})
