@@ -1,5 +1,6 @@
 defmodule Drops.CastersTest do
   use Drops.ContractCase
+  use Drops.DoctestCase
 
   doctest Drops.Casters
 
