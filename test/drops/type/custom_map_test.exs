@@ -28,14 +28,14 @@ defmodule Drops.Type.CustomMapTest do
   end
 
   describe "use/1 with a custom map in an atomized list" do
-    contract do
-      defmodule User do
-        use Drops.Type, %{required(:name) => string(), required(:age) => integer()}
-      end
+    defmodule AtomizedUser do
+      use Drops.Type, %{required(:name) => string(), required(:age) => integer()}
+    end
 
+    contract do
       schema(atomize: true) do
         %{
-          required(:users) => list(User)
+          required(:users) => list(AtomizedUser)
         }
       end
     end

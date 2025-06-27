@@ -25,11 +25,17 @@ defmodule Drops.ContractCase do
           unquote(body)
         end
 
+        on_exit(fn ->
+          :code.purge(__MODULE__.TestContract)
+          :code.delete(__MODULE__.TestContract)
+        end)
+
         {:ok, contract: TestContract}
       end
     end
   end
 end
 
-Code.put_compiler_option(:ignore_module_conflict, true)
+Code.require_file("support/doctest_case.ex", __DIR__)
+
 ExUnit.start()

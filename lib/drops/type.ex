@@ -265,6 +265,11 @@ defmodule Drops.Type do
   end
 
   @doc false
+  def predicate({:match?, %Regex{} = regex}) do
+    {:predicate, {:match?, {:regex, regex.source, regex.opts}}}
+  end
+
+  @doc false
   def predicate({name, args}) do
     predicate(name, args)
   end
@@ -276,6 +281,11 @@ defmodule Drops.Type do
   @doc false
   def predicate(name, args) when name in [:in?, :not_in?] and length(args) == 1 do
     {:predicate, {name, [args]}}
+  end
+
+  @doc false
+  def predicate(:match?, [%Regex{} = regex]) do
+    {:predicate, {:match?, [{:regex, regex.source, regex.opts}]}}
   end
 
   @doc false
