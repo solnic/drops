@@ -47,14 +47,17 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(plain_map, [])
 
-      expected =
-        {:map,
-         [
-           {required(:age), type(:integer)},
-           {required(:name), type(:string)}
-         ]}
+      assert {:map, key_specs} = result
+      assert length(key_specs) == 2
 
-      assert result == expected
+      result_map = Map.new(key_specs)
+
+      expected_map = %{
+        required(:age) => type(:integer),
+        required(:name) => type(:string)
+      }
+
+      assert result_map == expected_map
     end
 
     test "converts nested plain maps to schema AST" do
@@ -68,19 +71,25 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(plain_map, [])
 
-      expected =
-        {:map,
-         [
-           {required(:company), type(:string)},
-           {required(:user),
-            {:map,
-             [
-               {required(:age), type(:integer)},
-               {required(:name), type(:string)}
-             ]}}
-         ]}
+      assert {:map, key_specs} = result
+      assert length(key_specs) == 2
 
-      assert result == expected
+      result_map = Map.new(key_specs)
+
+      assert Map.has_key?(result_map, required(:company))
+      assert Map.has_key?(result_map, required(:user))
+
+      assert result_map[required(:company)] == type(:string)
+
+      assert {:map, user_key_specs} = result_map[required(:user)]
+      user_map = Map.new(user_key_specs)
+
+      expected_user_map = %{
+        required(:age) => type(:integer),
+        required(:name) => type(:string)
+      }
+
+      assert user_map == expected_user_map
     end
 
     test "handles mixed atom and non-atom values" do
@@ -92,19 +101,18 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(plain_map, [])
 
-      expected =
-        {:map,
-         [
-           {required(:count), type(:integer)},
-           {required(:data),
-            {:map,
-             [
-               {required(:nested), type(:boolean)}
-             ]}},
-           {required(:name), type(:string)}
-         ]}
+      assert {:map, key_specs} = result
+      assert length(key_specs) == 3
 
-      assert result == expected
+      result_map = Map.new(key_specs)
+
+      assert result_map[required(:name)] == type(:string)
+      assert result_map[required(:count)] == type(:integer)
+
+      assert {:map, data_key_specs} = result_map[required(:data)]
+      data_map = Map.new(data_key_specs)
+      expected_data_map = %{required(:nested) => type(:boolean)}
+      assert data_map == expected_data_map
     end
 
     test "does not convert maps that already have schema keys" do
@@ -115,7 +123,6 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(mixed_map, [])
 
-      # Should return unchanged since it already has schema keys
       assert result == mixed_map
     end
 
@@ -130,21 +137,22 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(plain_map, [])
 
-      expected =
-        {:map,
-         [
-           {required(:level1),
-            {:map,
-             [
-               {required(:level2),
-                {:map,
-                 [
-                   {required(:level3), type(:string)}
-                 ]}}
-             ]}}
-         ]}
+      assert {:map, key_specs} = result
+      assert length(key_specs) == 1
 
-      assert result == expected
+      [{level1_key, level1_spec}] = key_specs
+      assert level1_key == required(:level1)
+      assert {:map, level2_specs} = level1_spec
+      assert length(level2_specs) == 1
+
+      [{level2_key, level2_spec}] = level2_specs
+      assert level2_key == required(:level2)
+      assert {:map, level3_specs} = level2_spec
+      assert length(level3_specs) == 1
+
+      [{level3_key, level3_spec}] = level3_specs
+      assert level3_key == required(:level3)
+      assert level3_spec == type(:string)
     end
   end
 
@@ -152,17 +160,14 @@ defmodule Drops.Schema.InferenceTest do
     test "plain map can be compiled and used for validation" do
       plain_map = %{name: :string, age: :integer}
 
-      # Test that the inferred schema can be compiled
       compiled_type = Drops.Schema.infer_and_compile(plain_map, [])
 
       assert %Drops.Types.Map{} = compiled_type
       assert length(compiled_type.keys) == 2
 
-      # Test that the compiled type structure is correct
       key_names = Enum.map(compiled_type.keys, & &1.path) |> Enum.sort()
       assert key_names == [[:age], [:name]]
 
-      # Test that all keys are required by default
       presences = Enum.map(compiled_type.keys, & &1.presence) |> Enum.uniq()
       assert presences == [:required]
     end
@@ -180,7 +185,6 @@ defmodule Drops.Schema.InferenceTest do
       assert %Drops.Types.Map{} = compiled_type
       assert length(compiled_type.keys) == 1
 
-      # Check that the nested structure is properly compiled
       [user_key] = compiled_type.keys
       assert user_key.path == [:user]
       assert user_key.presence == :required
@@ -202,7 +206,6 @@ defmodule Drops.Schema.InferenceTest do
     end
 
     test "correctly identifies custom Drops types in plain maps" do
-      # Test with custom type as value
       plain_map = %{email: CustomEmail}
 
       result = Inference.infer_schema(plain_map, [])
@@ -220,18 +223,20 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(plain_map, [])
 
-      expected =
-        {:map,
-         [
-           {required(:email), CustomEmail},
-           {required(:user), CustomUser}
-         ]}
+      assert {:map, key_specs} = result
+      assert length(key_specs) == 2
 
-      assert result == expected
+      result_map = Map.new(key_specs)
+
+      expected_map = %{
+        required(:email) => CustomEmail,
+        required(:user) => CustomUser
+      }
+
+      assert result_map == expected_map
     end
 
     test "does not treat regular modules as Drops types" do
-      # Test with regular Elixir modules that have structs
       plain_map = %{
         date: Date,
         process: Process,
@@ -240,10 +245,8 @@ defmodule Drops.Schema.InferenceTest do
 
       result = Inference.infer_schema(plain_map, [])
 
-      # These should be treated as module type specs, not custom Drops types
       assert {:map, key_specs} = result
 
-      # Convert to a map for easier comparison (order doesn't matter)
       result_map = Map.new(key_specs)
 
       expected_map = %{
@@ -267,7 +270,6 @@ defmodule Drops.Schema.InferenceTest do
         end
       end
 
-      # Test successful validation with custom types
       valid_input = %{
         email: "test@example.com",
         user: %{name: "John", email: "john@example.com"}
@@ -276,9 +278,7 @@ defmodule Drops.Schema.InferenceTest do
       assert {:ok, result} = TestCustomTypeContract.conform(valid_input)
       assert result == valid_input
 
-      # Test validation failure
       invalid_input = %{
-        # Should fail CustomEmail validation (filled?)
         email: "",
         user: %{name: "John", email: "john@example.com"}
       }

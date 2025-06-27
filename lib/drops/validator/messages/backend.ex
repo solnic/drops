@@ -56,7 +56,13 @@ defmodule Drops.Validator.Messages.Backend do
       end
 
       def errors(results) when is_list(results) do
-        Enum.map(results, &error/1) |> List.flatten()
+        results
+        |> Enum.map(&error/1)
+        |> List.flatten()
+        |> Enum.sort_by(fn
+          %{path: path} when is_list(path) -> path
+          _ -> []
+        end)
       end
 
       defp error(text) when is_binary(text) do
@@ -98,9 +104,13 @@ defmodule Drops.Validator.Messages.Backend do
       end
 
       defp error({:error, {:map, results}}) when is_list(results) do
-        %Error.Set{
-          errors: Enum.reject(Enum.map(results, &error/1), &is_nil/1)
-        }
+        errors =
+          results
+          |> Enum.map(&error/1)
+          |> Enum.reject(&is_nil/1)
+          |> Enum.sort_by(fn error -> error.path end)
+
+        %Error.Set{errors: errors}
       end
 
       defp error({:error, {path, {:list, results}}}) when is_list(results) do
