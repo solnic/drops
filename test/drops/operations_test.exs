@@ -20,7 +20,7 @@ defmodule Drops.OperationsTest do
         end
       end
 
-      {:ok, %{type: :command, result: result}} = Test.CreateUser.call(%{})
+      {:ok, result} = Test.CreateUser.call(%{})
       assert result == %{name: "Jane Doe"}
     end
   end
@@ -38,10 +38,9 @@ defmodule Drops.OperationsTest do
     end
 
     test "it works without schema", %{operation: operation} do
-      {:ok, %{result: result, params: params}} = operation.call(%{name: "Jane Doe"})
+      {:ok, result} = operation.call(%{name: "Jane Doe"})
 
       assert result == %{name: "Jane Doe"}
-      assert params == %{name: "Jane Doe"}
     end
   end
 
@@ -64,17 +63,13 @@ defmodule Drops.OperationsTest do
     end
 
     test "it works with a schema", %{operation: operation} do
-      {:ok, %{result: result, params: params}} =
-        operation.call(%{name: "Jane Doe"})
+      {:ok, result} = operation.call(%{name: "Jane Doe"})
 
       assert result == %{name: "Jane Doe"}
-      assert params == %{name: "Jane Doe"}
 
-      {:error, %{result: result, params: params}} =
-        operation.call(%{name: ""})
+      {:error, result} = operation.call(%{name: ""})
 
       assert_errors(["name must be filled"], {:error, result})
-      assert params == %{name: ""}
     end
   end
 
@@ -100,11 +95,9 @@ defmodule Drops.OperationsTest do
     end
 
     test "passes prepared params to execute", %{operation: operation} do
-      {:ok, %{result: result, params: params}} =
-        operation.call(%{name: "README.md", template: true})
+      {:ok, result} = operation.call(%{name: "README.md", template: true})
 
       assert result == %{name: "README.md.template", template: true}
-      assert params == %{name: "README.md.template", template: true}
     end
   end
 
@@ -142,19 +135,15 @@ defmodule Drops.OperationsTest do
       result = create_op.call(%{name: "Jane"}) |> update_op.call(%{name: "Jane Doe"})
 
       # Check the structure and that the ID is preserved from the first operation
-      assert {:ok,
-              %Drops.Operations.Success{
-                operation: ^update_op,
-                result: %{id: id, name: "Jane Doe"}
-              }} = result
+      assert {:ok, %{id: id, name: "Jane Doe"}} = result
 
       assert is_integer(id) and id > 0
 
       result = create_op.call(%{name: ""}) |> update_op.call(%{name: "Jane Doe"})
-      assert {:error, %Drops.Operations.Failure{}} = result
+      assert {:error, _error} = result
 
       result = create_op.call(%{name: "Jane"}) |> update_op.call(%{name: ""})
-      assert {:error, %Drops.Operations.Failure{}} = result
+      assert {:error, _error} = result
     end
   end
 end

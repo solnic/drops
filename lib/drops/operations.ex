@@ -32,6 +32,13 @@ defmodule Drops.Operations do
               {:ok, any()} | {:error, any()}
 
   @doc """
+  Callback for finalizing the operation result.
+  This extracts the actual result from the Operation result struct for the public API.
+  """
+  @callback finalize(result_struct :: Success.t() | Failure.t()) ::
+              {:ok, any()} | {:error, any()}
+
+  @doc """
   Callback for preparing parameters before execution.
   Receives context map and should return updated params.
   """
@@ -76,35 +83,31 @@ defmodule Drops.Operations do
 
   # Public API functions that operations delegate to
   def call(operation_module, input) do
-    operation_type = operation_module.__operation_type__()
     uow = operation_module.__unit_of_work__()
 
     # Extract context and params from input
     context = normalize_input(input)
 
-    execute_operation(operation_module, uow, context, operation_type)
+    # Use the full UoW pipeline which includes execute and finalize
+    Drops.Operations.UnitOfWork.process(uow, context)
   end
 
-  # Pattern match on Success struct - extract result and continue with pipeline
-  def call(operation_module, {:ok, %__MODULE__.Success{result: previous_result}}, input) do
-    operation_type = operation_module.__operation_type__()
+  # Pattern match on finalized success result - extract result and continue with pipeline
+  def call(operation_module, {:ok, previous_result}, input) do
     uow = operation_module.__unit_of_work__()
 
     # Extract context and params from input
     context = normalize_input(input)
+    # Add the previous result to the context for composition
+    context_with_previous = Map.put(context, :execute_result, previous_result)
 
-    execute_operation_with_previous(
-      operation_module,
-      uow,
-      previous_result,
-      context,
-      operation_type
-    )
+    # Use the full UoW pipeline which includes execute and finalize
+    Drops.Operations.UnitOfWork.process(uow, context_with_previous)
   end
 
-  # Pattern match on Failure struct - return as-is to short-circuit pipeline
-  def call(_operation_module, {:error, %__MODULE__.Failure{} = failure}, _input) do
-    {:error, failure}
+  # Pattern match on finalized error result - return as-is to short-circuit pipeline
+  def call(_operation_module, {:error, _error} = error_result, _input) do
+    error_result
   end
 
   # Normalize input to ensure we have a context map with at least params
@@ -114,91 +117,6 @@ defmodule Drops.Operations do
 
   defp normalize_input(params) do
     %{params: params}
-  end
-
-  # Helper function to execute operation without previous result
-  defp execute_operation(operation_module, uow, context, operation_type) do
-    case process(uow, context, operation_type) do
-      {:ok, pipeline_result} ->
-        execute_result = operation_module.execute(pipeline_result.validated)
-
-        case execute_result do
-          {:ok, result} ->
-            {:ok,
-             %__MODULE__.Success{
-               operation: operation_module,
-               result: result,
-               params: pipeline_result.prepared,
-               type: operation_type
-             }}
-
-          {:error, error} ->
-            {:error,
-             %__MODULE__.Failure{
-               operation: operation_module,
-               result: error,
-               params: pipeline_result.prepared,
-               type: operation_type
-             }}
-        end
-
-      {:error, errors} ->
-        {:error,
-         %__MODULE__.Failure{
-           operation: operation_module,
-           result: errors,
-           params: context.params,
-           type: operation_type
-         }}
-    end
-  end
-
-  # Helper function to execute operation with previous result
-  defp execute_operation_with_previous(
-         operation_module,
-         uow,
-         previous_result,
-         context,
-         operation_type
-       ) do
-    case process(uow, context, operation_type) do
-      {:ok, pipeline_result} ->
-        execute_result =
-          operation_module.execute(previous_result, pipeline_result.validated)
-
-        case execute_result do
-          {:ok, result} ->
-            {:ok,
-             %__MODULE__.Success{
-               operation: operation_module,
-               result: result,
-               params: pipeline_result.prepared,
-               type: operation_type
-             }}
-
-          {:error, error} ->
-            {:error,
-             %__MODULE__.Failure{
-               operation: operation_module,
-               result: error,
-               params: pipeline_result.prepared,
-               type: operation_type
-             }}
-        end
-
-      {:error, errors} ->
-        {:error,
-         %__MODULE__.Failure{
-           operation: operation_module,
-           result: errors,
-           params: context.params,
-           type: operation_type
-         }}
-    end
-  end
-
-  def process(uow, context, _operation_type) do
-    Drops.Operations.UnitOfWork.process(uow, context)
   end
 
   def execute(_operation_module, _context) do
@@ -215,6 +133,14 @@ defmodule Drops.Operations do
 
   def validate(_operation_module, context) do
     context
+  end
+
+  def finalize(_operation_module, %__MODULE__.Success{result: result}) do
+    {:ok, result}
+  end
+
+  def finalize(_operation_module, %__MODULE__.Failure{result: result}) do
+    {:error, result}
   end
 
   defmacro __using__(opts) do
@@ -340,10 +266,15 @@ defmodule Drops.Operations do
         Drops.Operations.validate(__MODULE__, context)
       end
 
+      def finalize(result_struct) do
+        Drops.Operations.finalize(__MODULE__, result_struct)
+      end
+
       defoverridable execute: 1
       defoverridable execute: 2
       defoverridable prepare: 1
       defoverridable validate: 1
+      defoverridable finalize: 1
 
       # Apply extensions after defoverridable declarations
       unquote_splicing(extension_code)

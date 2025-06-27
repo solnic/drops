@@ -14,6 +14,7 @@ defmodule Drops.Operations.UnitOfWork do
   - `:prepare` - Prepares the conformed parameters for validation
   - `:validate` - Validates the prepared parameters
   - `:execute` - Executes the operation with validated parameters
+  - `:finalize` - Finalizes the operation result for the public API
 
   ## Extension Pipeline
 
@@ -66,15 +67,25 @@ defmodule Drops.Operations.UnitOfWork do
   """
   @spec new(module()) :: t()
   def new(operation_module) do
-    %__MODULE__{
+    uow = %__MODULE__{
       operation_module: operation_module,
       steps: %{
         conform: {operation_module, :conform},
         prepare: {operation_module, :prepare},
         validate: {operation_module, :validate},
-        execute: {operation_module, :execute}
+        execute: {operation_module, :execute},
+        finalize: {operation_module, :finalize}
       }
     }
+
+    # Register default after callback for execute step to wrap result in Success/Failure struct
+    register_after_callback(
+      uow,
+      :execute,
+      __MODULE__,
+      :wrap_execute_result,
+      operation_module
+    )
   end
 
   @doc """
@@ -198,9 +209,31 @@ defmodule Drops.Operations.UnitOfWork do
   @doc """
   Processes parameters through the UnitOfWork pipeline.
 
+  This function executes all steps in the pipeline including execute and finalize.
+
+  ## Parameters
+
+  - `uow` - The UnitOfWork defining the pipeline
+  - `context` - The context map containing params and other data
+
+  ## Returns
+
+  Returns `{:ok, result}` or `{:error, error}` after finalization.
+  """
+  @spec process(t(), map()) :: {:ok, any()} | {:error, any()}
+  def process(%__MODULE__{} = uow, context) when is_map(context) do
+    # Get the full pipeline steps in order
+    pipeline = get_pipeline_steps(uow)
+
+    # Process through the full pipeline
+    process_full_pipeline(uow, pipeline, context)
+  end
+
+  @doc """
+  Processes parameters through the UnitOfWork pipeline excluding execute and finalize.
+
   This function executes the conform, prepare, and validate steps in order,
-  but does NOT execute the :execute step. The execute step is handled
-  separately by the Operations module.
+  but does NOT execute the :execute and :finalize steps.
 
   ## Parameters
 
@@ -212,11 +245,11 @@ defmodule Drops.Operations.UnitOfWork do
   Returns `{:ok, %{original: original_params, prepared: prepared_params, validated: validated_params}}`
   on success or `{:error, error}` on failure.
   """
-  @spec process(t(), map()) ::
+  @spec process_validation_only(t(), map()) ::
           {:ok, %{original: any(), prepared: any(), validated: any()}} | {:error, any()}
-  def process(%__MODULE__{} = uow, context) when is_map(context) do
-    # Get the pipeline steps in order, excluding :execute
-    pipeline = get_pipeline_steps(uow)
+  def process_validation_only(%__MODULE__{} = uow, context) when is_map(context) do
+    # Get the pipeline steps in order, excluding :execute and :finalize
+    pipeline = get_validation_pipeline_steps(uow)
 
     # Extract params from context for backward compatibility
     params = Map.get(context, :params)
@@ -230,14 +263,42 @@ defmodule Drops.Operations.UnitOfWork do
   defp get_pipeline_steps(uow) do
     schema = uow.operation_module.schema()
 
-    # Define the base pipeline order - extensions can inject additional steps
+    # Define the full pipeline order - extensions can inject additional steps
+    base_pipeline = [:conform, :prepare, :validate, :execute, :finalize]
+
+    # Get all available steps from the UoW
+    available_step_names = Map.keys(uow.steps)
+
+    # Start with base pipeline and add any additional steps that aren't in the base
+    additional_steps = available_step_names -- base_pipeline
+
+    # Create the full pipeline by inserting additional steps in a logical order
+    full_pipeline = insert_additional_steps(base_pipeline, additional_steps)
+
+    # Filter to only include steps that are actually defined in the UoW
+    available_steps =
+      full_pipeline
+      |> Enum.filter(fn step -> Map.has_key?(uow.steps, step) end)
+
+    # Skip conform step if schema has no keys
+    if length(schema.keys) == 0 do
+      Enum.reject(available_steps, &(&1 == :conform))
+    else
+      available_steps
+    end
+  end
+
+  defp get_validation_pipeline_steps(uow) do
+    schema = uow.operation_module.schema()
+
+    # Define the validation-only pipeline order - extensions can inject additional steps
     base_pipeline = [:conform, :prepare, :validate]
 
     # Get all available steps from the UoW
     available_step_names = Map.keys(uow.steps)
 
     # Start with base pipeline and add any additional steps that aren't in the base
-    additional_steps = available_step_names -- (base_pipeline ++ [:execute])
+    additional_steps = available_step_names -- (base_pipeline ++ [:execute, :finalize])
 
     # Create the full pipeline by inserting additional steps in a logical order
     full_pipeline = insert_additional_steps(base_pipeline, additional_steps)
@@ -263,8 +324,62 @@ defmodule Drops.Operations.UnitOfWork do
       [:conform, :prepare, :validate] ->
         [:conform, :prepare] ++ additional_steps ++ [:validate]
 
+      [:conform, :prepare, :validate, :execute, :finalize] ->
+        [:conform, :prepare] ++ additional_steps ++ [:validate, :execute, :finalize]
+
       other ->
         other ++ additional_steps
+    end
+  end
+
+  defp process_full_pipeline(uow, pipeline, context) do
+    case process_full_pipeline_steps(uow, pipeline, context) do
+      {:ok, result} -> {:ok, result}
+      {:error, error} -> {:error, error}
+    end
+  end
+
+  defp process_full_pipeline_steps(_uow, [], result) do
+    {:ok, result}
+  end
+
+  defp process_full_pipeline_steps(uow, [step | remaining_steps], current_context) do
+    case call_step(uow, step, current_context, nil) do
+      {:ok, result} ->
+        # Handle different step types
+        updated_context =
+          case step do
+            :conform ->
+              # conform returns params, so update the context
+              Map.put(current_context, :params, result)
+
+            :execute ->
+              # execute returns the raw result, keep context but store result for finalize
+              Map.put(current_context, :execute_result, result)
+
+            :finalize ->
+              # finalize returns the final result, this is what we return
+              result
+
+            _other ->
+              # Other steps should return updated context
+              if is_map(result) do
+                result
+              else
+                # If step returns non-map, treat as params update
+                Map.put(current_context, :params, result)
+              end
+          end
+
+        # If this was the finalize step, return the result directly
+        if step == :finalize do
+          {:ok, updated_context}
+        else
+          process_full_pipeline_steps(uow, remaining_steps, updated_context)
+        end
+
+      {:error, error} ->
+        {:error, error}
     end
   end
 
@@ -346,10 +461,19 @@ defmodule Drops.Operations.UnitOfWork do
 
     case result do
       {:ok, step_result} ->
-        # Execute after callbacks on success
+        # Execute after callbacks on success and allow them to modify the result
         after_callbacks = Map.get(uow.callbacks.after, step, [])
-        execute_after_callbacks(uow, step, context, step_result, after_callbacks)
-        result
+
+        modified_result =
+          execute_after_callbacks_with_result(
+            uow,
+            step,
+            context,
+            step_result,
+            after_callbacks
+          )
+
+        {:ok, modified_result}
 
       {:error, _} = error ->
         error
@@ -364,6 +488,36 @@ defmodule Drops.Operations.UnitOfWork do
         # conform still works with params only
         params = Map.get(context, :params)
         apply(module, function, [params])
+
+      :execute ->
+        # execute step - handle both single and composition cases
+        execute_result = Map.get(context, :execute_result)
+
+        result =
+          if execute_result do
+            # This is a composition case where we have a previous result
+            apply(module, function, [execute_result, context])
+          else
+            # Regular execution case
+            apply(module, function, [context])
+          end
+
+        # Ensure result is wrapped in {:ok, result} tuple for step processing
+        case result do
+          {:ok, _} = ok_result -> ok_result
+          {:error, _} = error_result -> error_result
+          other -> {:ok, other}
+        end
+
+      :finalize ->
+        # finalize step - expects a result struct
+        execute_result = Map.get(context, :execute_result)
+
+        if execute_result do
+          apply(module, function, [execute_result])
+        else
+          {:error, "No execute result found for finalize step"}
+        end
 
       _other_step ->
         # All other steps now work with context
@@ -396,6 +550,41 @@ defmodule Drops.Operations.UnitOfWork do
     end
   end
 
+  @doc """
+  Default after callback for the execute step that wraps the result in Success/Failure structs.
+  """
+  def wrap_execute_result(:execute, context, execute_result, operation_module) do
+    operation_type = operation_module.__operation_type__()
+    prepared_params = Map.get(context, :prepared_params, Map.get(context, :params))
+
+    case execute_result do
+      {:ok, result} ->
+        %Drops.Operations.Success{
+          operation: operation_module,
+          result: result,
+          params: prepared_params,
+          type: operation_type
+        }
+
+      {:error, error} ->
+        %Drops.Operations.Failure{
+          operation: operation_module,
+          result: error,
+          params: prepared_params,
+          type: operation_type
+        }
+
+      # Handle case where execute returns raw result without tuple
+      result ->
+        %Drops.Operations.Success{
+          operation: operation_module,
+          result: result,
+          params: prepared_params,
+          type: operation_type
+        }
+    end
+  end
+
   # Callback execution helpers
 
   defp execute_before_callbacks(_uow, _step, _context, []), do: :ok
@@ -413,20 +602,21 @@ defmodule Drops.Operations.UnitOfWork do
     end
   end
 
-  defp execute_after_callbacks(_uow, _step, _context, _result, []), do: :ok
+  defp execute_after_callbacks_with_result(_uow, _step, _context, result, []), do: result
 
-  defp execute_after_callbacks(uow, step, context, result, [
+  defp execute_after_callbacks_with_result(uow, step, context, result, [
          {module, function, config} | rest
        ]) do
     try do
-      apply(module, function, [step, context, result, config])
-      execute_after_callbacks(uow, step, context, result, rest)
+      # Call the callback and use its return value as the new result
+      new_result = apply(module, function, [step, context, result, config])
+      execute_after_callbacks_with_result(uow, step, context, new_result, rest)
     rescue
       error ->
-        # Log error but continue with other callbacks
+        # Log error but continue with other callbacks using original result
         require Logger
         Logger.warning("After callback failed: #{inspect(error)}")
-        execute_after_callbacks(uow, step, context, result, rest)
+        execute_after_callbacks_with_result(uow, step, context, result, rest)
     end
   end
 
