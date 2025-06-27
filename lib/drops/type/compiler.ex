@@ -23,7 +23,7 @@ defmodule Drops.Type.Compiler do
     :integer,
     :list,
     :map,
-    :nil,
+    nil,
     :string,
     :time
   ]
@@ -31,8 +31,18 @@ defmodule Drops.Type.Compiler do
   def visit(type, _opts) when is_struct(type), do: type
 
   def visit(%{} = spec, opts) do
+    key_specs =
+      spec
+      |> Elixir.Map.keys()
+      |> Enum.map(fn key -> {key, Elixir.Map.get(spec, key)} end)
+
+    visit({:map, key_specs}, opts)
+  end
+
+  def visit({:map, key_specs}, opts) when is_list(key_specs) do
     keys =
-      Enum.map(spec, fn
+      key_specs
+      |> Enum.map(fn
         {key, type_spec} when is_atom(key) ->
           %Key{path: [key], presence: :required, type: visit(type_spec, opts)}
 
@@ -41,6 +51,18 @@ defmodule Drops.Type.Compiler do
       end)
 
     Map.new(keys, opts)
+  end
+
+  def visit([left, right], opts) when is_tuple(left) and is_tuple(right) do
+    Union.new(visit(left, opts), visit(right, opts))
+  end
+
+  def visit([left, right], opts) when is_map(left) and is_map(right) do
+    Union.new(visit(left, opts), visit(right, opts))
+  end
+
+  def visit([left, right], _opts) do
+    Union.new(left, right)
   end
 
   def visit({:union, {left, right}}, opts) do
@@ -62,18 +84,6 @@ defmodule Drops.Type.Compiler do
 
   def visit({:cast, {input_type, output_type, cast_opts}}, opts) do
     Cast.new(visit(input_type, opts), visit(output_type, opts), cast_opts)
-  end
-
-  def visit([left, right], opts) when is_tuple(left) and is_tuple(right) do
-    Union.new(visit(left, opts), visit(right, opts))
-  end
-
-  def visit([left, right], opts) when is_map(left) and is_map(right) do
-    Union.new(visit(left, opts), visit(right, opts))
-  end
-
-  def visit([left, right], _opts) do
-    Union.new(left, right)
   end
 
   def visit({:type, {type, predicates}}, opts)

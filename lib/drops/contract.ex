@@ -370,13 +370,15 @@ defmodule Drops.Contract do
 
       schemas = Module.get_attribute(mod, :schemas, %{})
 
+      compiled_schema = Drops.Schema.infer_and_compile(unquote(block), unquote(opts))
+
       Module.put_attribute(
         mod,
         :schemas,
         Map.put(
           schemas,
           unquote(name),
-          Drops.Type.Compiler.visit(unquote(block), unquote(opts))
+          compiled_schema
         )
       )
     end

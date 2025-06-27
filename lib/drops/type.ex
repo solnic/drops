@@ -138,6 +138,29 @@ defmodule Drops.Type do
   """
   @doc since: "0.2.0"
 
+  @spec register_type(module()) :: :ok
+  def register_type(module) when is_atom(module) do
+    key = {__MODULE__, :registered_types}
+    current_types = :persistent_term.get(key, [])
+
+    unless module in current_types do
+      :persistent_term.put(key, [module | current_types])
+    end
+
+    :ok
+  end
+
+  @spec type?(module()) :: boolean()
+  def type?(module) when is_atom(module) do
+    module in registered_types()
+  end
+
+  @spec registered_types() :: [module()]
+  def registered_types do
+    key = {__MODULE__, :registered_types}
+    :persistent_term.get(key, [])
+  end
+
   defmacro __using__({:%{}, _, _} = spec) do
     quote do
       import Drops.Type
@@ -164,6 +187,9 @@ defmodule Drops.Type do
       import Drops.Type.DSL
 
       unquote(block)
+
+      # Register this module as a Drops type
+      Drops.Type.register_type(__MODULE__)
     end
   end
 
@@ -176,6 +202,9 @@ defmodule Drops.Type do
         primitive: Type.infer_primitive(unquote(spec)),
         constraints: Type.infer_constraints(unquote(spec))
       )
+
+      # Register this module as a Drops type
+      Drops.Type.register_type(__MODULE__)
 
       def new(attributes) when is_list(attributes) do
         struct(__MODULE__, attributes)
@@ -257,11 +286,11 @@ defmodule Drops.Type do
   end
 
   def infer_constraints({:type, {type, predicates}}) when length(predicates) > 0 do
-    {:and, [predicate(:type?, type) | Enum.map(predicates, &predicate/1)]}
+    {:and, [predicate(:type?, [type]) | Enum.map(predicates, &predicate/1)]}
   end
 
   def infer_constraints({:type, {type, []}}) do
-    [predicate(:type?, type)]
+    [predicate(:type?, [type])]
   end
 
   @doc false
