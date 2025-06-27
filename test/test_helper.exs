@@ -37,6 +37,9 @@ defmodule Drops.ContractCase do
 end
 
 Code.require_file("support/doctest_case.ex", __DIR__)
+Code.require_file("support/data_case.ex", __DIR__)
+Code.require_file("support/operation_case.ex", __DIR__)
 Code.require_file("support/ecto/test_schemas.ex", __DIR__)
+Code.require_file("support/ecto/user_group_schemas.ex", __DIR__)
 
 ExUnit.start()
