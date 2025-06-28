@@ -36,6 +36,9 @@ defmodule Drops.Config do
   A list of extension modules to register automatically when the Drops application starts.
   These modules should implement the Drops.Operations.Extension behaviour.
 
+  Extensions configured here are available during compilation, making them suitable for
+  Phoenix applications where operations are compiled before the application starts.
+
   **Type:** list of `t:module/0`
   **Default:** `[]`
 
@@ -83,6 +86,9 @@ defmodule Drops.Config do
       doc: """
       A list of extension modules to register automatically when the Drops application starts.
       These modules should implement the Drops.Operations.Extension behaviour.
+
+      Extensions configured here are available during compilation, making them suitable for
+      Phoenix applications where operations are compiled before the application starts.
 
       ## Example
 
@@ -200,12 +206,23 @@ defmodule Drops.Config do
   @doc """
   Gets the list of registered extensions.
 
+  This function first tries to get extensions from the fast persistent_term storage.
+  If that fails (e.g., during compilation when the app hasn't started), it falls back
+  to the application environment which is available during compilation.
+
   ## Returns
 
   Returns a list of extension modules that have been registered.
   """
   @spec registered_extensions() :: [module()]
-  def registered_extensions, do: fetch!(:registered_extensions)
+  def registered_extensions do
+    try do
+      fetch!(:registered_extensions)
+    rescue
+      RuntimeError ->
+        Application.get_env(:drops, :registered_extensions, [])
+    end
+  end
 
   @doc """
   Updates the value of `key` in the configuration *at runtime*.

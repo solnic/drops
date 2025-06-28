@@ -7,6 +7,9 @@ defmodule Drops.Application do
 
   @impl true
   def start(_type, _opts) do
+    # Ensure built-in extensions are available in app env before validation
+    ensure_builtin_extensions_in_app_env()
+
     config = Config.validate!()
     :ok = Config.persist(config)
 
@@ -31,6 +34,27 @@ defmodule Drops.Application do
     ]
 
     Enum.each(builtin_types, &Drops.Type.register_type/1)
+  end
+
+  defp ensure_builtin_extensions_in_app_env do
+    builtin_extensions = [
+      Drops.Operations.Extensions.Ecto
+    ]
+
+    # Get current extensions from app env
+    current_extensions = Application.get_env(:drops, :registered_extensions, [])
+
+    # Add built-in extensions if not already present
+    updated_extensions =
+      builtin_extensions
+      |> Enum.reduce(current_extensions, fn ext, acc ->
+        if ext in acc, do: acc, else: [ext | acc]
+      end)
+
+    # Update app env if changed
+    if updated_extensions != current_extensions do
+      Application.put_env(:drops, :registered_extensions, updated_extensions)
+    end
   end
 
   defp register_builtin_extensions(_config) do

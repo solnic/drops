@@ -41,7 +41,22 @@ defmodule Drops.Operations.Extension do
 
   ## Extension Registration
 
-  Extensions must be registered before they can be used:
+  Extensions can be registered in two ways:
+
+  ### 1. Application Configuration (Recommended for Phoenix apps)
+
+  Configure extensions in your application environment to make them available during compilation:
+
+      # config/config.exs
+      config :drops,
+        registered_extensions: [MyExtension]
+
+  This approach ensures extensions are available when operations are compiled, which is
+  essential for Phoenix applications.
+
+  ### 2. Runtime Registration
+
+  Register extensions at runtime using the API:
 
       # Register an extension
       Drops.Operations.Extension.register_extension(MyExtension)

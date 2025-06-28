@@ -13,12 +13,18 @@ defmodule Drops.OperationCase do
 
   setup do
     # Ensure Ecto extension is registered for operation tests
-    current_extensions = Drops.Config.registered_extensions()
+    try do
+      current_extensions = Drops.Config.registered_extensions()
 
-    unless Drops.Operations.Extensions.Ecto in current_extensions do
-      put_test_config(
-        registered_extensions: [Drops.Operations.Extensions.Ecto | current_extensions]
-      )
+      unless Drops.Operations.Extensions.Ecto in current_extensions do
+        put_test_config(
+          registered_extensions: [Drops.Operations.Extensions.Ecto | current_extensions]
+        )
+      end
+    rescue
+      RuntimeError ->
+        # Application hasn't started yet, but built-in extensions are available anyway
+        :ok
     end
 
     :ok
