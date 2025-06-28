@@ -54,7 +54,15 @@ defmodule Drops.Operations.Extensions.Ecto do
       end
 
       def changeset(%{params: params} = context) do
-        {:ok, Map.put(context, :changeset, change(struct(ecto_schema()), params))}
+        schema_module = ecto_schema()
+
+        castable_fields = get_castable_fields(schema_module)
+        embedded_fields = schema_module.__schema__(:embeds)
+
+        changeset = cast(struct(schema_module), params, castable_fields)
+        changeset = cast_embedded_fields(changeset, embedded_fields, params)
+
+        {:ok, Map.put(context, :changeset, changeset)}
       end
 
       def validate(%{changeset: changeset} = context) do
@@ -75,6 +83,35 @@ defmodule Drops.Operations.Extensions.Ecto do
 
       def persist(changeset) do
         __repo__().insert(%{changeset | action: nil})
+      end
+
+      defp get_castable_fields(schema_module) do
+        all_fields = schema_module.__schema__(:fields)
+        virtual_fields = schema_module.__schema__(:virtual_fields)
+        embedded_fields = schema_module.__schema__(:embeds)
+
+        all_fields
+        |> Kernel.--(virtual_fields)
+        |> Kernel.--(embedded_fields)
+      end
+
+      defp cast_embedded_fields(changeset, embedded_fields, params) do
+        Enum.reduce(embedded_fields, changeset, fn field, acc ->
+          if Map.has_key?(params, field) do
+            cast_embed(acc, field, with: &cast_inline_embed/2)
+          else
+            acc
+          end
+        end)
+      end
+
+      defp cast_inline_embed(embed_struct, params) do
+        embed_module = embed_struct.__struct__
+        all_fields = embed_module.__schema__(:fields)
+        virtual_fields = embed_module.__schema__(:virtual_fields)
+        castable_fields = all_fields -- virtual_fields
+
+        cast(embed_struct, params, castable_fields)
       end
     end
   end

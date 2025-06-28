@@ -47,6 +47,77 @@ defmodule Drops.Operations.Extensions.EctoTest do
     end
   end
 
+  describe "operations with casting and type coercion" do
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
+    operation type: :command do
+      schema(Test.Ecto.TestSchemas.CastingTestSchema,
+        cast: true,
+        field_presence: %{admin: :optional, age: :optional, score: :optional}
+      )
+
+      @impl true
+      def execute(%{changeset: changeset}) do
+        case persist(changeset) do
+          {:ok, record} ->
+            {:ok,
+             %{
+               name: record.name,
+               admin: record.admin,
+               age: record.age,
+               score: record.score
+             }}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+      end
+    end
+
+    test "it casts boolean fields correctly from strings", %{operation: operation} do
+      # Test with string "true" -> boolean true
+      {:ok, result} =
+        operation.call(%{
+          params: %{name: "Admin User", admin: "true"}
+        })
+
+      assert result == %{name: "Admin User", admin: true, age: nil, score: nil}
+
+      # Test with string "false" -> boolean false
+      {:ok, result} =
+        operation.call(%{
+          params: %{name: "Regular User", admin: "false"}
+        })
+
+      assert result == %{name: "Regular User", admin: false, age: nil, score: nil}
+
+      # Test with actual boolean values
+      {:ok, result} =
+        operation.call(%{
+          params: %{name: "Bool Admin", admin: true}
+        })
+
+      assert result == %{name: "Bool Admin", admin: true, age: nil, score: nil}
+    end
+
+    test "it casts integer fields correctly from strings", %{operation: operation} do
+      {:ok, result} =
+        operation.call(%{
+          params: %{name: "User", age: "25"}
+        })
+
+      assert result == %{name: "User", admin: false, age: 25, score: nil}
+    end
+
+    test "it casts float fields correctly from strings", %{operation: operation} do
+      {:ok, result} =
+        operation.call(%{
+          params: %{name: "User", score: "98.5"}
+        })
+
+      assert result == %{name: "User", admin: false, age: nil, score: 98.5}
+    end
+  end
+
   describe "operations with custom validation" do
     @tag ecto_schemas: [Test.Ecto.TestSchemas.UserSchema]
     operation type: :command do
