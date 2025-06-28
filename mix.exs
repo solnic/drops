@@ -36,7 +36,9 @@ defmodule Drops.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      mod: {Drops.Application, []},
+      extra_applications: [:logger],
+      registered: [Drops.Supervisor]
     ]
   end
 
@@ -89,6 +91,7 @@ defmodule Drops.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:nimble_options, "~> 1.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.21.0", only: :dev},

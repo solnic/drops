@@ -1,5 +1,5 @@
 defmodule Drops.Schema.Inference.MapTest do
-  use Drops.ContractCase
+  use Drops.ContractCase, async: false
 
   alias Drops.Schema.Inference
   import Drops.Type.DSL
@@ -203,6 +203,12 @@ defmodule Drops.Schema.Inference.MapTest do
         required(:name) => string(),
         required(:email) => string()
       }
+    end
+
+    setup do
+      # Register the custom types for these tests
+      Drops.Test.Config.put_test_config(registered_types: [CustomEmail, CustomUser])
+      :ok
     end
 
     test "correctly identifies custom Drops types in plain maps" do
