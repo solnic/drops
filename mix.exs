@@ -38,7 +38,10 @@ defmodule Drops.MixProject do
     [
       mod: {Drops.Application, []},
       extra_applications: [:logger],
-      registered: [Drops.Supervisor]
+      registered: [Drops.Supervisor],
+      env: [
+        registered_extensions: [Drops.Operations.Extensions.Ecto]
+      ]
     ]
   end
 

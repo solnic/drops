@@ -1,4 +1,6 @@
 defmodule Drops.Operations.Extensions.Ecto do
+  @behaviour Drops.Operations.Extension
+
   @moduledoc """
   Ecto extension for Operations.
 
@@ -39,8 +41,6 @@ defmodule Drops.Operations.Extensions.Ecto do
         def execute(context), do: {:ok, context}
       end
   """
-
-  @behaviour Drops.Operations.Extension
 
   @doc """
   Callback for casting parameters into a changeset.

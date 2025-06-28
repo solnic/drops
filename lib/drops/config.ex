@@ -81,7 +81,7 @@ defmodule Drops.Config do
     ],
     registered_extensions: [
       type: {:list, :atom},
-      default: [],
+      default: [Drops.Operations.Extensions.Ecto],
       type_doc: "list of `t:module/0`",
       doc: """
       A list of extension modules to register automatically when the Drops application starts.
@@ -203,6 +203,9 @@ defmodule Drops.Config do
   @spec registered_types() :: [module()]
   def registered_types, do: fetch!(:registered_types)
 
+  # Compile-time fallback for registered extensions
+  @compile_time_extensions [Drops.Operations.Extensions.Ecto]
+
   @doc """
   Gets the list of registered extensions.
 
@@ -220,7 +223,8 @@ defmodule Drops.Config do
       fetch!(:registered_extensions)
     rescue
       RuntimeError ->
-        Application.get_env(:drops, :registered_extensions, [])
+        # Use compile-time configuration during compilation
+        @compile_time_extensions
     end
   end
 

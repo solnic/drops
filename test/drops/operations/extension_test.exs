@@ -91,38 +91,60 @@ defmodule Drops.Operations.ExtensionTest do
       :persistent_term.put({:drops_config, :registered_extensions}, original_config)
     end
 
-    test "register_extension/1 adds extension to registry" do
-      # Register our test extension
-      assert :ok = Extension.register_extension(TestExtension)
+    test "register_extension/1 macro works as alias for register/1" do
+      # Create a test module that uses register_extension
+      defmodule TestModuleWithRegisterExtension do
+        require Drops.Operations.Extension
+        Drops.Operations.Extension.register_extension(TestExtension)
+      end
 
-      # Verify it's in the registry
-      assert TestExtension in Extension.registered_extensions()
-      assert Extension.extension?(TestExtension)
-    end
+      # Verify the extension was registered
+      extensions = Extension.get_extensions_from_module(TestModuleWithRegisterExtension)
+      assert TestExtension in extensions
 
-    test "register_extension/1 prevents duplicates" do
-      # Register the same extension twice
-      Extension.register_extension(TestExtension)
-      initial_count = length(Extension.registered_extensions())
-
-      Extension.register_extension(TestExtension)
-      final_count = length(Extension.registered_extensions())
-
-      # Count should be the same
-      assert initial_count == final_count
+      # Built-in extensions should be available
+      assert Drops.Operations.Extensions.Ecto in Extension.registered_extensions()
+      assert Extension.extension?(Drops.Operations.Extensions.Ecto)
     end
 
     test "extension?/1 returns false for non-registered extensions" do
       refute Extension.extension?(NonExistentExtension)
     end
 
-    test "available_extensions/0 returns registered extensions" do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+    test "register/1 macro registers extensions at compile time" do
+      # Create a test module that uses the new registration API
+      defmodule TestModuleWithRegistration do
+        require Drops.Operations.Extension
+        Drops.Operations.Extension.register(TestExtension)
 
+        # Add a function to check the attributes were set
+        def get_registered_extensions do
+          case __MODULE__.__info__(:attributes) do
+            attributes when is_list(attributes) ->
+              Keyword.get_values(attributes, :_registered_extensions)
+              |> List.flatten()
+
+            _ ->
+              []
+          end
+        end
+      end
+
+      # Verify the extension was registered in the module's attributes
+      extensions = TestModuleWithRegistration.get_registered_extensions()
+      assert TestExtension in extensions
+
+      # Also test the helper function
+      extensions_via_helper =
+        Extension.get_extensions_from_module(TestModuleWithRegistration)
+
+      assert TestExtension in extensions_via_helper
+    end
+
+    test "available_extensions/0 returns registered extensions" do
+      # Extensions are now statically configured, so we test the built-in ones
       available = Extension.available_extensions()
-      assert TestExtension in available
-      assert ManualExtension in available
+      assert Drops.Operations.Extensions.Ecto in available
     end
   end
 

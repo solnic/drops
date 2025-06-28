@@ -4,10 +4,28 @@ defmodule Drops.Operations do
 
   This module provides a framework for defining operations that can be used
   to encapsulate business logic with input validation and execution.
+
+  ## Extension Registration
+
+  Extensions can be registered using the public API:
+
+      defmodule MyApp.Operations do
+        use Drops.Operations
+
+        # Register built-in extensions
+        Drops.Operations.Extension.register(Drops.Operations.Extensions.Ecto)
+
+        # Register custom extensions
+        Drops.Operations.Extension.register(MyApp.Extensions.Audit)
+      end
+
   """
 
   require Drops.Operations.Extension
   require Drops.Operations.Extensions.Ecto
+
+  # Register built-in extensions using the new public API
+  Drops.Operations.Extension.register(Drops.Operations.Extensions.Ecto)
 
   alias Drops.Operations.UnitOfWork
 
