@@ -12,8 +12,6 @@ defmodule Drops.Application do
 
     register_builtin_types()
 
-    register_builtin_extensions(config)
-
     children = []
 
     opts = [strategy: :one_for_one, name: Drops.Supervisor]
@@ -31,9 +29,5 @@ defmodule Drops.Application do
     ]
 
     Enum.each(builtin_types, &Drops.Type.register_type/1)
-  end
-
-  defp register_builtin_extensions(_config) do
-    :ok
   end
 end

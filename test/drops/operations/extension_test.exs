@@ -1,5 +1,5 @@
 defmodule Drops.Operations.ExtensionTest do
-  use Drops.OperationCase, async: true
+  use Drops.OperationCase, async: false
 
   alias Drops.Operations.Extension
 
@@ -10,45 +10,150 @@ defmodule Drops.Operations.ExtensionTest do
   alias Test.Support.{TestExtension, ManualExtension}
 
   describe "extension registration" do
-    test "register_extension/1 adds extension to registry" do
-      # Register our test extension
-      assert :ok = Extension.register_extension(TestExtension)
+    test "registered_extensions/0 handles application not started" do
+      # Temporarily clear the persistent term to simulate app not started
+      original_config = :persistent_term.get({:drops_config, :registered_extensions}, [])
+      :persistent_term.erase({:drops_config, :registered_extensions})
 
-      # Verify it's in the registry
-      assert TestExtension in Extension.registered_extensions()
-      assert Extension.extension?(TestExtension)
+      # Should fallback to app env when persistent term not available
+      # Built-in extensions should be available from app env
+      extensions = Extension.registered_extensions()
+      assert Drops.Operations.Extensions.Ecto in extensions
+
+      # Restore the original config
+      :persistent_term.put({:drops_config, :registered_extensions}, original_config)
     end
 
-    test "register_extension/1 prevents duplicates" do
-      # Register the same extension twice
-      Extension.register_extension(TestExtension)
-      initial_count = length(Extension.registered_extensions())
+    test "Operations module can be defined when application not started" do
+      # Temporarily clear the persistent term to simulate app not started
+      original_config = :persistent_term.get({:drops_config, :registered_extensions}, [])
+      :persistent_term.erase({:drops_config, :registered_extensions})
 
-      Extension.register_extension(TestExtension)
-      final_count = length(Extension.registered_extensions())
+      # This should not raise an error during compilation
+      defmodule TestOperationWithoutApp do
+        use Drops.Operations, repo: TestRepo
+      end
 
-      # Count should be the same
-      assert initial_count == final_count
+      # Restore the original config
+      :persistent_term.put({:drops_config, :registered_extensions}, original_config)
+
+      # Module should be defined successfully
+      assert Code.ensure_loaded?(TestOperationWithoutApp)
+    end
+
+    test "built-in extensions are available even when application not started" do
+      # Temporarily clear the persistent term to simulate app not started
+      original_config = :persistent_term.get({:drops_config, :registered_extensions}, [])
+      :persistent_term.erase({:drops_config, :registered_extensions})
+
+      # Built-in extensions should still be available from app env
+      available = Extension.available_extensions()
+      assert Drops.Operations.Extensions.Ecto in available
+
+      # Restore the original config
+      :persistent_term.put({:drops_config, :registered_extensions}, original_config)
+    end
+
+    test "Ecto extension functions are available when application not started" do
+      # Temporarily clear the persistent term to simulate app not started
+      original_config = :persistent_term.get({:drops_config, :registered_extensions}, [])
+      :persistent_term.erase({:drops_config, :registered_extensions})
+
+      # Use Code.eval_string to define modules dynamically
+      test_id = System.unique_integer([:positive])
+
+      base_module_code = """
+      defmodule TestBaseOps#{test_id} do
+        use Drops.Operations, repo: TestRepo
+      end
+      """
+
+      operation_module_code = """
+      defmodule TestEctoOp#{test_id} do
+        use TestBaseOps#{test_id}, type: :command
+
+        def execute(context), do: {:ok, context}
+      end
+      """
+
+      # Evaluate the module definitions
+      Code.eval_string(base_module_code)
+      Code.eval_string(operation_module_code)
+
+      operation_module = Module.concat([:"TestEctoOp#{test_id}"])
+
+      # Should have Ecto extension functions
+      assert function_exported?(operation_module, :changeset, 1)
+      assert function_exported?(operation_module, :validate_changeset, 1)
+      assert function_exported?(operation_module, :cast_changeset, 1)
+
+      # Restore the original config
+      :persistent_term.put({:drops_config, :registered_extensions}, original_config)
+    end
+
+    test "register_extension/1 macro works as alias for register/1" do
+      # Create a test module that uses register_extension
+      defmodule TestModuleWithRegisterExtension do
+        require Drops.Operations.Extension
+        Drops.Operations.Extension.register_extension(TestExtension)
+      end
+
+      # Verify the extension was registered
+      extensions = Extension.get_extensions_from_module(TestModuleWithRegisterExtension)
+      assert TestExtension in extensions
+
+      # Built-in extensions should be available
+      assert Drops.Operations.Extensions.Ecto in Extension.registered_extensions()
+      assert Extension.extension?(Drops.Operations.Extensions.Ecto)
     end
 
     test "extension?/1 returns false for non-registered extensions" do
       refute Extension.extension?(NonExistentExtension)
     end
 
-    test "available_extensions/0 returns registered extensions" do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+    test "register/1 macro registers extensions at compile time" do
+      # Create a test module that uses the new registration API
+      defmodule TestModuleWithRegistration do
+        require Drops.Operations.Extension
+        Drops.Operations.Extension.register(TestExtension)
 
+        # Add a function to check the attributes were set
+        def get_registered_extensions do
+          case __MODULE__.__info__(:attributes) do
+            attributes when is_list(attributes) ->
+              Keyword.get_values(attributes, :_registered_extensions)
+              |> List.flatten()
+
+            _ ->
+              []
+          end
+        end
+      end
+
+      # Verify the extension was registered in the module's attributes
+      extensions = TestModuleWithRegistration.get_registered_extensions()
+      assert TestExtension in extensions
+
+      # Also test the helper function
+      extensions_via_helper =
+        Extension.get_extensions_from_module(TestModuleWithRegistration)
+
+      assert TestExtension in extensions_via_helper
+    end
+
+    test "available_extensions/0 returns registered extensions" do
+      # Extensions are now statically configured, so we test the built-in ones
       available = Extension.available_extensions()
-      assert TestExtension in available
-      assert ManualExtension in available
+      assert Drops.Operations.Extensions.Ecto in available
     end
   end
 
   describe "extension auto-discovery" do
     setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+      Drops.Test.Config.put_test_config(
+        registered_extensions: [TestExtension, ManualExtension]
+      )
+
       :ok
     end
 
@@ -75,8 +180,10 @@ defmodule Drops.Operations.ExtensionTest do
 
   describe "explicit extension configuration" do
     setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+      Drops.Test.Config.put_test_config(
+        registered_extensions: [TestExtension, ManualExtension]
+      )
+
       :ok
     end
 
@@ -114,16 +221,14 @@ defmodule Drops.Operations.ExtensionTest do
 
   describe "extension integration with operations" do
     setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+      Drops.Test.Config.put_test_config(
+        registered_extensions: [TestExtension, ManualExtension]
+      )
+
       :ok
     end
 
     test "auto-discovered extension is applied to operation module" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
       defmodule TestOperationWithAutoExtension do
         use Drops.Operations, type: :command, test_logging: true
 
@@ -138,10 +243,6 @@ defmodule Drops.Operations.ExtensionTest do
     end
 
     test "explicitly configured extension is applied to operation module" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
       defmodule TestOperationWithManualExtension do
         use Drops.Operations, type: :command, extensions: [Test.Support.ManualExtension]
 
@@ -163,10 +264,6 @@ defmodule Drops.Operations.ExtensionTest do
     end
 
     test "multiple extensions can be applied together" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
       defmodule TestOperationWithBothExtensions do
         use Drops.Operations,
           type: :command,

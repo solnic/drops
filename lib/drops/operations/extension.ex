@@ -13,7 +13,6 @@ defmodule Drops.Operations.Extension do
   - `enabled?/1` - Determines if the extension should be loaded based on options
   - `extend_using_macro/1` - Returns quoted code to inject into the `__using__` macro
   - `extend_operation_runtime/1` - Returns quoted code for runtime operation modules
-  - `extend_operation_definition/1` - Returns quoted code for compile-time operation modules
 
   ## Example Extension
 
@@ -38,21 +37,37 @@ defmodule Drops.Operations.Extension do
             # Code to inject into runtime operation modules
           end
         end
-
-        @impl true
-        def extend_operation_definition(opts) do
-          quote do
-            # Code to inject into compile-time operation modules
-          end
-        end
       end
 
   ## Extension Registration
 
-  Extensions must be registered before they can be used:
+  Extensions can be registered in three ways:
 
-      # Register an extension
-      Drops.Operations.Extension.register_extension(MyExtension)
+  ### 1. Application Configuration (Recommended for Phoenix apps)
+
+  Configure extensions in your application environment to make them available during compilation:
+
+      # config/config.exs
+      config :drops,
+        registered_extensions: [MyExtension]
+
+  This approach ensures extensions are available when operations are compiled, which is
+  essential for Phoenix applications.
+
+  ### 2. Public Registration API (Recommended for libraries)
+
+  Register extensions using the public API in your Operations module:
+
+      defmodule MyApp.Operations do
+        use Drops.Operations
+
+        require Drops.Operations.Extension
+        Drops.Operations.Extension.register(MyExtension)
+      end
+
+  ### 3. Check Registration Status
+
+  Check if an extension is registered and get all registered extensions:
 
       # Check if an extension is registered
       Drops.Operations.Extension.extension?(MyExtension)
@@ -135,22 +150,6 @@ defmodule Drops.Operations.Extension do
   @callback extend_operation_runtime(opts :: keyword()) :: Macro.t()
 
   @doc """
-  Returns quoted code to inject into compile-time operation modules.
-
-  This is called when creating operation modules directly with options
-  (compile-time pattern).
-
-  ## Parameters
-
-  - `opts` - The options for the operation
-
-  ## Returns
-
-  Returns quoted Elixir code to be injected.
-  """
-  @callback extend_operation_definition(opts :: keyword()) :: Macro.t()
-
-  @doc """
   Allows extensions to modify the UnitOfWork for an operation.
 
   This is called after the UnitOfWork is created to allow extensions
@@ -173,8 +172,9 @@ defmodule Drops.Operations.Extension do
   @doc """
   Register an extension to make it available for use.
 
-  Extensions must be registered before they can be discovered or explicitly configured.
-  This function stores the extension in a persistent term for efficient lookup.
+  This function provides a public API for registering extensions. It should be
+  called at the module level to register extensions that will be available
+  during compilation.
 
   ## Parameters
 
@@ -182,7 +182,60 @@ defmodule Drops.Operations.Extension do
 
   ## Returns
 
-  Returns `:ok` on success. Duplicate registrations are ignored.
+  Returns `:ok` on success.
+
+  ## Examples
+
+      # In the Operations module
+      defmodule MyApp.Operations do
+        use Drops.Operations
+
+        Drops.Operations.Extension.register(MyExtension)
+      end
+
+  """
+  @spec register(module()) :: :ok
+  defmacro register(extension) do
+    quote do
+      # Ensure the extension module is loaded
+      require unquote(extension)
+
+      # Register the attribute as accumulated and persistent if not already done
+      unless Module.has_attribute?(__MODULE__, :_registered_extensions) do
+        Module.register_attribute(__MODULE__, :_registered_extensions,
+          persist: true,
+          accumulate: true
+        )
+
+        @before_compile Drops.Operations.Extension
+      end
+
+      # Store the extension in the accumulated attribute
+      @_registered_extensions unquote(extension)
+
+      :ok
+    end
+  end
+
+  @doc false
+  defmacro __before_compile__(env) do
+    extensions = Module.get_attribute(env.module, :_registered_extensions, [])
+
+    quote do
+      def __registered_extensions__, do: unquote(extensions)
+    end
+  end
+
+  @doc """
+  Register an extension (alias for register/1).
+
+  ## Parameters
+
+  - `module` - The extension module to register
+
+  ## Returns
+
+  Returns `:ok` on success.
 
   ## Examples
 
@@ -190,15 +243,10 @@ defmodule Drops.Operations.Extension do
       # => :ok
 
   """
-  @spec register_extension(module()) :: :ok
-  def register_extension(module) when is_atom(module) do
-    current_extensions = registered_extensions()
-
-    unless module in current_extensions do
-      Drops.Config.put_config(:registered_extensions, [module | current_extensions])
+  defmacro register_extension(extension) do
+    quote do
+      Drops.Operations.Extension.register(unquote(extension))
     end
-
-    :ok
   end
 
   @doc """
@@ -221,7 +269,9 @@ defmodule Drops.Operations.Extension do
   @doc """
   Get all registered extensions.
 
-  Returns a list of all extension modules that have been registered.
+  Returns a list of all extension modules that have been registered, including
+  both those configured via application environment and those registered via
+  the public API.
 
   ## Returns
 
@@ -235,7 +285,37 @@ defmodule Drops.Operations.Extension do
   """
   @spec registered_extensions() :: [module()]
   def registered_extensions do
-    Drops.Config.registered_extensions()
+    config_extensions = Drops.Config.registered_extensions()
+    api_extensions = get_api_registered_extensions()
+
+    (config_extensions ++ api_extensions)
+    |> Enum.uniq()
+  end
+
+  @doc """
+  Get extensions registered via the public API from a specific module.
+
+  ## Parameters
+
+  - `module` - The module to get registered extensions from
+
+  ## Returns
+
+  Returns a list of extension modules registered by the given module.
+  """
+  @spec get_extensions_from_module(module()) :: [module()]
+  def get_extensions_from_module(module) when is_atom(module) do
+    if function_exported?(module, :__registered_extensions__, 0) do
+      module.__registered_extensions__()
+    else
+      []
+    end
+  end
+
+  # Private function to get all API-registered extensions
+  defp get_api_registered_extensions do
+    # Get extensions from the main Operations module
+    get_extensions_from_module(Drops.Operations)
   end
 
   @doc """
@@ -321,22 +401,6 @@ defmodule Drops.Operations.Extension do
   def extend_operation_runtime(opts) do
     enabled_extensions(opts)
     |> Enum.map(& &1.extend_operation_runtime(opts))
-  end
-
-  @doc """
-  Generate extension code for compile-time operation modules.
-
-  ## Parameters
-
-  - `opts` - The options for the operation
-
-  ## Returns
-
-  Returns quoted code from all enabled extensions.
-  """
-  def extend_operation_definition(opts) do
-    enabled_extensions(opts)
-    |> Enum.map(& &1.extend_operation_definition(opts))
   end
 
   @doc """
