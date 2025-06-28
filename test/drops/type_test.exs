@@ -1,6 +1,8 @@
 defmodule Drops.TypeTest do
-  use Drops.ContractCase
+  use Drops.ContractCase, async: false
   use Drops.DoctestCase
+
+  import Drops.Test.Config
 
   defmodule Email do
     use Drops.Type, string()
@@ -24,6 +26,12 @@ defmodule Drops.TypeTest do
   doctest Drops.Type
 
   describe "type registry" do
+    setup do
+      # Register the test types for these tests
+      put_test_config(registered_types: [Email, FilledEmail, User, Price])
+      :ok
+    end
+
     test "registered_types/0 returns list of all registered types" do
       types = Drops.Type.registered_types()
 
@@ -48,6 +56,9 @@ defmodule Drops.TypeTest do
       defmodule RuntimeType do
         use Drops.Type, string()
       end
+
+      # Register the type explicitly
+      Drops.Type.register_type(RuntimeType)
 
       assert Drops.Type.type?(RuntimeType)
       assert RuntimeType in Drops.Type.registered_types()

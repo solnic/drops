@@ -140,11 +140,10 @@ defmodule Drops.Type do
 
   @spec register_type(module()) :: :ok
   def register_type(module) when is_atom(module) do
-    key = {__MODULE__, :registered_types}
-    current_types = :persistent_term.get(key, [])
+    current_types = registered_types()
 
     unless module in current_types do
-      :persistent_term.put(key, [module | current_types])
+      Drops.Config.put_config(:registered_types, [module | current_types])
     end
 
     :ok
@@ -157,8 +156,7 @@ defmodule Drops.Type do
 
   @spec registered_types() :: [module()]
   def registered_types do
-    key = {__MODULE__, :registered_types}
-    :persistent_term.get(key, [])
+    Drops.Config.registered_types()
   end
 
   defmacro __using__({:%{}, _, _} = spec) do
@@ -187,9 +185,6 @@ defmodule Drops.Type do
       import Drops.Type.DSL
 
       unquote(block)
-
-      # Register this module as a Drops type
-      Drops.Type.register_type(__MODULE__)
     end
   end
 
@@ -202,9 +197,6 @@ defmodule Drops.Type do
         primitive: Type.infer_primitive(unquote(spec)),
         constraints: Type.infer_constraints(unquote(spec))
       )
-
-      # Register this module as a Drops type
-      Drops.Type.register_type(__MODULE__)
 
       def new(attributes) when is_list(attributes) do
         struct(__MODULE__, attributes)

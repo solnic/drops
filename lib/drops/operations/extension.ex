@@ -192,11 +192,10 @@ defmodule Drops.Operations.Extension do
   """
   @spec register_extension(module()) :: :ok
   def register_extension(module) when is_atom(module) do
-    key = {__MODULE__, :registered_extensions}
-    current_extensions = :persistent_term.get(key, [])
+    current_extensions = registered_extensions()
 
     unless module in current_extensions do
-      :persistent_term.put(key, [module | current_extensions])
+      Drops.Config.put_config(:registered_extensions, [module | current_extensions])
     end
 
     :ok
@@ -236,8 +235,7 @@ defmodule Drops.Operations.Extension do
   """
   @spec registered_extensions() :: [module()]
   def registered_extensions do
-    key = {__MODULE__, :registered_extensions}
-    :persistent_term.get(key, [])
+    Drops.Config.registered_extensions()
   end
 
   @doc """
