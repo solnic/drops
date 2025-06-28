@@ -1,13 +1,27 @@
 defmodule Drops.OperationCase do
   use ExUnit.CaseTemplate
 
-  Drops.Operations.Extension.register_extension(Drops.Operations.Extensions.Ecto)
+  import Drops.Test.Config
 
   using do
     quote do
       use Drops.DataCase
       import Drops.OperationCase
+      import Drops.Test.Config
     end
+  end
+
+  setup do
+    # Ensure Ecto extension is registered for operation tests
+    current_extensions = Drops.Config.registered_extensions()
+
+    unless Drops.Operations.Extensions.Ecto in current_extensions do
+      put_test_config(
+        registered_extensions: [Drops.Operations.Extensions.Ecto | current_extensions]
+      )
+    end
+
+    :ok
   end
 
   defmacro operation(opts \\ [], do: body) do

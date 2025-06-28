@@ -1,5 +1,5 @@
 defmodule Drops.Operations.ExtensionTest do
-  use Drops.OperationCase, async: true
+  use Drops.OperationCase, async: false
 
   alias Drops.Operations.Extension
 
@@ -47,8 +47,10 @@ defmodule Drops.Operations.ExtensionTest do
 
   describe "extension auto-discovery" do
     setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+      Drops.Test.Config.put_test_config(
+        registered_extensions: [TestExtension, ManualExtension]
+      )
+
       :ok
     end
 
@@ -75,8 +77,10 @@ defmodule Drops.Operations.ExtensionTest do
 
   describe "explicit extension configuration" do
     setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+      Drops.Test.Config.put_test_config(
+        registered_extensions: [TestExtension, ManualExtension]
+      )
+
       :ok
     end
 
@@ -114,16 +118,14 @@ defmodule Drops.Operations.ExtensionTest do
 
   describe "extension integration with operations" do
     setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+      Drops.Test.Config.put_test_config(
+        registered_extensions: [TestExtension, ManualExtension]
+      )
+
       :ok
     end
 
     test "auto-discovered extension is applied to operation module" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
       defmodule TestOperationWithAutoExtension do
         use Drops.Operations, type: :command, test_logging: true
 
@@ -138,10 +140,6 @@ defmodule Drops.Operations.ExtensionTest do
     end
 
     test "explicitly configured extension is applied to operation module" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
       defmodule TestOperationWithManualExtension do
         use Drops.Operations, type: :command, extensions: [Test.Support.ManualExtension]
 
@@ -163,10 +161,6 @@ defmodule Drops.Operations.ExtensionTest do
     end
 
     test "multiple extensions can be applied together" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
       defmodule TestOperationWithBothExtensions do
         use Drops.Operations,
           type: :command,

@@ -11,8 +11,6 @@ defmodule Drops.Operations do
 
   alias Drops.Operations.UnitOfWork
 
-  Drops.Operations.Extension.register_extension(Drops.Operations.Extensions.Ecto)
-
   defmodule Success do
     @type t :: %__MODULE__{}
 

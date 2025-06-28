@@ -1,5 +1,5 @@
 defmodule Drops.Operations.Extensions.EctoTest do
-  use Drops.OperationCase, async: true
+  use Drops.OperationCase, async: false
 
   alias Drops.Operations.Extensions.Ecto, as: EctoExtension
 

@@ -34,6 +34,10 @@ defmodule Drops.Application do
   end
 
   defp register_builtin_extensions(_config) do
-    :ok
+    builtin_extensions = [
+      Drops.Operations.Extensions.Ecto
+    ]
+
+    Enum.each(builtin_extensions, &Drops.Operations.Extension.register_extension/1)
   end
 end
