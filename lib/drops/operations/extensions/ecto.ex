@@ -17,15 +17,18 @@ defmodule Drops.Operations.Extensions.Ecto do
   @behaviour Drops.Operations.Extension
 
   @doc """
-  Callback for validating an Ecto changeset.
+  Callback for casting parameters into a changeset.
+  Receives context map and should return updated context.
   """
-  @callback validate(changeset :: Ecto.Changeset.t()) :: Ecto.Changeset.t()
+  @callback cast_changeset(context :: map()) :: {:ok, map()} | {:error, any()}
 
   @doc """
-  Callback for casting and validating a changeset with new parameters.
+  Callback for validating an Ecto changeset.
+  Receives context map with changeset and should return the validated changeset.
   """
-  @callback cast_changeset(params :: map(), changeset :: Ecto.Changeset.t()) ::
-              Ecto.Changeset.t()
+  @callback validate_changeset(context :: map()) :: Ecto.Changeset.t()
+
+  @optional_callbacks cast_changeset: 1, validate_changeset: 1
 
   @impl true
   def enabled?(opts) do

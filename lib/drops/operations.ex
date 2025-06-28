@@ -32,13 +32,6 @@ defmodule Drops.Operations do
   @callback execute(context :: map()) :: {:ok, any()} | {:error, any()}
 
   @doc """
-  Callback for executing an operation with a previous result and new context.
-  Used for composing operations with the pipeline operator.
-  """
-  @callback execute(previous_result :: any(), context :: map()) ::
-              {:ok, any()} | {:error, any()}
-
-  @doc """
   Callback for finalizing the operation result.
   This extracts the actual result from the Operation result struct for the public API.
   """
@@ -47,15 +40,17 @@ defmodule Drops.Operations do
 
   @doc """
   Callback for preparing parameters before execution.
-  Receives context map and should return updated params.
+  Receives context map and should return updated context.
   """
-  @callback prepare(context :: map()) :: any()
+  @callback prepare(context :: map()) :: {:ok, map()} | {:error, any()}
 
   @doc """
   Callback for validating parameters.
-  Receives context map and should return validated params or error.
+  Receives context map and should return validated context or error.
   """
-  @callback validate(context :: map()) :: {:ok, any()} | {:error, any()}
+  @callback validate(context :: map()) :: {:ok, map()} | {:error, any()}
+
+  @optional_callbacks prepare: 1, validate: 1, finalize: 1
 
   @doc """
   Before compile callback to extend UoW after all schema macros have been processed.
