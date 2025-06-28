@@ -17,6 +17,26 @@ defmodule Test.Ecto.TestSchemas do
     end
   end
 
+  defmodule CastingTestSchema do
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    schema "casting_test" do
+      field(:name, :string)
+      field(:admin, :boolean, default: false)
+      field(:age, :integer)
+      field(:score, :float)
+
+      timestamps()
+    end
+
+    def changeset(record, attrs) do
+      record
+      |> cast(attrs, [:name, :admin, :age, :score])
+      |> validate_required([:name])
+    end
+  end
+
   defmodule BasicTypesSchema do
     use Ecto.Schema
 

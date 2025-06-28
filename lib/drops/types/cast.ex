@@ -42,14 +42,19 @@ defmodule Drops.Types.Cast do
 
       case Validator.validate(input_type, value) do
         {:ok, result} ->
-          casted_value =
-            apply(
-              caster,
-              :cast,
-              [input_type.primitive, output_type.primitive, result] ++ cast_opts
-            )
+          try do
+            casted_value =
+              apply(
+                caster,
+                :cast,
+                [input_type.primitive, output_type.primitive, result] ++ cast_opts
+              )
 
-          Validator.validate(output_type, casted_value)
+            Validator.validate(output_type, casted_value)
+          rescue
+            exception ->
+              {:error, {:cast, [predicate: :cast, args: [exception.message]]}}
+          end
 
         {:error, error} ->
           {:error, {:cast, error}}
