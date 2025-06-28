@@ -99,6 +99,8 @@ defimpl Drops.Schema.Inference, for: Atom do
 
   import Drops.Type.DSL
 
+  alias Drops.Types.EctoCaster
+
   @doc """
   Infer schema from an Ecto schema module.
 
@@ -109,6 +111,7 @@ defimpl Drops.Schema.Inference, for: Atom do
     - `:exclude_fields` - List of field names to exclude (default: `[:id, :inserted_at, :updated_at]`)
     - `:field_presence` - Map of field names to presence (`:required` or `:optional`)
     - `:default_presence` - Default presence for fields (default: `:required`)
+    - `:cast` - Enable casting support (default: `false`)
 
   ## Returns
 
@@ -127,6 +130,9 @@ defimpl Drops.Schema.Inference, for: Atom do
 
       # Include all fields
       Drops.Schema.Inference.infer_schema(MyApp.User, exclude_fields: [])
+
+      # Enable casting support
+      Drops.Schema.Inference.infer_schema(MyApp.User, cast: true)
   """
   def infer_schema(module, opts) when is_atom(module) do
     # Check if this is an Ecto schema module
@@ -149,6 +155,7 @@ defimpl Drops.Schema.Inference, for: Atom do
   defp infer_ecto_schema(module, opts) do
     field_presence = Keyword.get(opts, :field_presence, %{})
     default_presence = Keyword.get(opts, :default_presence, :required)
+    enable_casting = Keyword.get(opts, :cast, false)
 
     # Get all fields from the Ecto schema
     all_fields = module.__schema__(:fields)
@@ -186,7 +193,13 @@ defimpl Drops.Schema.Inference, for: Atom do
     field_entries =
       Enum.map(fields, fn field ->
         field_type = module.__schema__(:type, field)
-        drops_type = ecto_type_to_drops_type(field_type)
+
+        drops_type =
+          if enable_casting do
+            ecto_type_to_drops_type_with_casting(field_type, module)
+          else
+            ecto_type_to_drops_type(field_type)
+          end
 
         # Determine field presence
         presence = Map.get(field_presence, field, default_presence)
@@ -248,4 +261,18 @@ defimpl Drops.Schema.Inference, for: Atom do
 
   # Fallback for unknown types
   defp ecto_type_to_drops_type(_), do: any()
+
+  # Type mapping with casting support - accepts any input and casts to Ecto type
+  defp ecto_type_to_drops_type_with_casting(field_type, ecto_schema_module) do
+    target_type = ecto_type_to_drops_type(field_type)
+
+    # Create a cast specification that accepts any input and casts to the target type
+    cast_opts = [
+      caster: EctoCaster,
+      ecto_type: field_type,
+      ecto_schema: ecto_schema_module
+    ]
+
+    {:cast, {any(), target_type, cast_opts}}
+  end
 end
