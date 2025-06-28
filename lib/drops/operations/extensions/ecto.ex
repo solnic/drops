@@ -10,8 +10,33 @@ defmodule Drops.Operations.Extensions.Ecto do
   - `changeset/1` and `persist/1` functions
   - Phoenix.HTML.FormData protocol support for Success/Failure structs
   - Schema error conversion to changeset errors
+  - Automatic casting support for Ecto schemas (cast: true by default)
 
   The extension is automatically enabled when the `:repo` option is provided.
+
+  ## Automatic Casting
+
+  When using Ecto schemas in operations, the extension automatically enables
+  casting support (`cast: true`) by default. This means that string inputs
+  will be automatically cast to the appropriate Ecto types (e.g., "42" to 42
+  for integer fields). You can still override this by explicitly setting
+  `cast: false` in your schema options.
+
+  ## Examples
+
+      # Automatic casting enabled by default
+      operation type: :command do
+        schema(MyApp.User)  # cast: true is applied automatically
+
+        def execute(context), do: {:ok, context}
+      end
+
+      # Explicitly disable casting if needed
+      operation type: :command do
+        schema(MyApp.User, cast: false)
+
+        def execute(context), do: {:ok, context}
+      end
   """
 
   @behaviour Drops.Operations.Extension
@@ -46,6 +71,11 @@ defmodule Drops.Operations.Extensions.Ecto do
   def extend_operation_runtime(_opts) do
     quote location: :keep do
       import Ecto.Changeset
+
+      # Set default schema options to enable casting for Ecto schemas
+      @schema_opts Keyword.merge(Module.get_attribute(__MODULE__, :schema_opts, []),
+                     cast: true
+                   )
 
       def ecto_schema, do: schema().meta[:source_schema]
 

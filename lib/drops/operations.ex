@@ -108,7 +108,7 @@ defmodule Drops.Operations do
   @doc false
   def __define_operation__(opts, base_module) do
     extension_code =
-      Drops.Operations.Extension.extend_operation_runtime(base_module.__app_opts__())
+      Drops.Operations.Extension.extend_operation_runtime(opts)
 
     quote location: :keep do
       @behaviour Drops.Operations

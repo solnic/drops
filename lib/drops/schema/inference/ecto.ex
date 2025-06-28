@@ -264,15 +264,24 @@ defimpl Drops.Schema.Inference, for: Atom do
 
   # Type mapping with casting support - accepts any input and casts to Ecto type
   defp ecto_type_to_drops_type_with_casting(field_type, ecto_schema_module) do
-    target_type = ecto_type_to_drops_type(field_type)
+    # Don't apply casting to embedded fields as they need special handling
+    if embedded_field?(field_type) do
+      ecto_type_to_drops_type(field_type)
+    else
+      target_type = ecto_type_to_drops_type(field_type)
 
-    # Create a cast specification that accepts any input and casts to the target type
-    cast_opts = [
-      caster: EctoCaster,
-      ecto_type: field_type,
-      ecto_schema: ecto_schema_module
-    ]
+      # Create a cast specification that accepts any input and casts to the target type
+      cast_opts = [
+        caster: EctoCaster,
+        ecto_type: field_type,
+        ecto_schema: ecto_schema_module
+      ]
 
-    {:cast, {any(), target_type, cast_opts}}
+      {:cast, {any(), target_type, cast_opts}}
+    end
   end
+
+  # Check if a field type is an embedded field
+  defp embedded_field?({:parameterized, {Ecto.Embedded, _}}), do: true
+  defp embedded_field?(_), do: false
 end

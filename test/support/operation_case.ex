@@ -35,7 +35,9 @@ defmodule Drops.OperationCase do
           Keyword.pop(keyword_list, :name, :operation)
       end
 
-    test_id = "#{System.unique_integer([:positive])}_#{:erlang.phash2(self())}"
+    test_id =
+      "#{System.unique_integer([:positive])}_#{:erlang.phash2(self())}_#{:erlang.phash2(__CALLER__.line)}"
+
     app_module_name = Module.concat(__CALLER__.module, :"TestApp#{test_id}")
     operation_module_name = Module.concat(__CALLER__.module, :"TestOperation#{test_id}")
 

@@ -48,10 +48,8 @@ defmodule Drops.Operations.Extensions.EctoTest do
   end
 
   describe "operations with casting and type coercion" do
-    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
     operation type: :command do
       schema(Test.Ecto.TestSchemas.CastingTestSchema,
-        cast: true,
         field_presence: %{admin: :optional, age: :optional, score: :optional}
       )
 
@@ -73,6 +71,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       end
     end
 
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
     test "it casts boolean fields correctly from strings", %{operation: operation} do
       # Test with string "true" -> boolean true
       {:ok, result} =
@@ -99,6 +98,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       assert result == %{name: "Bool Admin", admin: true, age: nil, score: nil}
     end
 
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
     test "it casts integer fields correctly from strings", %{operation: operation} do
       {:ok, result} =
         operation.call(%{
@@ -108,6 +108,7 @@ defmodule Drops.Operations.Extensions.EctoTest do
       assert result == %{name: "User", admin: false, age: 25, score: nil}
     end
 
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
     test "it casts float fields correctly from strings", %{operation: operation} do
       {:ok, result} =
         operation.call(%{
@@ -115,6 +116,84 @@ defmodule Drops.Operations.Extensions.EctoTest do
         })
 
       assert result == %{name: "User", admin: false, age: nil, score: 98.5}
+    end
+  end
+
+  describe "operations with default casting behavior" do
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
+    operation type: :command do
+      # No explicit cast option - should default to true
+      schema(Test.Ecto.TestSchemas.CastingTestSchema,
+        field_presence: %{admin: :optional, age: :optional, score: :optional}
+      )
+
+      @impl true
+      def execute(%{changeset: changeset}) do
+        case persist(changeset) do
+          {:ok, record} ->
+            {:ok,
+             %{
+               name: record.name,
+               admin: record.admin,
+               age: record.age,
+               score: record.score
+             }}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+      end
+    end
+
+    test "it automatically casts string inputs by default", %{operation: operation} do
+      {:ok, result} =
+        operation.call(%{
+          params: %{name: "User", age: "25", admin: "true", score: "98.5"}
+        })
+
+      assert result == %{name: "User", admin: true, age: 25, score: 98.5}
+    end
+  end
+
+  describe "operations with explicit cast: false" do
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.CastingTestSchema]
+    operation type: :command do
+      # Explicitly disable casting
+      schema(Test.Ecto.TestSchemas.CastingTestSchema,
+        cast: false,
+        field_presence: %{admin: :optional, age: :optional, score: :optional}
+      )
+
+      @impl true
+      def execute(%{changeset: changeset}) do
+        case persist(changeset) do
+          {:ok, record} ->
+            {:ok,
+             %{
+               name: record.name,
+               admin: record.admin,
+               age: record.age,
+               score: record.score
+             }}
+
+          {:error, changeset} ->
+            {:error, changeset}
+        end
+      end
+    end
+
+    test "it does not cast when explicitly disabled", %{operation: operation} do
+      # This should fail validation because string "25" is not an integer
+      {:error, errors} =
+        operation.call(%{
+          params: %{name: "User", age: "25"}
+        })
+
+      assert is_list(errors)
+      # Should contain a type error for age field
+      assert Enum.any?(errors, fn error ->
+               error.path == [:age] and String.contains?(error.text, "integer")
+             end)
     end
   end
 
