@@ -14,17 +14,16 @@ defmodule Drops.Operations.UnitOfWork do
   - `:prepare` - Prepares the conformed parameters for validation
   - `:validate` - Validates the prepared parameters
   - `:execute` - Executes the operation with validated parameters
-  - `:finalize` - Finalizes the operation result for the public API
 
   ## Extension Pipeline
 
   Extensions can inject additional steps into the pipeline by using the
-  `inject_step/4` function. The pipeline order is determined dynamically
+  `before_step/3` and `after_step/3` functions. The pipeline order is determined dynamically
   based on the steps that are actually present in the UnitOfWork.
 
   ## Usage
 
-      # Create a UnitOfWork for an operation module
+      # Create a UnitOfWork for an module
       uow = UnitOfWork.new(MyOperation)
 
       # Process parameters through the pipeline
@@ -37,82 +36,128 @@ defmodule Drops.Operations.UnitOfWork do
 
   @type step :: atom()
   @type step_definition :: {module(), atom()}
-  @type callback_type :: :before | :after | :around
+  @type callback_type :: :before | :after
   @type callback_definition :: {module(), atom(), any()}
   @type t :: %__MODULE__{
           steps: %{step() => step_definition()},
-          operation_module: module(),
+          step_order: [step()],
+          module: module(),
           callbacks: %{callback_type() => %{step() => [callback_definition()]}}
         }
 
   defstruct [
     :steps,
-    :operation_module,
-    callbacks: %{before: %{}, after: %{}, around: %{}}
+    :step_order,
+    :module,
+    callbacks: %{before: %{}, after: %{}}
   ]
 
   @doc """
-  Creates a new UnitOfWork for the given operation module.
+  Creates a new UnitOfWork for the given module.
 
   The UnitOfWork will be initialized with default steps that delegate
-  to the operation module itself.
+  to the module itself.
 
   ## Parameters
 
-  - `operation_module` - The operation module to create a UnitOfWork for
+  - `module` - The module to create a UnitOfWork for
 
   ## Returns
 
   Returns a new UnitOfWork struct.
   """
-  @spec new(module()) :: t()
-  def new(operation_module) do
-    uow = %__MODULE__{
-      operation_module: operation_module,
-      steps: %{
-        conform: {operation_module, :conform},
-        prepare: {operation_module, :prepare},
-        validate: {operation_module, :validate},
-        execute: {operation_module, :execute},
-        finalize: {operation_module, :finalize}
-      }
-    }
+  @spec new(module(), list(atom())) :: t()
+  def new(module, step_names)
+      when is_atom(module) and is_list(step_names) do
+    # Build steps map from the provided step names
+    steps = build_steps_map(module, step_names)
 
-    # Register default after callback for execute step to wrap result in Success/Failure struct
-    register_after_callback(
-      uow,
-      :execute,
-      __MODULE__,
-      :wrap_execute_result,
-      operation_module
-    )
+    %__MODULE__{
+      module: module,
+      steps: steps,
+      step_order: step_names
+    }
   end
 
   @doc """
-  Injects a new step into the UnitOfWork.
-
-  This allows extensions to add new processing steps to the pipeline.
+  Adds a new step to be called after an existing step.
 
   ## Parameters
 
   - `uow` - The UnitOfWork to modify
-  - `step` - The step name to inject
-  - `module` - The module containing the step function
-  - `function` - The function name to call for this step
+  - `existing_step` - The existing step name to insert after
+  - `new_step` - The new step name to add
 
   ## Returns
 
-  Returns the modified UnitOfWork.
+  Returns the modified UnitOfWork with updated step order.
+
+  ## Examples
+
+      # Add :audit step after :execute step
+      uow = after_step(uow, :execute, :audit)
+
   """
-  @spec inject_step(t(), step(), module(), atom()) :: t()
-  def inject_step(%__MODULE__{} = uow, step, module, function) do
-    %{uow | steps: Map.put(uow.steps, step, {module, function})}
+  @spec after_step(t(), step(), step()) :: t()
+  def after_step(%__MODULE__{} = uow, existing_step, new_step)
+      when is_atom(existing_step) and is_atom(new_step) do
+    case Enum.find_index(uow.step_order, &(&1 == existing_step)) do
+      nil ->
+        # If existing step not found, just add to the end
+        updated_step_order = uow.step_order ++ [new_step]
+        updated_steps = Map.put(uow.steps, new_step, {uow.module, new_step})
+        %{uow | step_order: updated_step_order, steps: updated_steps}
+
+      index ->
+        # Insert new step after the existing step
+        updated_step_order = List.insert_at(uow.step_order, index + 1, new_step)
+        updated_steps = Map.put(uow.steps, new_step, {uow.module, new_step})
+        %{uow | step_order: updated_step_order, steps: updated_steps}
+    end
+  end
+
+  @doc """
+  Adds a new step to be called before an existing step.
+
+  ## Parameters
+
+  - `uow` - The UnitOfWork to modify
+  - `existing_step` - The existing step name to insert before
+  - `new_step` - The new step name to add
+
+  ## Returns
+
+  Returns the modified UnitOfWork with updated step order.
+
+  ## Examples
+
+      # Add :audit step before :execute step
+      uow = before_step(uow, :execute, :audit)
+
+  """
+  @spec before_step(t(), step(), step()) :: t()
+  def before_step(%__MODULE__{} = uow, existing_step, new_step)
+      when is_atom(existing_step) and is_atom(new_step) do
+    case Enum.find_index(uow.step_order, &(&1 == existing_step)) do
+      nil ->
+        # If existing step not found, just add to the beginning
+        updated_step_order = [new_step | uow.step_order]
+        updated_steps = Map.put(uow.steps, new_step, {uow.module, new_step})
+        %{uow | step_order: updated_step_order, steps: updated_steps}
+
+      index ->
+        # Insert new step before the existing step
+        updated_step_order = List.insert_at(uow.step_order, index, new_step)
+        updated_steps = Map.put(uow.steps, new_step, {uow.module, new_step})
+        %{uow | step_order: updated_step_order, steps: updated_steps}
+    end
   end
 
   @doc """
   Registers a before callback for a specific step.
 
   Before callbacks are executed before the step function is called.
+  The callback function will receive: `module`, `step`, `context`, and `config`.
 
   ## Parameters
 
@@ -125,6 +170,13 @@ defmodule Drops.Operations.UnitOfWork do
   ## Returns
 
   Returns the modified UnitOfWork.
+
+  ## Example
+
+      def my_before_callback(module, step, context, config) do
+        # Callback logic here
+        :ok
+      end
   """
   @spec register_before_callback(t(), step(), module(), atom(), any()) :: t()
   def register_before_callback(%__MODULE__{} = uow, step, module, function, config \\ nil) do
@@ -138,6 +190,7 @@ defmodule Drops.Operations.UnitOfWork do
   Registers an after callback for a specific step.
 
   After callbacks are executed after the step function completes successfully.
+  The callback function will receive: `module`, `step`, `context`, `result`, and `config`.
 
   ## Parameters
 
@@ -150,6 +203,13 @@ defmodule Drops.Operations.UnitOfWork do
   ## Returns
 
   Returns the modified UnitOfWork.
+
+  ## Example
+
+      def my_after_callback(module, step, context, result, config) do
+        # Callback logic here
+        :ok
+      end
   """
   @spec register_after_callback(t(), step(), module(), atom(), any()) :: t()
   def register_after_callback(%__MODULE__{} = uow, step, module, function, config \\ nil) do
@@ -157,32 +217,6 @@ defmodule Drops.Operations.UnitOfWork do
     after_callbacks = Map.get(uow.callbacks.after, step, [])
     updated_after = Map.put(uow.callbacks.after, step, [callback | after_callbacks])
     %{uow | callbacks: %{uow.callbacks | after: updated_after}}
-  end
-
-  @doc """
-  Registers an around callback for a specific step.
-
-  Around callbacks wrap the step function execution and can control
-  whether the step is executed and modify its result.
-
-  ## Parameters
-
-  - `uow` - The UnitOfWork to modify
-  - `step` - The step name to attach the callback to
-  - `module` - The module containing the callback function
-  - `function` - The function name to call for this callback
-  - `config` - Optional configuration data passed to the callback
-
-  ## Returns
-
-  Returns the modified UnitOfWork.
-  """
-  @spec register_around_callback(t(), step(), module(), atom(), any()) :: t()
-  def register_around_callback(%__MODULE__{} = uow, step, module, function, config \\ nil) do
-    callback = {module, function, config}
-    around_callbacks = Map.get(uow.callbacks.around, step, [])
-    updated_around = Map.put(uow.callbacks.around, step, [callback | around_callbacks])
-    %{uow | callbacks: %{uow.callbacks | around: updated_around}}
   end
 
   @doc """
@@ -209,7 +243,7 @@ defmodule Drops.Operations.UnitOfWork do
   @doc """
   Processes parameters through the UnitOfWork pipeline.
 
-  This function executes all steps in the pipeline including execute and finalize.
+  This function executes all steps in the pipeline.
 
   ## Parameters
 
@@ -218,444 +252,70 @@ defmodule Drops.Operations.UnitOfWork do
 
   ## Returns
 
-  Returns `{:ok, result}` or `{:error, error}` after finalization.
+  Returns `{:ok, result}` or `{:error, error}`.
   """
   @spec process(t(), map()) :: {:ok, any()} | {:error, any()}
   def process(%__MODULE__{} = uow, context) when is_map(context) do
-    # Get the full pipeline steps in order
-    pipeline = get_pipeline_steps(uow)
-
-    # Process through the full pipeline
-    process_full_pipeline(uow, pipeline, context)
-  end
-
-  @doc """
-  Processes parameters through the UnitOfWork pipeline excluding execute and finalize.
-
-  This function executes the conform, prepare, and validate steps in order,
-  but does NOT execute the :execute and :finalize steps.
-
-  ## Parameters
-
-  - `uow` - The UnitOfWork defining the pipeline
-  - `context` - The context map containing params and other data
-
-  ## Returns
-
-  Returns `{:ok, %{original: original_params, prepared: prepared_params, validated: validated_params}}`
-  on success or `{:error, error}` on failure.
-  """
-  @spec process_validation_only(t(), map()) ::
-          {:ok, %{original: any(), prepared: any(), validated: any()}} | {:error, any()}
-  def process_validation_only(%__MODULE__{} = uow, context) when is_map(context) do
-    # Get the pipeline steps in order, excluding :execute and :finalize
-    pipeline = get_validation_pipeline_steps(uow)
-
-    # Extract params from context for backward compatibility
-    params = Map.get(context, :params)
-
-    # Process through the pipeline, keeping track of original context and prepared params
-    process_pipeline(uow, pipeline, context, params, nil)
+    # Process through the pipeline using the stored step order
+    process_steps(uow, uow.step_order, context)
   end
 
   # Private functions
 
-  defp get_pipeline_steps(uow) do
-    schema = uow.operation_module.schema()
-
-    # Define the full pipeline order - extensions can inject additional steps
-    base_pipeline = [:conform, :prepare, :validate, :execute, :finalize]
-
-    # Get all available steps from the UoW
-    available_step_names = Map.keys(uow.steps)
-
-    # Start with base pipeline and add any additional steps that aren't in the base
-    additional_steps = available_step_names -- base_pipeline
-
-    # Create the full pipeline by inserting additional steps in a logical order
-    full_pipeline = insert_additional_steps(base_pipeline, additional_steps)
-
-    # Filter to only include steps that are actually defined in the UoW
-    available_steps =
-      full_pipeline
-      |> Enum.filter(fn step -> Map.has_key?(uow.steps, step) end)
-
-    # Skip conform step if schema has no keys
-    if length(schema.keys) == 0 do
-      Enum.reject(available_steps, &(&1 == :conform))
-    else
-      available_steps
-    end
+  defp build_steps_map(module, step_names) do
+    Enum.into(step_names, %{}, fn step_name ->
+      {step_name, {module, step_name}}
+    end)
   end
 
-  defp get_validation_pipeline_steps(uow) do
-    schema = uow.operation_module.schema()
-
-    # Define the validation-only pipeline order - extensions can inject additional steps
-    base_pipeline = [:conform, :prepare, :validate]
-
-    # Get all available steps from the UoW
-    available_step_names = Map.keys(uow.steps)
-
-    # Start with base pipeline and add any additional steps that aren't in the base
-    additional_steps = available_step_names -- (base_pipeline ++ [:execute, :finalize])
-
-    # Create the full pipeline by inserting additional steps in a logical order
-    full_pipeline = insert_additional_steps(base_pipeline, additional_steps)
-
-    # Filter to only include steps that are actually defined in the UoW
-    available_steps =
-      full_pipeline
-      |> Enum.filter(fn step -> Map.has_key?(uow.steps, step) end)
-
-    # Skip conform step if schema has no keys
-    if length(schema.keys) == 0 do
-      Enum.reject(available_steps, &(&1 == :conform))
-    else
-      available_steps
-    end
-  end
-
-  # Insert additional steps in logical positions within the pipeline
-  defp insert_additional_steps(base_pipeline, additional_steps) do
-    # For now, insert additional steps after :prepare and before :validate
-    # Extensions can override this behavior by providing their own pipeline logic
-    case base_pipeline do
-      [:conform, :prepare, :validate] ->
-        [:conform, :prepare] ++ additional_steps ++ [:validate]
-
-      [:conform, :prepare, :validate, :execute, :finalize] ->
-        [:conform, :prepare] ++ additional_steps ++ [:validate, :execute, :finalize]
-
-      other ->
-        other ++ additional_steps
-    end
-  end
-
-  defp process_full_pipeline(uow, pipeline, context) do
-    case process_full_pipeline_steps(uow, pipeline, context) do
-      {:ok, result} -> {:ok, result}
-      {:error, error} -> {:error, error}
-    end
-  end
-
-  defp process_full_pipeline_steps(_uow, [], result) do
+  defp process_steps(_uow, [], result) do
     {:ok, result}
   end
 
-  defp process_full_pipeline_steps(uow, [step | remaining_steps], current_context) do
-    case call_step(uow, step, current_context, nil) do
+  defp process_steps(uow, [step | remaining_steps], current_context) do
+    case call_step(uow, step, current_context) do
       {:ok, result} ->
-        # Handle different step types
-        updated_context =
-          case step do
-            :conform ->
-              # conform returns params, so update the context
-              Map.put(current_context, :params, result)
-
-            :execute ->
-              # execute returns the raw result, keep context but store result for finalize
-              Map.put(current_context, :execute_result, result)
-
-            :finalize ->
-              # finalize returns the final result, this is what we return
-              result
-
-            _other ->
-              # Other steps should return updated context
-              if is_map(result) do
-                result
-              else
-                # If step returns non-map, treat as params update
-                Map.put(current_context, :params, result)
-              end
-          end
-
-        # If this was the finalize step, return the result directly
-        if step == :finalize do
-          {:ok, updated_context}
-        else
-          process_full_pipeline_steps(uow, remaining_steps, updated_context)
-        end
+        process_steps(uow, remaining_steps, result)
 
       {:error, error} ->
         {:error, error}
     end
   end
 
-  defp process_pipeline(_uow, [], result, original_params, prepared_params) do
-    {:ok, %{original: original_params, prepared: prepared_params, validated: result}}
-  end
-
-  defp process_pipeline(
-         uow,
-         [step | remaining_steps],
-         current_context,
-         original_params,
-         prepared_params
-       ) do
-    case call_step(uow, step, current_context, original_params) do
-      {:ok, result} ->
-        # For conform step, result is params, so update context
-        # For other steps, result should be the updated context
-        updated_context =
-          case step do
-            :conform ->
-              # conform returns params, so update the context
-              Map.put(current_context, :params, result)
-
-            _other ->
-              # Other steps should return updated context
-              if is_map(result) do
-                result
-              else
-                # If step returns non-map, treat as params update
-                Map.put(current_context, :params, result)
-              end
-          end
-
-        # Store prepared context after the :prepare step
-        new_prepared_params =
-          if step == :prepare do
-            Map.get(updated_context, :params)
-          else
-            prepared_params
-          end
-
-        process_pipeline(
-          uow,
-          remaining_steps,
-          updated_context,
-          original_params,
-          new_prepared_params
-        )
-
-      {:error, error} ->
-        {:error, error}
-    end
-  end
-
-  defp call_step(uow, step, context, _original_params) do
-    # Execute around callbacks if any exist
-    around_callbacks = Map.get(uow.callbacks.around, step, [])
-
-    if around_callbacks != [] do
-      # Execute around callbacks (they control the step execution)
-      execute_around_callbacks(uow, step, context, around_callbacks)
-    else
-      # No around callbacks, execute step with before/after callbacks
-      execute_step_with_callbacks(uow, step, context)
-    end
-  rescue
-    error ->
-      {:error, error}
-  end
-
-  defp execute_step_with_callbacks(uow, step, context) do
-    # Execute before callbacks
+  defp call_step(uow, step, context) do
     before_callbacks = Map.get(uow.callbacks.before, step, [])
+    after_callbacks = Map.get(uow.callbacks.after, step, [])
+
     execute_before_callbacks(uow, step, context, before_callbacks)
 
-    # Execute the actual step
-    result = execute_step_function(uow, step, context)
+    {module, function} = Map.get(uow.steps, step)
+    result = apply(module, function, [context])
 
+    # Only execute after callbacks if the step succeeded
     case result do
-      {:ok, step_result} ->
-        # Execute after callbacks on success and allow them to modify the result
-        after_callbacks = Map.get(uow.callbacks.after, step, [])
+      {:ok, _} ->
+        execute_after_callbacks(uow, step, context, result, after_callbacks)
 
-        modified_result =
-          execute_after_callbacks_with_result(
-            uow,
-            step,
-            context,
-            step_result,
-            after_callbacks
-          )
-
-        {:ok, modified_result}
-
-      {:error, _} = error ->
-        error
+      {:error, _} ->
+        :ok
     end
+
+    result
   end
-
-  defp execute_step_function(uow, step, context) do
-    {module, function} = uow.steps[step]
-
-    case step do
-      :conform ->
-        # conform still works with params only
-        params = Map.get(context, :params)
-        apply(module, function, [params])
-
-      :execute ->
-        # execute step - handle both single and composition cases
-        execute_result = Map.get(context, :execute_result)
-
-        result =
-          if execute_result do
-            # This is a composition case where we have a previous result
-            apply(module, function, [execute_result, context])
-          else
-            # Regular execution case
-            apply(module, function, [context])
-          end
-
-        # Ensure result is wrapped in {:ok, result} tuple for step processing
-        case result do
-          {:ok, _} = ok_result -> ok_result
-          {:error, _} = error_result -> error_result
-          other -> {:ok, other}
-        end
-
-      :finalize ->
-        # finalize step - expects a result struct
-        execute_result = Map.get(context, :execute_result)
-
-        if execute_result do
-          apply(module, function, [execute_result])
-        else
-          {:error, "No execute result found for finalize step"}
-        end
-
-      _other_step ->
-        # All other steps now work with context
-        result =
-          cond do
-            module == uow.operation_module ->
-              # For operation module functions, pass context
-              apply(module, function, [context])
-
-            true ->
-              # For extension functions, pass operation module as first arg
-              case function_arity(module, function) do
-                2 ->
-                  apply(module, function, [uow.operation_module, context])
-
-                3 ->
-                  # For 3-arity functions, we might need original context
-                  apply(module, function, [uow.operation_module, context, context])
-
-                _ ->
-                  apply(module, function, [uow.operation_module, context])
-              end
-          end
-
-        # Handle the case where the step function returns an error tuple
-        case result do
-          {:error, _} = error -> error
-          other -> {:ok, other}
-        end
-    end
-  end
-
-  @doc """
-  Default after callback for the execute step that wraps the result in Success/Failure structs.
-  """
-  def wrap_execute_result(:execute, context, execute_result, operation_module) do
-    operation_type = operation_module.__operation_type__()
-    prepared_params = Map.get(context, :prepared_params, Map.get(context, :params))
-
-    case execute_result do
-      {:ok, result} ->
-        %Drops.Operations.Success{
-          operation: operation_module,
-          result: result,
-          params: prepared_params,
-          type: operation_type
-        }
-
-      {:error, error} ->
-        %Drops.Operations.Failure{
-          operation: operation_module,
-          result: error,
-          params: prepared_params,
-          type: operation_type
-        }
-
-      # Handle case where execute returns raw result without tuple
-      result ->
-        %Drops.Operations.Success{
-          operation: operation_module,
-          result: result,
-          params: prepared_params,
-          type: operation_type
-        }
-    end
-  end
-
-  # Callback execution helpers
 
   defp execute_before_callbacks(_uow, _step, _context, []), do: :ok
 
   defp execute_before_callbacks(uow, step, context, [{module, function, config} | rest]) do
-    try do
-      apply(module, function, [step, context, config])
-      execute_before_callbacks(uow, step, context, rest)
-    rescue
-      error ->
-        # Log error but continue with other callbacks
-        require Logger
-        Logger.warning("Before callback failed: #{inspect(error)}")
-        execute_before_callbacks(uow, step, context, rest)
-    end
+    apply(module, function, [uow.module, step, context, config])
+    execute_before_callbacks(uow, step, context, rest)
   end
 
-  defp execute_after_callbacks_with_result(_uow, _step, _context, result, []), do: result
+  defp execute_after_callbacks(_uow, _step, _context, _result, []), do: :ok
 
-  defp execute_after_callbacks_with_result(uow, step, context, result, [
+  defp execute_after_callbacks(uow, step, context, result, [
          {module, function, config} | rest
        ]) do
-    try do
-      # Call the callback and use its return value as the new result
-      new_result = apply(module, function, [step, context, result, config])
-      execute_after_callbacks_with_result(uow, step, context, new_result, rest)
-    rescue
-      error ->
-        # Log error but continue with other callbacks using original result
-        require Logger
-        Logger.warning("After callback failed: #{inspect(error)}")
-        execute_after_callbacks_with_result(uow, step, context, result, rest)
-    end
-  end
-
-  defp execute_around_callbacks(uow, step, context, [{module, function, config} | rest]) do
-    try do
-      # Around callbacks receive a function to call the next callback or the step
-      next_fn = fn ->
-        if rest == [] do
-          execute_step_with_callbacks(uow, step, context)
-        else
-          execute_around_callbacks(uow, step, context, rest)
-        end
-      end
-
-      apply(module, function, [step, context, next_fn, config])
-    rescue
-      error ->
-        {:error, error}
-    end
-  end
-
-  # Helper function to get function arity
-  defp function_arity(module, function) do
-    case :erlang.function_exported(module, function, 1) do
-      true ->
-        1
-
-      false ->
-        case :erlang.function_exported(module, function, 2) do
-          true ->
-            2
-
-          false ->
-            case :erlang.function_exported(module, function, 3) do
-              true -> 3
-              # Default fallback
-              false -> 1
-            end
-        end
-    end
+    apply(module, function, [uow.module, step, context, result, config])
+    execute_after_callbacks(uow, step, context, result, rest)
   end
 end

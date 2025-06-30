@@ -31,20 +31,13 @@ defmodule Drops.Config do
   **Type:** list of `t:module/0`
   **Default:** `[]`
 
-  ### `:registered_extensions`
 
-  A list of extension modules to register automatically when the Drops application starts.
-  These modules should implement the Drops.Operations.Extension behaviour.
-
-  **Type:** list of `t:module/0`
-  **Default:** `[]`
 
   ## Examples
 
       # Basic configuration
       config :drops,
-        registered_types: [MyApp.CustomType],
-        registered_extensions: [MyApp.CustomExtension]
+        registered_types: [MyApp.CustomType]
 
       # Runtime configuration update (not recommended for production)
       Drops.Config.put_config(:registered_types, [MyApp.CustomType, MyApp.AnotherType])
@@ -54,11 +47,6 @@ defmodule Drops.Config do
   A list of type modules to register automatically on application start.
   """
   @type registered_types :: [module()]
-
-  @typedoc """
-  A list of extension modules to register automatically on application start.
-  """
-  @type registered_extensions :: [module()]
 
   # Configuration schema definition
   @config_schema [
@@ -74,20 +62,6 @@ defmodule Drops.Config do
 
           config :drops,
             registered_types: [MyApp.Types.CustomString, MyApp.Types.Email]
-      """
-    ],
-    registered_extensions: [
-      type: {:list, :atom},
-      default: [],
-      type_doc: "list of `t:module/0`",
-      doc: """
-      A list of extension modules to register automatically when the Drops application starts.
-      These modules should implement the Drops.Operations.Extension behaviour.
-
-      ## Example
-
-          config :drops,
-            registered_extensions: [MyApp.Extensions.Audit, MyApp.Extensions.Cache]
       """
     ]
   ]
@@ -198,16 +172,6 @@ defmodule Drops.Config do
   def registered_types, do: fetch!(:registered_types)
 
   @doc """
-  Gets the list of registered extensions.
-
-  ## Returns
-
-  Returns a list of extension modules that have been registered.
-  """
-  @spec registered_extensions() :: [module()]
-  def registered_extensions, do: fetch!(:registered_extensions)
-
-  @doc """
   Updates the value of `key` in the configuration *at runtime*.
 
   Once the `:drops` application starts, it validates and caches the value of the
@@ -240,9 +204,6 @@ defmodule Drops.Config do
 
       # Update registered types at runtime (useful for testing)
       Drops.Config.put_config(:registered_types, [MyApp.CustomType])
-
-      # Update registered extensions at runtime
-      Drops.Config.put_config(:registered_extensions, [MyApp.CustomExtension])
   """
   @spec put_config(atom(), term()) :: :ok
   def put_config(key, value) when is_atom(key) do
