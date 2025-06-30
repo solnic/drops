@@ -40,13 +40,6 @@ defmodule Drops.Operations do
   @callback execute(context :: map()) :: {:ok, any()} | {:error, any()}
 
   @doc """
-  Callback for executing an operation with a previous result and new context.
-  Used for composing operations with the pipeline operator.
-  """
-  @callback execute(previous_result :: any(), context :: map()) ::
-              {:ok, any()} | {:error, any()}
-
-  @doc """
   Callback for finalizing the operation result.
   This extracts the actual result from the Operation result struct for the public API.
   """
@@ -55,15 +48,17 @@ defmodule Drops.Operations do
 
   @doc """
   Callback for preparing parameters before execution.
-  Receives context map and should return updated params.
+  Receives context map and should return updated context.
   """
-  @callback prepare(context :: map()) :: any()
+  @callback prepare(context :: map()) :: {:ok, map()} | {:error, any()}
 
   @doc """
   Callback for validating parameters.
-  Receives context map and should return validated params or error.
+  Receives context map and should return validated context or error.
   """
-  @callback validate(context :: map()) :: {:ok, any()} | {:error, any()}
+  @callback validate(context :: map()) :: {:ok, map()} | {:error, any()}
+
+  @optional_callbacks prepare: 1, validate: 1, finalize: 1
 
   @doc """
   Before compile callback to extend UoW after all schema macros have been processed.
@@ -134,68 +129,6 @@ defmodule Drops.Operations do
     end
   end
 
-  # Public API functions that operations delegate to
-  def call(operation_module, input) do
-    uow = operation_module.__unit_of_work__()
-
-    # Extract context and params from input
-    context = normalize_input(input)
-
-    # Use the full UoW pipeline which includes execute and finalize
-    Drops.Operations.UnitOfWork.process(uow, context)
-  end
-
-  # Pattern match on finalized success result - extract result and continue with pipeline
-  def call(operation_module, {:ok, previous_result}, input) do
-    uow = operation_module.__unit_of_work__()
-
-    # Extract context and params from input
-    context = normalize_input(input)
-    # Add the previous result to the context for composition
-    context_with_previous = Map.put(context, :execute_result, previous_result)
-
-    # Use the full UoW pipeline which includes execute and finalize
-    Drops.Operations.UnitOfWork.process(uow, context_with_previous)
-  end
-
-  # Pattern match on finalized error result - return as-is to short-circuit pipeline
-  def call(_operation_module, {:error, _error} = error_result, _input) do
-    error_result
-  end
-
-  # Normalize input to ensure we have a context map with at least params
-  defp normalize_input(%{params: _params} = context) when is_map(context) do
-    context
-  end
-
-  defp normalize_input(params) do
-    %{params: params}
-  end
-
-  def execute(_operation_module, _context) do
-    raise "execute/1 must be implemented"
-  end
-
-  def execute(_operation_module, _previous_result, _context) do
-    raise "execute/2 must be implemented for operations that support composition"
-  end
-
-  def prepare(_operation_module, context) do
-    context
-  end
-
-  def validate(_operation_module, context) do
-    context
-  end
-
-  def finalize(_operation_module, %__MODULE__.Success{result: result}) do
-    {:ok, result}
-  end
-
-  def finalize(_operation_module, %__MODULE__.Failure{result: result}) do
-    {:error, result}
-  end
-
   defmacro __using__(opts) do
     quote do
       import Drops.Operations
@@ -243,12 +176,7 @@ defmodule Drops.Operations do
 
       use Drops.Contract
 
-      # Conditional import for base module pattern
-      unquote(
-        if base_module do
-          quote do: import(unquote(base_module))
-        end
-      )
+      import unquote(base_module)
 
       @enabled_extensions unquote(enabled_extensions)
       @operation_type unquote(opts[:type])
@@ -265,42 +193,57 @@ defmodule Drops.Operations do
       def __opts__, do: @opts
       def __operation_type__, do: @operation_type
 
-      # Always delegate to the main module to eliminate duplication
-      def call(input) do
-        Drops.Operations.call(__MODULE__, input)
+      def call(context) do
+        UnitOfWork.process(__unit_of_work__(), context)
       end
 
-      def call(previous_result, input) do
-        Drops.Operations.call(__MODULE__, previous_result, input)
+      def call({:ok, previous_result}, context) do
+        UnitOfWork.process(
+          __unit_of_work__(),
+          Map.put(context, :execute_result, previous_result)
+        )
       end
 
-      def execute(context) do
-        Drops.Operations.execute(__MODULE__, context)
+      def call({:error, _error} = error_result, _input) do
+        error_result
       end
 
-      def execute(previous_result, context) do
-        Drops.Operations.execute(__MODULE__, previous_result, context)
+      def conform(%{params: params} = context) when is_map(context) do
+        case super(params) do
+          {:ok, conformed_params} ->
+            {:ok, Map.put(context, :params, conformed_params)}
+
+          {:error, _} = error ->
+            error
+        end
+      end
+
+      def execute(_context) do
+        raise "execute/1 must be implemented"
       end
 
       def prepare(context) do
-        Drops.Operations.prepare(__MODULE__, context)
+        {:ok, context}
       end
 
       def validate(context) when is_map(context) do
-        Drops.Operations.validate(__MODULE__, context)
+        {:ok, context}
       end
 
-      def finalize(result_struct) do
-        Drops.Operations.finalize(__MODULE__, result_struct)
+      def finalize(%Drops.Operations.Success{result: result}) do
+        {:ok, result}
       end
 
+      def finalize(%Drops.Operations.Failure{result: result}) do
+        {:error, result}
+      end
+
+      defoverridable conform: 1
       defoverridable execute: 1
-      defoverridable execute: 2
       defoverridable prepare: 1
       defoverridable validate: 1
       defoverridable finalize: 1
 
-      # Apply extensions after defoverridable declarations
       unquote_splicing(extension_code)
     end
   end

@@ -248,14 +248,17 @@ defmodule Drops.Operations.UnitOfWork do
   @spec process_validation_only(t(), map()) ::
           {:ok, %{original: any(), prepared: any(), validated: any()}} | {:error, any()}
   def process_validation_only(%__MODULE__{} = uow, context) when is_map(context) do
+    # Add operation_module to context so all step functions can access it
+    context_with_operation = Map.put(context, :operation_module, uow.operation_module)
+
     # Get the pipeline steps in order, excluding :execute and :finalize
     pipeline = get_validation_pipeline_steps(uow)
 
     # Extract params from context for backward compatibility
-    params = Map.get(context, :params)
+    params = Map.get(context_with_operation, :params)
 
     # Process through the pipeline, keeping track of original context and prepared params
-    process_pipeline(uow, pipeline, context, params, nil)
+    process_pipeline(uow, pipeline, context_with_operation, params, nil)
   end
 
   # Private functions
@@ -346,36 +349,12 @@ defmodule Drops.Operations.UnitOfWork do
   defp process_full_pipeline_steps(uow, [step | remaining_steps], current_context) do
     case call_step(uow, step, current_context, nil) do
       {:ok, result} ->
-        # Handle different step types
-        updated_context =
-          case step do
-            :conform ->
-              # conform returns params, so update the context
-              Map.put(current_context, :params, result)
-
-            :execute ->
-              # execute returns the raw result, keep context but store result for finalize
-              Map.put(current_context, :execute_result, result)
-
-            :finalize ->
-              # finalize returns the final result, this is what we return
-              result
-
-            _other ->
-              # Other steps should return updated context
-              if is_map(result) do
-                result
-              else
-                # If step returns non-map, treat as params update
-                Map.put(current_context, :params, result)
-              end
-          end
-
-        # If this was the finalize step, return the result directly
+        # For finalize step, return the result directly as the final output
         if step == :finalize do
-          {:ok, updated_context}
+          {:ok, result}
         else
-          process_full_pipeline_steps(uow, remaining_steps, updated_context)
+          # For all other steps, use the result as the context for the next step
+          process_full_pipeline_steps(uow, remaining_steps, result)
         end
 
       {:error, error} ->
@@ -396,23 +375,8 @@ defmodule Drops.Operations.UnitOfWork do
        ) do
     case call_step(uow, step, current_context, original_params) do
       {:ok, result} ->
-        # For conform step, result is params, so update context
-        # For other steps, result should be the updated context
-        updated_context =
-          case step do
-            :conform ->
-              # conform returns params, so update the context
-              Map.put(current_context, :params, result)
-
-            _other ->
-              # Other steps should return updated context
-              if is_map(result) do
-                result
-              else
-                # If step returns non-map, treat as params update
-                Map.put(current_context, :params, result)
-              end
-          end
+        # Use the result as the updated context for the next step
+        updated_context = result
 
         # Store prepared context after the :prepare step
         new_prepared_params =
@@ -446,9 +410,6 @@ defmodule Drops.Operations.UnitOfWork do
       # No around callbacks, execute step with before/after callbacks
       execute_step_with_callbacks(uow, step, context)
     end
-  rescue
-    error ->
-      {:error, error}
   end
 
   defp execute_step_with_callbacks(uow, step, context) do
@@ -483,71 +444,12 @@ defmodule Drops.Operations.UnitOfWork do
   defp execute_step_function(uow, step, context) do
     {module, function} = uow.steps[step]
 
-    case step do
-      :conform ->
-        # conform still works with params only
-        params = Map.get(context, :params)
-        apply(module, function, [params])
+    # All step functions now have consistent arity 1 - they all receive context
+    result = apply(module, function, [context])
 
-      :execute ->
-        # execute step - handle both single and composition cases
-        execute_result = Map.get(context, :execute_result)
-
-        result =
-          if execute_result do
-            # This is a composition case where we have a previous result
-            apply(module, function, [execute_result, context])
-          else
-            # Regular execution case
-            apply(module, function, [context])
-          end
-
-        # Ensure result is wrapped in {:ok, result} tuple for step processing
-        case result do
-          {:ok, _} = ok_result -> ok_result
-          {:error, _} = error_result -> error_result
-          other -> {:ok, other}
-        end
-
-      :finalize ->
-        # finalize step - expects a result struct
-        execute_result = Map.get(context, :execute_result)
-
-        if execute_result do
-          apply(module, function, [execute_result])
-        else
-          {:error, "No execute result found for finalize step"}
-        end
-
-      _other_step ->
-        # All other steps now work with context
-        result =
-          cond do
-            module == uow.operation_module ->
-              # For operation module functions, pass context
-              apply(module, function, [context])
-
-            true ->
-              # For extension functions, pass operation module as first arg
-              case function_arity(module, function) do
-                2 ->
-                  apply(module, function, [uow.operation_module, context])
-
-                3 ->
-                  # For 3-arity functions, we might need original context
-                  apply(module, function, [uow.operation_module, context, context])
-
-                _ ->
-                  apply(module, function, [uow.operation_module, context])
-              end
-          end
-
-        # Handle the case where the step function returns an error tuple
-        case result do
-          {:error, _} = error -> error
-          other -> {:ok, other}
-        end
-    end
+    # Steps should return {:ok, context} or {:error, error}
+    # Don't wrap raw results - let steps handle their own return format
+    result
   end
 
   @doc """
@@ -635,27 +537,6 @@ defmodule Drops.Operations.UnitOfWork do
     rescue
       error ->
         {:error, error}
-    end
-  end
-
-  # Helper function to get function arity
-  defp function_arity(module, function) do
-    case :erlang.function_exported(module, function, 1) do
-      true ->
-        1
-
-      false ->
-        case :erlang.function_exported(module, function, 2) do
-          true ->
-            2
-
-          false ->
-            case :erlang.function_exported(module, function, 3) do
-              true -> 3
-              # Default fallback
-              false -> 1
-            end
-        end
     end
   end
 end
