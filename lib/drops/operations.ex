@@ -68,38 +68,22 @@ defmodule Drops.Operations do
     opts = Module.get_attribute(module, :opts)
     registered_extensions = Module.get_attribute(module, :registered_extensions, [])
     enabled_extensions = Module.get_attribute(module, :enabled_extensions, [])
-
     schema_meta = Module.get_attribute(module, :schema_meta, %{})
+    final_opts = Keyword.put(opts, :schema_meta, schema_meta)
 
-    uow_code =
-      if map_size(schema_meta) > 0 do
-        unit_of_work = Module.get_attribute(module, :unit_of_work)
-        final_opts = Keyword.put(opts, :schema_meta, schema_meta)
-
-        final_extended_uow =
-          Drops.Operations.Extension.extend_unit_of_work(
-            unit_of_work,
-            enabled_extensions,
-            final_opts
-          )
-
-        quote do
-          def __unit_of_work__, do: unquote(Macro.escape(final_extended_uow))
-        end
-      else
-        unit_of_work = Module.get_attribute(module, :unit_of_work)
-
-        quote do
-          def __unit_of_work__, do: unquote(Macro.escape(unit_of_work))
-        end
-      end
+    unit_of_work =
+      Drops.Operations.Extension.extend_unit_of_work(
+        Module.get_attribute(module, :unit_of_work),
+        enabled_extensions,
+        final_opts
+      )
 
     quote do
       def registered_extensions, do: unquote(Enum.reverse(registered_extensions))
 
       def enabled_extensions, do: unquote(Enum.reverse(enabled_extensions))
 
-      unquote(uow_code)
+      def __unit_of_work__, do: unquote(Macro.escape(unit_of_work))
     end
   end
 
