@@ -1,193 +1,131 @@
 defmodule Drops.Operations.ExtensionTest do
-  use Drops.OperationCase, async: true
+  use Drops.OperationCase, async: false
 
-  alias Drops.Operations.Extension
-
-  # Ensure test extensions are compiled and available
   Code.require_file("test/support/test_extension.ex")
   Code.require_file("test/support/manual_extension.ex")
 
-  alias Test.Support.{TestExtension, ManualExtension}
+  alias Test.Extensions, as: Exts
 
   describe "extension registration" do
-    test "register_extension/1 adds extension to registry" do
-      # Register our test extension
-      assert :ok = Extension.register_extension(TestExtension)
+    test "register_extension/1 adds new extensions to registry" do
+      defmodule Test.MyOperations do
+        use Drops.Operations
 
-      # Verify it's in the registry
-      assert TestExtension in Extension.registered_extensions()
-      assert Extension.extension?(TestExtension)
+        register_extension(Exts.PrepareExtension)
+        register_extension(Exts.ManualExtension)
+      end
+
+      assert Test.MyOperations.registered_extensions() == [
+               Exts.PrepareExtension,
+               Exts.ManualExtension
+             ]
     end
 
-    test "register_extension/1 prevents duplicates" do
-      # Register the same extension twice
-      Extension.register_extension(TestExtension)
-      initial_count = length(Extension.registered_extensions())
+    test "operations inherit extensions from base module" do
+      defmodule Test.MyOperationsWithExtensions do
+        use Drops.Operations
 
-      Extension.register_extension(TestExtension)
-      final_count = length(Extension.registered_extensions())
+        register_extension(Exts.PrepareExtension)
+      end
 
-      # Count should be the same
-      assert initial_count == final_count
-    end
-
-    test "extension?/1 returns false for non-registered extensions" do
-      refute Extension.extension?(NonExistentExtension)
-    end
-
-    test "available_extensions/0 returns registered extensions" do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
-      available = Extension.available_extensions()
-      assert TestExtension in available
-      assert ManualExtension in available
-    end
-  end
-
-  describe "extension auto-discovery" do
-    setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-      :ok
-    end
-
-    test "enabled_extensions/1 includes auto-discovered extensions" do
-      opts = [test_logging: true]
-      enabled = Extension.enabled_extensions(opts)
-
-      # TestExtension should be auto-discovered because test_logging is present
-      assert TestExtension in enabled
-
-      # ManualExtension should NOT be auto-discovered (always returns false)
-      refute ManualExtension in enabled
-    end
-
-    test "enabled_extensions/1 excludes extensions that don't match criteria" do
-      opts = [some_other_option: true]
-      enabled = Extension.enabled_extensions(opts)
-
-      # Neither extension should be enabled
-      refute TestExtension in enabled
-      refute ManualExtension in enabled
-    end
-  end
-
-  describe "explicit extension configuration" do
-    setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-      :ok
-    end
-
-    test "enabled_extensions/1 includes explicitly configured extensions" do
-      opts = [extensions: [ManualExtension]]
-      enabled = Extension.enabled_extensions(opts)
-
-      # ManualExtension should be enabled even though it doesn't auto-discover
-      assert ManualExtension in enabled
-
-      # TestExtension should NOT be enabled (not in explicit list and no test_logging)
-      refute TestExtension in enabled
-    end
-
-    test "enabled_extensions/1 combines explicit and auto-discovered extensions" do
-      opts = [test_logging: true, extensions: [ManualExtension]]
-      enabled = Extension.enabled_extensions(opts)
-
-      # Both extensions should be enabled
-      # auto-discovered
-      assert TestExtension in enabled
-      # explicitly configured
-      assert ManualExtension in enabled
-    end
-
-    test "enabled_extensions/1 deduplicates extensions" do
-      opts = [test_logging: true, extensions: [TestExtension]]
-      enabled = Extension.enabled_extensions(opts)
-
-      # TestExtension should appear only once even though it's both auto-discovered and explicit
-      assert TestExtension in enabled
-      assert length(Enum.filter(enabled, &(&1 == TestExtension))) == 1
-    end
-  end
-
-  describe "extension integration with operations" do
-    setup do
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-      :ok
-    end
-
-    test "auto-discovered extension is applied to operation module" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
-
-      defmodule TestOperationWithAutoExtension do
-        use Drops.Operations, type: :command, test_logging: true
+      defmodule Test.MyOperation do
+        use Test.MyOperationsWithExtensions
 
         def execute(context) do
-          {:ok, context.params}
+          {:ok, context}
         end
       end
 
-      # Verify the extension was loaded
-      assert TestOperationWithAutoExtension.__test_extension_loaded?()
-      assert function_exported?(TestOperationWithAutoExtension, :log_operation, 1)
+      assert Test.MyOperationsWithExtensions.registered_extensions() == [
+               Exts.PrepareExtension
+             ]
     end
+  end
 
-    test "explicitly configured extension is applied to operation module" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+  describe "extension behavior verification" do
+    test "PrepareExtension modifies params in prepare step" do
+      defmodule Test.PrepareOperations do
+        use Drops.Operations
 
-      defmodule TestOperationWithManualExtension do
-        use Drops.Operations, type: :command, extensions: [Test.Support.ManualExtension]
+        register_extension(Exts.PrepareExtension)
+      end
 
-        def execute(context) do
-          {:ok, context.params}
+      defmodule Test.PrepareOperation do
+        use Test.PrepareOperations
+
+        schema do
+          %{
+            required(:name) => string()
+          }
+        end
+
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, params}
         end
       end
 
-      # Verify the extension was loaded
-      assert TestOperationWithManualExtension.__manual_extension_loaded?()
-
-      assert function_exported?(
-               TestOperationWithManualExtension,
-               :manual_extension_active?,
-               0
-             )
-
-      assert TestOperationWithManualExtension.manual_extension_active?()
+      {:ok, result} = Test.PrepareOperation.call(%{params: %{name: "test"}})
+      assert result == %{name: "prepared_test"}
     end
 
-    test "multiple extensions can be applied together" do
-      # Ensure extensions are registered before defining the operation
-      Extension.register_extension(TestExtension)
-      Extension.register_extension(ManualExtension)
+    test "ValidateExtension adds custom validation" do
+      defmodule Test.ValidateOperations do
+        use Drops.Operations
 
-      defmodule TestOperationWithBothExtensions do
-        use Drops.Operations,
-          type: :command,
-          test_logging: true,
-          extensions: [Test.Support.ManualExtension]
+        register_extension(Exts.ValidateExtension)
+      end
 
-        def execute(context) do
-          {:ok, context.params}
+      defmodule Test.ValidateOperation do
+        use Test.ValidateOperations
+
+        schema do
+          %{
+            required(:name) => string()
+          }
+        end
+
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, params}
         end
       end
 
-      # Verify both extensions were loaded
-      assert TestOperationWithBothExtensions.__test_extension_loaded?()
-      assert TestOperationWithBothExtensions.__manual_extension_loaded?()
-      assert function_exported?(TestOperationWithBothExtensions, :log_operation, 1)
+      {:ok, result} = Test.ValidateOperation.call(%{params: %{name: "valid_name"}})
+      assert result == %{name: "valid_name"}
 
-      assert function_exported?(
-               TestOperationWithBothExtensions,
-               :manual_extension_active?,
-               0
-             )
+      {:error, error} = Test.ValidateOperation.call(%{params: %{name: "invalid_name"}})
+      assert error == "name cannot contain 'invalid'"
+    end
+
+    test "multiple extensions work together" do
+      defmodule Test.MultiExtensionOperations do
+        use Drops.Operations
+
+        register_extension(Exts.PrepareExtension)
+        register_extension(Exts.ValidateExtension)
+      end
+
+      defmodule Test.MultiExtensionOperation do
+        use Test.MultiExtensionOperations
+
+        schema do
+          %{
+            required(:name) => string()
+          }
+        end
+
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, params}
+        end
+      end
+
+      {:ok, result} = Test.MultiExtensionOperation.call(%{params: %{name: "test"}})
+      assert result == %{name: "prepared_test"}
+
+      {:error, error} = Test.MultiExtensionOperation.call(%{params: %{name: "invalid"}})
+      assert error == "name cannot contain 'invalid'"
     end
   end
 end

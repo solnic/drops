@@ -4,7 +4,22 @@ defmodule Drops.Operations do
 
   This module provides a framework for defining operations that can be used
   to encapsulate business logic with input validation and execution.
+
+  ## Extension Registration
+
+  Extensions can be registered using the `register_extension` macro:
+
+      defmodule MyApp.Operations do
+        use Drops.Operations
+
+        register_extension(MyApp.Extensions.Audit)
+      end
+
   """
+
+  require Drops.Operations.Extension
+
+  alias Drops.Operations.{Extension, UnitOfWork}
 
   defmodule Success do
     @type t :: %__MODULE__{}
@@ -54,30 +69,68 @@ defmodule Drops.Operations do
   Before compile callback to extend UoW after all schema macros have been processed.
   """
   defmacro __before_compile__(env) do
-    # Get the module being compiled
     module = env.module
+    opts = Module.get_attribute(module, :opts)
+    registered_extensions = Module.get_attribute(module, :registered_extensions, [])
+    enabled_extensions = Module.get_attribute(module, :enabled_extensions, [])
 
-    # Check if we need to extend the UoW based on schema metadata
-    final_schema_meta = Module.get_attribute(module, :schema_meta, %{})
+    schema_meta = Module.get_attribute(module, :schema_meta, %{})
 
-    if map_size(final_schema_meta) > 0 do
-      # We have schema metadata, so extend the UoW
-      operation_opts = Module.get_attribute(module, :operation_opts, [])
-      unit_of_work = Module.get_attribute(module, :unit_of_work)
-      final_opts = Keyword.put(operation_opts, :schema_meta, final_schema_meta)
+    uow_code =
+      if map_size(schema_meta) > 0 do
+        unit_of_work = Module.get_attribute(module, :unit_of_work)
+        final_opts = Keyword.put(opts, :schema_meta, schema_meta)
 
-      final_extended_uow =
-        Drops.Operations.Extension.extend_unit_of_work(unit_of_work, final_opts)
+        final_extended_uow =
+          Drops.Operations.Extension.extend_unit_of_work(
+            unit_of_work,
+            enabled_extensions,
+            final_opts
+          )
 
-      quote do
-        # Define the function to return the extended UoW
-        def __unit_of_work__, do: unquote(Macro.escape(final_extended_uow))
+        quote do
+          def __unit_of_work__, do: unquote(Macro.escape(final_extended_uow))
+        end
+      else
+        unit_of_work = Module.get_attribute(module, :unit_of_work)
+
+        quote do
+          def __unit_of_work__, do: unquote(Macro.escape(unit_of_work))
+        end
       end
-    else
-      quote do
-        # No schema metadata, use the base UoW
-        def __unit_of_work__, do: @unit_of_work
+
+    quote do
+      def registered_extensions, do: unquote(Enum.reverse(registered_extensions))
+
+      def enabled_extensions, do: unquote(Enum.reverse(enabled_extensions))
+
+      unquote(uow_code)
+    end
+  end
+
+  @doc """
+  Register an extension module for this operations module.
+
+  This macro accumulates extension modules in the `:registered_extensions` module attribute.
+  When operations are defined using this module as a base, they will automatically
+  be extended with the registered extensions.
+
+  ## Parameters
+
+  - `extension` - The extension module to register
+
+  ## Example
+
+      defmodule MyApp.Operations do
+        use Drops.Operations
+
+        register_extension(MyApp.Extensions.Audit)
+        register_extension(MyApp.Extensions.Cache)
       end
+  """
+  defmacro register_extension(extension) do
+    quote do
+      @registered_extensions unquote(extension)
     end
   end
 
@@ -147,24 +200,22 @@ defmodule Drops.Operations do
     quote do
       import Drops.Operations
 
-      # Store the app-level options (like repo) to pass to operations
-      @app_opts unquote(opts)
+      @opts unquote(opts)
+      def __opts__, do: @opts
 
-      # Define a function to return the app options
-      def __app_opts__, do: @app_opts
+      Module.register_attribute(__MODULE__, :registered_extensions, accumulate: true)
 
-      # Apply extensions to the main using macro
-      unquote_splicing(Drops.Operations.Extension.extend_using_macro(opts))
+      @before_compile Drops.Operations
+
+      import Drops.Operations, only: [register_extension: 1]
 
       defmacro __using__(opts) when opts == [] do
-        # When used without arguments, use this module as a base operations module
-        Drops.Operations.__define_operation__(@app_opts, __MODULE__)
+        Drops.Operations.__define_operation__(@opts, __MODULE__)
       end
 
       defmacro __using__(type) when is_atom(type) do
-        # Merge app-level options with operation-specific options
-        merged_opts = Keyword.merge(@app_opts, type: type)
-        Drops.Operations.__define_operation__(merged_opts, nil)
+        merged_opts = Keyword.merge(@opts, type: type)
+        Drops.Operations.__define_operation__(merged_opts, __MODULE__)
       end
 
       defmacro __using__(opts) when is_list(opts) do
@@ -172,24 +223,20 @@ defmodule Drops.Operations do
           raise ArgumentError, "type option is required when using Drops.Operations"
         end
 
-        # Merge app-level options with operation-specific options
-        merged_opts = Keyword.merge(@app_opts, opts)
-        Drops.Operations.__define_operation__(merged_opts, nil)
+        merged_opts = Keyword.merge(@opts, opts)
+        Drops.Operations.__define_operation__(merged_opts, __MODULE__)
       end
     end
   end
 
   @doc false
-  def __define_operation__(opts, base_module \\ nil) do
-    # Determine which extension code to use based on whether we have a base module
-    extension_code =
-      if base_module do
-        # Get the app options at compile time for runtime operations
-        app_opts = base_module.__app_opts__()
-        Drops.Operations.Extension.extend_operation_runtime(app_opts)
-      else
-        Drops.Operations.Extension.extend_operation_definition(opts)
-      end
+  def __define_operation__(opts, base_module) do
+    final_opts = Keyword.merge(base_module.__opts__(), opts)
+
+    enabled_extensions =
+      Extension.enabled_extensions(base_module.registered_extensions(), final_opts)
+
+    extension_code = Extension.extend_operation(enabled_extensions, final_opts)
 
     quote location: :keep do
       @behaviour Drops.Operations
@@ -203,42 +250,19 @@ defmodule Drops.Operations do
         end
       )
 
-      # Store the repo configuration if provided
-      @repo unquote(opts[:repo])
-
-      # Store the operation type
+      @enabled_extensions unquote(enabled_extensions)
       @operation_type unquote(opts[:type])
+      @opts unquote(final_opts)
+      @schema_opts if unquote(opts[:type]) == :form, do: [atomize: true], else: []
+      @unit_of_work UnitOfWork.new(__MODULE__)
 
-      # Store the operation options for extension access
-      @app_opts unquote(opts)
-
-      # Set default schema options based on operation type
-      @schema_opts (case unquote(opts[:type]) do
-                      :form -> [atomize: true]
-                      _ -> []
-                    end)
-
-      # Define a function to return the app options
-      def __app_opts__, do: @app_opts
+      @before_compile Drops.Operations
 
       schema do
         %{}
       end
 
-      # Create and store the UnitOfWork
-      @unit_of_work Drops.Operations.UnitOfWork.new(__MODULE__)
-
-      # Store options for UoW extension
-      @operation_opts unquote(opts)
-
-      # Initialize extended UoW to base UoW (not used anymore, kept for compatibility)
-      @extended_unit_of_work @unit_of_work
-
-      # Use @before_compile to process schema callbacks after all schemas are set
-      @before_compile Drops.Operations
-
-      # Accessor functions for module attributes
-      def __repo__, do: @repo
+      def __opts__, do: @opts
       def __operation_type__, do: @operation_type
 
       # Always delegate to the main module to eliminate duplication

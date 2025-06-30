@@ -1,87 +1,57 @@
-defmodule Test.Support.TestExtension do
-  @moduledoc """
-  A test extension for verifying the Operations.Extension API.
+defmodule Test.Extensions do
+  defmodule PrepareExtension do
+    @behaviour Drops.Operations.Extension
 
-  This extension adds logging functionality and custom validation
-  to operations when the :test_logging option is present.
-  """
+    @impl true
+    def enabled?(_opts) do
+      true
+    end
 
-  @behaviour Drops.Operations.Extension
-
-  @impl true
-  def enabled?(opts) do
-    Keyword.has_key?(opts, :test_logging)
-  end
-
-  @impl true
-  def extend_using_macro(opts) do
-    if Keyword.get(opts, :test_logging) do
+    @impl true
+    def extend_operation(_opts) do
       quote do
-        # Add a module attribute to track that this extension was loaded
-        @test_extension_loaded true
+        def prepare(%{params: params} = context) do
+          updated_params =
+            if Map.has_key?(params, :name) do
+              Map.put(params, :name, "prepared_" <> params.name)
+            else
+              params
+            end
 
-        # Define a function to check if the extension is loaded
-        def __test_extension_loaded?, do: @test_extension_loaded
-
-        # Add logging function
-        def log_operation(message) do
-          IO.puts("[TestExtension] #{__MODULE__}: #{message}")
+          {:ok, Map.put(context, :params, updated_params)}
         end
       end
-    else
-      quote do
-      end
+    end
+
+    @impl true
+    def extend_unit_of_work(uow, _opts) do
+      uow
     end
   end
 
-  @impl true
-  def extend_operation_runtime(opts) do
-    if Keyword.get(opts, :test_logging) do
-      quote do
-        # Add logging to runtime operations
-        def log_operation(message) do
-          IO.puts("[TestExtension] #{__MODULE__}: #{message}")
-        end
+  defmodule ValidateExtension do
+    @behaviour Drops.Operations.Extension
 
-        # Override prepare to add logging
-        def prepare(context) do
-          log_operation("Preparing operation with params: #{inspect(context.params)}")
-          super(context)
-        end
-      end
-    else
-      quote do
-      end
+    @impl true
+    def enabled?(_opts) do
+      true
     end
-  end
 
-  @impl true
-  def extend_operation_definition(opts) do
-    if Keyword.get(opts, :test_logging) do
+    @impl true
+    def extend_operation(_opts) do
       quote do
-        # Add logging to compile-time operations
-        def log_operation(message) do
-          IO.puts("[TestExtension] #{__MODULE__}: #{message}")
-        end
-      end
-    else
-      quote do
-      end
-    end
-  end
-
-  @impl true
-  def extend_unit_of_work(uow, opts) do
-    if Keyword.get(opts, :test_logging) do
-      # Add a custom step to the UnitOfWork for logging
-      %{
-        uow
-        | prepare: fn context ->
-            IO.puts("[TestExtension UoW] Preparing: #{inspect(context.params)}")
-            uow.prepare.(context)
+        def validate(%{params: params} = context) do
+          if Map.has_key?(params, :name) and String.contains?(params.name, "invalid") do
+            {:error, "name cannot contain 'invalid'"}
+          else
+            {:ok, context}
           end
-      }
-    else
+        end
+      end
+    end
+
+    @impl true
+    def extend_unit_of_work(uow, _opts) do
       uow
     end
   end
