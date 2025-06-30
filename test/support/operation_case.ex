@@ -4,6 +4,7 @@ defmodule Drops.OperationCase do
   using do
     quote do
       use Drops.DataCase
+      use Drops.DoctestCase
       import Drops.OperationCase
       import Drops.Test.Config
     end

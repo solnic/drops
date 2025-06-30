@@ -40,13 +40,6 @@ defmodule Drops.Operations do
   @callback execute(context :: map()) :: {:ok, any()} | {:error, any()}
 
   @doc """
-  Callback for finalizing the operation result.
-  This extracts the actual result from the Operation result struct for the public API.
-  """
-  @callback finalize(result_struct :: Success.t() | Failure.t()) ::
-              {:ok, any()} | {:error, any()}
-
-  @doc """
   Callback for preparing parameters before execution.
   Receives context map and should return updated context.
   """
@@ -58,7 +51,7 @@ defmodule Drops.Operations do
   """
   @callback validate(context :: map()) :: {:ok, map()} | {:error, any()}
 
-  @optional_callbacks prepare: 1, validate: 1, finalize: 1
+  @optional_callbacks prepare: 1, validate: 1
 
   @doc """
   Before compile callback to extend UoW after all schema macros have been processed.
@@ -71,9 +64,23 @@ defmodule Drops.Operations do
     schema_meta = Module.get_attribute(module, :schema_meta, %{})
     final_opts = Keyword.put(opts, :schema_meta, schema_meta)
 
+    # Create the UnitOfWork now that the schema is available
+    # Determine which steps to include based on schema
+    base_steps = [:conform, :prepare, :validate, :execute]
+
+    steps =
+      if has_empty_schema?(module) do
+        List.delete(base_steps, :conform)
+      else
+        base_steps
+      end
+
+    base_unit_of_work = UnitOfWork.new(module, steps)
+
     unit_of_work =
       Drops.Operations.Extension.extend_unit_of_work(
-        Module.get_attribute(module, :unit_of_work),
+        base_unit_of_work,
+        module,
         enabled_extensions,
         final_opts
       )
@@ -166,8 +173,6 @@ defmodule Drops.Operations do
       @operation_type unquote(opts[:type])
       @opts unquote(final_opts)
       @schema_opts if unquote(opts[:type]) == :form, do: [atomize: true], else: []
-      @unit_of_work UnitOfWork.new(__MODULE__)
-
       @before_compile Drops.Operations
 
       schema do
@@ -214,21 +219,19 @@ defmodule Drops.Operations do
         {:ok, context}
       end
 
-      def finalize(%Drops.Operations.Success{result: result}) do
-        {:ok, result}
-      end
-
-      def finalize(%Drops.Operations.Failure{result: result}) do
-        {:error, result}
-      end
-
       defoverridable conform: 1
       defoverridable execute: 1
       defoverridable prepare: 1
       defoverridable validate: 1
-      defoverridable finalize: 1
 
       unquote_splicing(extension_code)
     end
+  end
+
+  defp has_empty_schema?(operation_module) do
+    schemas = Module.get_attribute(operation_module, :schemas, %{})
+    default_schema = schemas[:default]
+
+    default_schema == nil or length(default_schema.keys) == 0
   end
 end

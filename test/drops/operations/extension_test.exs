@@ -66,7 +66,7 @@ defmodule Drops.Operations.ExtensionTest do
       end
 
       {:ok, result} = Test.PrepareOperation.call(%{params: %{name: "test"}})
-      assert result == %{name: "prepared_test"}
+      assert result == %{name: "prepared_test", prepared: true}
     end
 
     test "ValidateExtension adds custom validation" do
@@ -122,10 +122,80 @@ defmodule Drops.Operations.ExtensionTest do
       end
 
       {:ok, result} = Test.MultiExtensionOperation.call(%{params: %{name: "test"}})
-      assert result == %{name: "prepared_test"}
+      assert result == %{name: "prepared_test", prepared: true}
 
       {:error, error} = Test.MultiExtensionOperation.call(%{params: %{name: "invalid"}})
       assert error == "name cannot contain 'invalid'"
+    end
+
+    test "StepExtension adds steps before and after prepare" do
+      defmodule Test.StepOperations do
+        use Drops.Operations
+
+        register_extension(Exts.StepExtension)
+      end
+
+      defmodule Test.StepOperation do
+        use Test.StepOperations
+
+        schema do
+          %{
+            required(:name) => string()
+          }
+        end
+
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, params}
+        end
+      end
+
+      # Check that steps are added to the UnitOfWork
+      uow = Test.StepOperation.__unit_of_work__()
+
+      # Verify log_before_prepare step is added before prepare
+      prepare_index = Enum.find_index(uow.step_order, &(&1 == :prepare))
+      before_index = Enum.find_index(uow.step_order, &(&1 == :log_before_prepare))
+
+      assert before_index == prepare_index - 1
+      assert uow.steps[:log_before_prepare] == {Test.StepOperation, :log_before_prepare}
+
+      # Verify log_after_prepare step is added after prepare
+      after_index = Enum.find_index(uow.step_order, &(&1 == :log_after_prepare))
+      assert after_index == prepare_index + 1
+      assert uow.steps[:log_after_prepare] == {Test.StepOperation, :log_after_prepare}
+    end
+
+    test "StepExtension demonstrates step execution order" do
+      defmodule Test.StepTestOperations do
+        use Drops.Operations
+
+        register_extension(Exts.StepExtension)
+      end
+
+      defmodule Test.StepTestOperation do
+        use Test.StepTestOperations
+
+        schema do
+          %{
+            required(:data) => string()
+          }
+        end
+
+        @impl true
+        def execute(context) do
+          # Return the full context so we can verify the step markers
+          {:ok, context}
+        end
+      end
+
+      # Test actual execution to verify steps work
+      context = %{params: %{data: "test"}}
+      {:ok, result} = Test.StepTestOperation.call(context)
+
+      # Verify both before and after steps were executed
+      assert result.before_prepare_called == true
+      assert result.after_prepare_called == true
     end
   end
 end

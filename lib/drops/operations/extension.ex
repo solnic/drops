@@ -80,10 +80,14 @@ defmodule Drops.Operations.Extension do
 
   Returns the modified UnitOfWork.
   """
-  @callback extend_unit_of_work(uow :: Drops.Operations.UnitOfWork.t(), opts :: keyword()) ::
+  @callback extend_unit_of_work(
+              uow :: Drops.Operations.UnitOfWork.t(),
+              Module.t(),
+              opts :: keyword()
+            ) ::
               Drops.Operations.UnitOfWork.t()
 
-  @optional_callbacks extend_unit_of_work: 2
+  @optional_callbacks extend_unit_of_work: 3
 
   @doc """
   Get enabled extensions based on the provided options and registered extensions.
@@ -135,11 +139,11 @@ defmodule Drops.Operations.Extension do
 
   Returns the modified UnitOfWork with extension overrides applied.
   """
-  def extend_unit_of_work(uow, registered_extensions, opts) do
+  def extend_unit_of_work(uow, mod, registered_extensions, opts) do
     enabled_extensions(registered_extensions, opts)
     |> Enum.reduce(uow, fn extension, acc_uow ->
-      if function_exported?(extension, :extend_unit_of_work, 2) do
-        extension.extend_unit_of_work(acc_uow, opts)
+      if function_exported?(extension, :extend_unit_of_work, 3) do
+        extension.extend_unit_of_work(acc_uow, mod, opts)
       else
         acc_uow
       end
