@@ -105,7 +105,9 @@ defmodule Drops.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ecto, "~> 3.10", optional: true},
       {:ecto_sql, "~> 3.10", optional: true},
-      {:ecto_sqlite3, "~> 0.12", only: [:test, :dev]}
+      {:ecto_sqlite3, "~> 0.12", only: [:test, :dev]},
+      {:phoenix_html, "~> 4.0", only: [:test], runtime: false, optional: true},
+      {:phoenix_ecto, "~> 4.0", only: [:test], runtime: false, optional: true}
     ]
   end
 end

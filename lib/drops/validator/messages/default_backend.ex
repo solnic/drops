@@ -37,12 +37,20 @@ defmodule Drops.Validator.Messages.DefaultBackend do
     not_in?: "must not be one of: %input%",
 
     # built-in types
-    number: "must be a number"
+    number: "must be a number",
+
+    # cast errors
+    cast: "%input%"
   }
 
   @impl true
   def text(:number, _opts) do
     @text_mapping[:number]
+  end
+
+  @impl true
+  def text(:cast, error_message) do
+    error_message
   end
 
   @impl true
@@ -68,6 +76,11 @@ defmodule Drops.Validator.Messages.DefaultBackend do
   @impl true
   def text(:not_in?, values, _input) do
     String.replace(@text_mapping[:not_in?], "%input%", Enum.join(values, ", "))
+  end
+
+  @impl true
+  def text(:cast, error_message, _input) do
+    error_message
   end
 
   @impl true

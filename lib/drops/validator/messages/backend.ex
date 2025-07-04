@@ -96,6 +96,15 @@ defmodule Drops.Validator.Messages.Backend do
         }
       end
 
+      defp error({:error, {path, [predicate: predicate, args: [error_message]] = meta}})
+           when is_list(path) do
+        %Error.Type{
+          path: path,
+          text: text(predicate, error_message),
+          meta: meta
+        }
+      end
+
       defp error({:error, {path, {:map, results}}}) do
         Enum.map(results, &error/1)
         |> List.flatten()
