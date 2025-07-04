@@ -236,7 +236,13 @@ defmodule Drops.Operations.UnitOfWorkTest do
       UnitOfWork.process(updated_uow, context)
 
       # Verify the callback was called with correct parameters
-      assert_receive {:before_callback, TestOperation, :prepare, ^context, ^config}
+      # Note: config now includes trace, so we check the essential parts
+      assert_receive {:before_callback, TestOperation, :prepare, ^context,
+                      received_config}
+
+      assert received_config.test_pid == test_pid
+      assert received_config.key == "value"
+      assert Map.has_key?(received_config, :trace)
     end
 
     test "executes multiple before callbacks in registration order" do
@@ -392,7 +398,11 @@ defmodule Drops.Operations.UnitOfWorkTest do
       expected_result = {:ok, %{params: %{name: "test"}, prepared: true}}
 
       assert_receive {:after_callback, TestOperation, :prepare, ^context,
-                      ^expected_result, ^config}
+                      ^expected_result, received_config}
+
+      assert received_config.test_pid == test_pid
+      assert received_config.key == "value"
+      assert Map.has_key?(received_config, :trace)
     end
 
     test "executes multiple after callbacks in registration order" do
@@ -554,7 +564,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       assert_receive {:after, :execute, ^prepared_context, ^expected_execute_result}
     end
 
-    test "after callbacks are not called when step fails" do
+    test "after callbacks are called even when step fails" do
       test_pid = self()
 
       defmodule CallbackModule do
@@ -562,8 +572,8 @@ defmodule Drops.Operations.UnitOfWorkTest do
           send(config.test_pid, {:before, step})
         end
 
-        def after_validate(_module, step, _context, _result, config) do
-          send(config.test_pid, {:after, step})
+        def after_validate(_module, step, _context, result, config) do
+          send(config.test_pid, {:after, step, result})
         end
       end
 
@@ -605,9 +615,9 @@ defmodule Drops.Operations.UnitOfWorkTest do
       context = %{params: %{}}
       {:error, _} = UnitOfWork.process(updated_uow, context)
 
-      # Verify before callback was called but after callback was not
+      # Verify both before and after callbacks were called
       assert_receive {:before, :validate}
-      refute_receive {:after, :validate}
+      assert_receive {:after, :validate, {:error, "validation failed"}}
     end
   end
 
