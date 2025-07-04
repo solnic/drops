@@ -1,13 +1,8 @@
-defmodule Test.Support.ManualExtension do
-  @behaviour Drops.Operations.Extension
+defmodule Test.Extensions.ManualExtension do
+  use Drops.Operations.Extension
 
-  @impl true
-  def enabled?(_opts) do
-    false
-  end
-
-  @impl true
-  def extend_operation(_opts) do
-    []
+  def extend(_source_module, _target_module, _opts) do
+    quote do
+    end
   end
 end

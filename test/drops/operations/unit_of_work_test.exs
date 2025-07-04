@@ -44,27 +44,34 @@ defmodule Drops.Operations.UnitOfWorkTest do
     test "after_step/3 executes new step after existing step" do
       test_pid = self()
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-
-        def prepare(context) do
-          send(context.test_pid, {:step, :prepare})
-          {:ok, context}
-        end
-
-        def audit(context) do
-          send(context.test_pid, {:step, :audit})
-          {:ok, context}
-        end
-
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+
+          def prepare(context) do
+            send(context.test_pid, {:step, :prepare})
+            {:ok, context}
+          end
+
+          def audit(context) do
+            send(context.test_pid, {:step, :audit})
+            {:ok, context}
+          end
+
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       updated_uow = UnitOfWork.after_step(uow, :prepare, :audit)
 
       context = %{params: %{}, test_pid: test_pid}
@@ -75,62 +82,68 @@ defmodule Drops.Operations.UnitOfWorkTest do
       assert_receive {:step, :audit}
     end
 
-    test "after_step/3 adds step at end when existing step not found" do
-      test_pid = self()
+    test "after_step/3 raises when existing step not found" do
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
+      end
 
       defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
+        use TestOperations
 
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
 
-        def execute(context) do
-          send(context.test_pid, {:step, :execute})
-          {:ok, context}
-        end
+          @impl true
+          def execute(context) do
+            {:ok, context}
+          end
 
-        def audit(context) do
-          send(context.test_pid, {:step, :audit})
-          {:ok, context}
+          def audit(context) do
+            {:ok, context}
+          end
         end
       end
 
-      uow = new_uow(TestOperation)
-      updated_uow = UnitOfWork.after_step(uow, :nonexistent, :audit)
+      uow = TestOperation.__unit_of_work__()
 
-      context = %{params: %{}, test_pid: test_pid}
-      UnitOfWork.process(updated_uow, context)
-
-      # Verify audit step was executed last
-      assert_receive {:step, :execute}
-      assert_receive {:step, :audit}
+      assert_raise RuntimeError,
+                   "Existing step nonexistent not found in UnitOfWork",
+                   fn ->
+                     UnitOfWork.after_step(uow, :nonexistent, :audit)
+                   end
     end
 
     test "before_step/3 executes new step before existing step" do
       test_pid = self()
 
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
+      end
+
       defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
+        use TestOperations
 
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
 
-        def audit(context) do
-          send(context.test_pid, {:step, :audit})
-          {:ok, context}
-        end
+          def audit(context) do
+            send(context.test_pid, {:step, :audit})
+            {:ok, context}
+          end
 
-        def execute(context) do
-          send(context.test_pid, {:step, :execute})
-          {:ok, context}
+          @impl true
+          def execute(context) do
+            send(context.test_pid, {:step, :execute})
+            {:ok, context}
+          end
         end
       end
 
-      uow = new_uow(TestOperation)
+      uow = TestOperation.__unit_of_work__()
       updated_uow = UnitOfWork.before_step(uow, :execute, :audit)
 
       context = %{params: %{}, test_pid: test_pid}
@@ -141,37 +154,38 @@ defmodule Drops.Operations.UnitOfWorkTest do
       assert_receive {:step, :execute}
     end
 
-    test "before_step/3 adds step at beginning when existing step not found" do
-      test_pid = self()
-
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def audit(context) do
-          send(context.test_pid, {:step, :audit})
-          {:ok, context}
-        end
-
-        def conform(context) do
-          send(context.test_pid, {:step, :conform})
-          {:ok, context}
-        end
-
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+    test "before_step/3 raises when existing step not found" do
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
-      updated_uow = UnitOfWork.before_step(uow, :nonexistent, :audit)
+      defmodule TestOperation do
+        use TestOperations
 
-      context = %{params: %{}, test_pid: test_pid}
-      UnitOfWork.process(updated_uow, context)
+        steps do
+          def audit(context) do
+            {:ok, context}
+          end
 
-      # Verify audit step was executed first
-      assert_receive {:step, :audit}
-      assert_receive {:step, :conform}
+          def conform(context) do
+            {:ok, context}
+          end
+
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
+
+      assert_raise RuntimeError,
+                   "Existing step nonexistent not found in UnitOfWork",
+                   fn ->
+                     UnitOfWork.before_step(uow, :nonexistent, :audit)
+                   end
     end
   end
 
@@ -189,17 +203,24 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid, key: "value"}
 
       updated_uow =
@@ -233,17 +254,24 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid}
 
       updated_uow =
@@ -278,17 +306,24 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid}
 
       updated_uow =
@@ -321,17 +356,24 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, Map.put(context, :prepared, true)}
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, Map.put(context, :prepared, true)}
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid, key: "value"}
 
       updated_uow =
@@ -368,17 +410,24 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid}
 
       updated_uow =
@@ -425,26 +474,32 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
+      end
+
       defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
+        use TestOperations
 
-        def conform(context), do: {:ok, context}
+        steps do
+          def conform(context), do: {:ok, context}
 
-        def prepare(context) do
-          send(context.test_pid, {:step, :prepare, context})
-          {:ok, Map.put(context, :prepared, true)}
-        end
+          def prepare(context) do
+            send(context.test_pid, {:step, :prepare, context})
+            {:ok, Map.put(context, :prepared, true)}
+          end
 
-        def validate(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
 
-        def execute(context) do
-          send(context.test_pid, {:step, :execute, context})
-          {:ok, Map.put(context, :executed, true)}
+          @impl true
+          def execute(context) do
+            send(context.test_pid, {:step, :execute, context})
+            {:ok, Map.put(context, :executed, true)}
+          end
         end
       end
 
-      uow = new_uow(TestOperation)
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid}
 
       updated_uow =
@@ -512,17 +567,24 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(_context), do: {:error, "validation failed"}
-        def execute(context), do: {:ok, context}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(_context), do: {:error, "validation failed"}
+
+          @impl true
+          def execute(context), do: {:ok, context}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       config = %{test_pid: test_pid}
 
       updated_uow =
@@ -553,19 +615,26 @@ defmodule Drops.Operations.UnitOfWorkTest do
     test "executes overridden step instead of default" do
       test_pid = self()
 
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
+      end
+
       defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
+        use TestOperations
 
-        def conform(context), do: {:ok, context}
+        steps do
+          def conform(context), do: {:ok, context}
 
-        def prepare(context) do
-          send(context.test_pid, {:step, :original_prepare})
-          {:ok, context}
+          def prepare(context) do
+            send(context.test_pid, {:step, :original_prepare})
+            {:ok, context}
+          end
+
+          def validate(context), do: {:ok, context}
+
+          @impl true
+          def execute(context), do: {:ok, context}
         end
-
-        def validate(context), do: {:ok, context}
-        def execute(context), do: {:ok, context}
       end
 
       defmodule CustomModule do
@@ -575,7 +644,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
         end
       end
 
-      uow = new_uow(TestOperation)
+      uow = TestOperation.__unit_of_work__()
       updated_uow = UnitOfWork.override_step(uow, :prepare, CustomModule, :custom_prepare)
 
       context = %{params: %{}, test_pid: test_pid}
@@ -598,9 +667,11 @@ defmodule Drops.Operations.UnitOfWorkTest do
         }
       end
 
-      @impl true
-      def execute(%{params: params}) do
-        {:ok, Map.put(params, :processed, true)}
+      steps do
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, Map.put(params, :processed, true)}
+        end
       end
     end
 
@@ -614,39 +685,52 @@ defmodule Drops.Operations.UnitOfWorkTest do
     end
 
     test "processes without adding module to context" do
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
+      end
+
       defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
+        use TestOperations
 
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
 
-        def execute(context) do
-          # Verify module is NOT in context
-          refute Map.has_key?(context, :module)
-          {:ok, context}
+          @impl true
+          def execute(context) do
+            # Verify module is NOT in context
+            refute Map.has_key?(context, :module)
+            {:ok, context}
+          end
         end
       end
 
-      uow = new_uow(TestOperation)
+      uow = TestOperation.__unit_of_work__()
       context = %{params: %{}}
 
       {:ok, _result} = UnitOfWork.process(uow, context)
     end
 
     test "handles errors in pipeline" do
-      defmodule TestOperation do
-        def schema, do: %{keys: []}
-        def __operation_type__, do: :command
-
-        def conform(context), do: {:ok, context}
-        def prepare(context), do: {:ok, context}
-        def validate(_context), do: {:error, "validation failed"}
-        def execute(_context), do: {:ok, %{}}
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
       end
 
-      uow = new_uow(TestOperation)
+      defmodule TestOperation do
+        use TestOperations
+
+        steps do
+          def conform(context), do: {:ok, context}
+          def prepare(context), do: {:ok, context}
+          def validate(_context), do: {:error, "validation failed"}
+
+          @impl true
+          def execute(_context), do: {:ok, %{}}
+        end
+      end
+
+      uow = TestOperation.__unit_of_work__()
       context = %{params: %{}}
 
       {:error, error} = UnitOfWork.process(uow, context)
@@ -654,23 +738,29 @@ defmodule Drops.Operations.UnitOfWorkTest do
     end
 
     test "processes correctly without conform step" do
+      defmodule TestOperations do
+        use Drops.Operations, type: :command
+      end
+
       defmodule TestOperationNoConform do
-        def schema, do: %{}
-        def __operation_type__, do: :command
+        use TestOperations
 
-        def prepare(context), do: {:ok, context}
-        def validate(context), do: {:ok, context}
+        steps do
+          def prepare(context), do: {:ok, context}
+          def validate(context), do: {:ok, context}
 
-        def execute(%{params: params}) do
-          if params[:name] == nil do
-            {:error, "name is required"}
-          else
-            {:ok, params}
+          @impl true
+          def execute(%{params: params}) do
+            if params[:name] == nil do
+              {:error, "name is required"}
+            else
+              {:ok, params}
+            end
           end
         end
       end
 
-      uow = new_uow(TestOperationNoConform, [:prepare, :validate, :execute])
+      uow = TestOperationNoConform.__unit_of_work__()
       context = %{params: %{name: "Jane Doe"}}
 
       {:ok, result} = UnitOfWork.process(uow, context)

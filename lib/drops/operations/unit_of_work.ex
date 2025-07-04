@@ -80,6 +80,26 @@ defmodule Drops.Operations.UnitOfWork do
   end
 
   @doc """
+  Adds a new step to the UnitOfWork.
+
+  ## Parameters
+
+  - `uow` - The UnitOfWork to modify
+  - `step_name` - The name of the new step
+  - `module` - The module that contains the step function
+  - `function` - The function name to call for this step
+
+  ## Returns
+
+  Returns the modified UnitOfWork with updated step order.
+  """
+  def add_step(%__MODULE__{} = uow, step_name) do
+    updated_steps = Map.put(uow.steps, step_name, {uow.module, step_name})
+    updated_step_order = uow.step_order ++ [step_name]
+    %{uow | steps: updated_steps, step_order: updated_step_order}
+  end
+
+  @doc """
   Adds a new step to be called after an existing step.
 
   ## Parameters
@@ -103,10 +123,7 @@ defmodule Drops.Operations.UnitOfWork do
       when is_atom(existing_step) and is_atom(new_step) do
     case Enum.find_index(uow.step_order, &(&1 == existing_step)) do
       nil ->
-        # If existing step not found, just add to the end
-        updated_step_order = uow.step_order ++ [new_step]
-        updated_steps = Map.put(uow.steps, new_step, {uow.module, new_step})
-        %{uow | step_order: updated_step_order, steps: updated_steps}
+        raise "Existing step #{existing_step} not found in UnitOfWork"
 
       index ->
         # Insert new step after the existing step
@@ -140,10 +157,7 @@ defmodule Drops.Operations.UnitOfWork do
       when is_atom(existing_step) and is_atom(new_step) do
     case Enum.find_index(uow.step_order, &(&1 == existing_step)) do
       nil ->
-        # If existing step not found, just add to the beginning
-        updated_step_order = [new_step | uow.step_order]
-        updated_steps = Map.put(uow.steps, new_step, {uow.module, new_step})
-        %{uow | step_order: updated_step_order, steps: updated_steps}
+        raise "Existing step #{existing_step} not found in UnitOfWork"
 
       index ->
         # Insert new step before the existing step

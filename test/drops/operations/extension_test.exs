@@ -1,53 +1,106 @@
 defmodule Drops.Operations.ExtensionTest do
   use Drops.OperationCase, async: false
 
-  Code.require_file("test/support/test_extension.ex")
-  Code.require_file("test/support/manual_extension.ex")
+  defmodule Test.Extensions do
+    defmodule PrepareExtension do
+      use Drops.Operations.Extension
+
+      def using do
+        quote do
+          def prepare(%{params: params} = context) do
+            updated_params =
+              if Map.has_key?(params, :name) do
+                Map.put(params, :name, "prepared_" <> params.name)
+              else
+                params
+              end
+
+            {:ok, Map.put(context, :params, updated_params)}
+          end
+
+          def prepare_more(%{params: params} = context) do
+            {:ok, Map.put(context, :params, Map.put(params, :prepared, true))}
+          end
+        end
+      end
+
+      @impl true
+      def unit_of_work(uow, _opts) do
+        after_step(uow, :prepare, :prepare_more)
+      end
+    end
+
+    defmodule ValidateExtension do
+      use Drops.Operations.Extension
+
+      def using do
+        quote do
+          def validate(%{params: params} = context) do
+            if Map.has_key?(params, :name) and String.contains?(params.name, "invalid") do
+              {:error, "name cannot contain 'invalid'"}
+            else
+              {:ok, context}
+            end
+          end
+        end
+      end
+    end
+
+    defmodule StepExtension do
+      use Drops.Operations.Extension
+
+      def using do
+        quote do
+          def log_before_prepare(context) do
+            Process.put(:before_prepare_called, true)
+            {:ok, Map.put(context, :before_prepare_called, true)}
+          end
+
+          def log_after_prepare(context) do
+            {:ok, Map.put(context, :after_prepare_called, true)}
+          end
+        end
+      end
+
+      @impl true
+      def unit_of_work(uow, _opts) do
+        uow
+        |> before_step(:prepare, :log_before_prepare)
+        |> after_step(:prepare, :log_after_prepare)
+      end
+    end
+  end
 
   alias Test.Extensions, as: Exts
 
   describe "extension registration" do
-    test "register_extension/1 adds new extensions to registry" do
-      defmodule Test.MyOperations do
-        use Drops.Operations
-
-        register_extension(Exts.PrepareExtension)
-        register_extension(Exts.ManualExtension)
-      end
-
-      assert Test.MyOperations.registered_extensions() == [
-               Exts.PrepareExtension,
-               Exts.ManualExtension
-             ]
-    end
-
     test "operations inherit extensions from base module" do
       defmodule Test.MyOperationsWithExtensions do
         use Drops.Operations
-
-        register_extension(Exts.PrepareExtension)
       end
 
       defmodule Test.MyOperation do
-        use Test.MyOperationsWithExtensions
+        use Test.MyOperationsWithExtensions,
+          type: :command,
+          extensions: [Exts.PrepareExtension]
 
-        def execute(context) do
-          {:ok, context}
+        steps do
+          def execute(context) do
+            {:ok, context}
+          end
         end
       end
 
-      assert Test.MyOperationsWithExtensions.registered_extensions() == [
-               Exts.PrepareExtension
-             ]
+      assert Drops.Operations.Extensions.Params in Test.MyOperationsWithExtensions.__extensions__()
+
+      assert Exts.PrepareExtension in Test.MyOperation.__enabled_extensions__()
     end
   end
 
   describe "extension behavior verification" do
     test "PrepareExtension modifies params in prepare step" do
       defmodule Test.PrepareOperations do
-        use Drops.Operations
-
-        register_extension(Exts.PrepareExtension)
+        use Drops.Operations, extensions: [Exts.PrepareExtension]
       end
 
       defmodule Test.PrepareOperation do
@@ -59,9 +112,11 @@ defmodule Drops.Operations.ExtensionTest do
           }
         end
 
-        @impl true
-        def execute(%{params: params}) do
-          {:ok, params}
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            {:ok, params}
+          end
         end
       end
 
@@ -71,9 +126,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "ValidateExtension adds custom validation" do
       defmodule Test.ValidateOperations do
-        use Drops.Operations
-
-        register_extension(Exts.ValidateExtension)
+        use Drops.Operations, extensions: [Exts.ValidateExtension]
       end
 
       defmodule Test.ValidateOperation do
@@ -85,9 +138,11 @@ defmodule Drops.Operations.ExtensionTest do
           }
         end
 
-        @impl true
-        def execute(%{params: params}) do
-          {:ok, params}
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            {:ok, params}
+          end
         end
       end
 
@@ -100,10 +155,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "multiple extensions work together" do
       defmodule Test.MultiExtensionOperations do
-        use Drops.Operations
-
-        register_extension(Exts.PrepareExtension)
-        register_extension(Exts.ValidateExtension)
+        use Drops.Operations, extensions: [Exts.PrepareExtension, Exts.ValidateExtension]
       end
 
       defmodule Test.MultiExtensionOperation do
@@ -115,9 +167,11 @@ defmodule Drops.Operations.ExtensionTest do
           }
         end
 
-        @impl true
-        def execute(%{params: params}) do
-          {:ok, params}
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            {:ok, params}
+          end
         end
       end
 
@@ -130,9 +184,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "StepExtension adds steps before and after prepare" do
       defmodule Test.StepOperations do
-        use Drops.Operations
-
-        register_extension(Exts.StepExtension)
+        use Drops.Operations, extensions: [Exts.StepExtension]
       end
 
       defmodule Test.StepOperation do
@@ -144,9 +196,11 @@ defmodule Drops.Operations.ExtensionTest do
           }
         end
 
-        @impl true
-        def execute(%{params: params}) do
-          {:ok, params}
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            {:ok, params}
+          end
         end
       end
 
@@ -168,9 +222,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "StepExtension demonstrates step execution order" do
       defmodule Test.StepTestOperations do
-        use Drops.Operations
-
-        register_extension(Exts.StepExtension)
+        use Drops.Operations, extensions: [Exts.StepExtension]
       end
 
       defmodule Test.StepTestOperation do
@@ -182,10 +234,12 @@ defmodule Drops.Operations.ExtensionTest do
           }
         end
 
-        @impl true
-        def execute(context) do
-          # Return the full context so we can verify the step markers
-          {:ok, context}
+        steps do
+          @impl true
+          def execute(context) do
+            # Return the full context so we can verify the step markers
+            {:ok, context}
+          end
         end
       end
 

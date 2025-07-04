@@ -14,7 +14,6 @@ defmodule Drops.OperationCase do
     {name, operation_opts} =
       case opts do
         atom when is_atom(atom) ->
-          # Old syntax: operation :command do ... end
           {:operation, [type: atom]}
 
         keyword_list when is_list(keyword_list) ->
