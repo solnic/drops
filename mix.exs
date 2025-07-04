@@ -63,6 +63,13 @@ defmodule Drops.MixProject do
         "CHANGELOG.md"
       ],
       groups_for_modules: [
+        Operations: [
+          Drops.Operations,
+          Drops.Operations.Command,
+          Drops.Operations.Extensions.Command,
+          Drops.Operations.Extensions.Params,
+          Drops.Operations.Extensions.Ecto
+        ],
         Validation: [
           Drops.Contract,
           Drops.Casters,

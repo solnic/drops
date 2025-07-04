@@ -136,18 +136,11 @@ defmodule Drops.Operations do
       end
 
       def call(context) do
-        UnitOfWork.process(__unit_of_work__(), context)
+        Drops.Operations.call(context, __unit_of_work__())
       end
 
-      def call({:ok, previous_result}, context) do
-        UnitOfWork.process(
-          __unit_of_work__(),
-          Map.put(context, :execute_result, previous_result)
-        )
-      end
-
-      def call({:error, _error} = error_result, _input) do
-        error_result
+      def call(result, context) do
+        Drops.Operations.call(result, context, __unit_of_work__())
       end
     end
   end
@@ -193,6 +186,155 @@ defmodule Drops.Operations do
 
       def steps, do: @steps
     end
+  end
+
+  @doc """
+  Executes the operation with the given context.
+
+  The context must be a map containing a `:params` key with the input parameters.
+  The operation will process the context through its configured pipeline of steps
+  and return either `{:ok, result}` or `{:error, reason}`.
+
+  ## Parameters
+
+  - `context` - A map containing `:params` and optionally other context data
+
+  ## Returns
+
+  - `{:ok, result}` - When the operation succeeds
+  - `{:error, reason}` - When the operation fails at any step
+
+  ## Examples
+
+  Using `Drops.Operations.Command`:
+
+      defmodule CreateUser do
+        use Drops.Operations.Command
+
+        schema do
+          %{
+            required(:name) => string(:filled?),
+            required(:email) => string(:email?)
+          }
+        end
+
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            case MyApp.Users.create(params) do
+              {:ok, user} -> {:ok, user}
+              {:error, changeset} -> {:error, changeset}
+            end
+          end
+        end
+      end
+
+      # Success case
+      {:ok, user} = CreateUser.call(%{params: %{name: "John Doe", email: "john@example.com"}})
+      # => {:ok, %{id: 1, name: "John Doe", email: "john@example.com"}}
+
+      # Validation error
+      {:error, errors} = CreateUser.call(%{params: %{name: "", email: "invalid"}})
+      # => {:error, ["name must be filled", "email must be a valid email"]}
+
+  With additional context:
+
+      context = %{
+        params: %{name: "Jane Doe", email: "jane@example.com"},
+        user_id: 123,
+        request_id: "req-456"
+      }
+      {:ok, result} = CreateUser.call(context)
+
+  """
+  @spec call(map(), UnitOfWork.t()) :: {:ok, any()} | {:error, any()}
+  def call(context, uow) do
+    UnitOfWork.process(uow, context)
+  end
+
+  @doc """
+  Executes the operation with the result from a previous operation.
+
+  This function enables operation composition by accepting the result tuple from
+  a previous operation. If the previous operation succeeded (`{:ok, result}`),
+  the result is added to the context as `:execute_result` and the operation
+  proceeds. If the previous operation failed (`{:error, reason}`), the error
+  is passed through without executing this operation.
+
+  ## Parameters
+
+  - `previous_result` - The result tuple from a previous operation: `{:ok, result}` or `{:error, reason}`
+  - `context` - A map containing `:params` and optionally other context data
+
+  ## Returns
+
+  - `{:ok, result}` - When both the previous operation and this operation succeed
+  - `{:error, reason}` - When either the previous operation or this operation fails
+
+  ## Examples
+
+  Composing operations:
+
+      defmodule CreateUser do
+        use Drops.Operations.Command
+
+        schema do
+          %{required(:name) => string(:filled?)}
+        end
+
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            {:ok, %{id: 1, name: params.name}}
+          end
+        end
+      end
+
+      defmodule CreateProfile do
+        use Drops.Operations.Command
+
+        schema do
+          %{required(:bio) => string(:filled?)}
+        end
+
+        steps do
+          @impl true
+          def execute(%{execute_result: user, params: params}) do
+            profile = %{user_id: user.id, bio: params.bio}
+            {:ok, profile}
+          end
+        end
+      end
+
+      # Successful composition
+      result = CreateUser.call(%{params: %{name: "John Doe"}})
+               |> CreateProfile.call(%{params: %{bio: "Software Developer"}})
+      # => {:ok, %{user_id: 1, bio: "Software Developer"}}
+
+      # Failed first operation - second operation is skipped
+      result = CreateUser.call(%{params: %{name: ""}})
+               |> CreateProfile.call(%{params: %{bio: "Software Developer"}})
+      # => {:error, ["name must be filled"]}
+
+      # Failed second operation
+      result = CreateUser.call(%{params: %{name: "John Doe"}})
+               |> CreateProfile.call(%{params: %{bio: ""}})
+      # => {:error, ["bio must be filled"]}
+
+  Manual composition:
+
+      {:ok, user} = CreateUser.call(%{params: %{name: "John Doe"}})
+      {:ok, profile} = CreateProfile.call({:ok, user}, %{params: %{bio: "Developer"}})
+
+  """
+  @spec call({:ok, map(), UnitOfWork.t()} | {:error, any()}, map()) ::
+          {:ok, any()} | {:error, any()}
+  def call({:ok, previous_result}, context, uow) do
+    UnitOfWork.process(uow, Map.put(context, :execute_result, previous_result))
+  end
+
+  def call({:error, _error} = error_result, _context, _uow) do
+    error_result
   end
 
   @spec merge_opts(nil | module() | keyword(), keyword()) :: keyword()
