@@ -28,11 +28,73 @@ defmodule Drops.Operations.Extensions.Command do
 
   ## Callbacks
 
-  Operations using this extension must implement:
+  Operations using this extension can implement:
 
-  - `execute/1` - The main operation logic
+  - `prepare/1` - Prepares the context for validation and execution (optional)
+  - `validate/1` - Validates the prepared context (optional)
+  - `execute/1` - The main operation logic (required)
   """
   use Drops.Operations.Extension
+
+  @doc """
+  Prepares the context for validation and execution.
+
+  This callback is optional and provides a hook for operations to modify
+  the context before validation and execution. The default implementation
+  returns the context unchanged.
+
+  ## Parameters
+
+  - `context` - A map containing the operation context, typically including:
+    - `:params` - The input parameters
+    - Additional keys from previous steps
+
+  ## Returns
+
+  - `{:ok, context}` - Success with the updated context
+  - `{:error, error}` - Failure with error details
+
+  ## Example
+
+      @impl true
+      def prepare(%{params: params} = context) do
+        # Add computed values or transform params
+        updated_params = Map.put(params, :computed_field, compute_value(params))
+        {:ok, Map.put(context, :params, updated_params)}
+      end
+  """
+  @callback prepare(context :: map()) :: {:ok, map()} | {:error, any()}
+
+  @doc """
+  Validates the prepared context.
+
+  This callback is optional and provides a hook for operations to perform
+  custom validation logic beyond schema validation. The default implementation
+  returns the context unchanged.
+
+  ## Parameters
+
+  - `context` - A map containing the operation context, typically including:
+    - `:params` - The validated input parameters
+    - Additional keys from previous steps
+
+  ## Returns
+
+  - `{:ok, context}` - Success with the validated context
+  - `{:error, error}` - Failure with validation error details
+
+  ## Example
+
+      @impl true
+      def validate(%{params: %{email: email}} = context) do
+        if email_exists?(email) do
+          {:error, "Email already exists"}
+        else
+          {:ok, context}
+        end
+      end
+  """
+  @callback validate(context :: map()) :: {:ok, map()} | {:error, any()}
 
   @doc """
   Executes the main operation logic.
@@ -61,7 +123,10 @@ defmodule Drops.Operations.Extensions.Command do
         end
       end
   """
+
   @callback execute(context :: map()) :: {:ok, any()} | {:error, any()}
+
+  @optional_callbacks prepare: 1, validate: 1
 
   @impl true
   @spec unit_of_work(Drops.Operations.UnitOfWork.t(), keyword()) ::
@@ -82,10 +147,12 @@ defmodule Drops.Operations.Extensions.Command do
   end
 
   steps do
+    @impl true
     def prepare(context) do
       {:ok, context}
     end
 
+    @impl true
     def validate(context) do
       {:ok, context}
     end
