@@ -14,25 +14,67 @@ defmodule Drops.OperationsTest do
       defmodule Test.CreateUser do
         use Test.Operations
 
-        @impl true
-        def execute(%{params: _params}) do
-          {:ok, build_user()}
+        import Test.Operations, only: [build_user: 0]
+
+        steps do
+          @impl true
+          def execute(%{params: _params}) do
+            {:ok, build_user()}
+          end
         end
       end
 
       {:ok, result} = Test.CreateUser.call(%{params: %{}})
       assert result == %{name: "Jane Doe"}
     end
+
+    test "inherits steps from source module" do
+      defmodule Test.BaseOperationWithSteps do
+        use Drops.Operations, type: :command
+
+        steps do
+          def custom_step(context) do
+            {:ok, Map.put(context, :custom_step_called, true)}
+          end
+
+          def helper_step(context) do
+            {:ok, Map.put(context, :helper_called, true)}
+          end
+        end
+      end
+
+      defmodule Test.DerivedOperation do
+        use Test.BaseOperationWithSteps
+
+        steps do
+          @impl true
+          def execute(context) do
+            # Call the inherited custom_step and helper_step
+            {:ok, result1} = custom_step(context)
+            {:ok, result2} = helper_step(result1)
+            {:ok, Map.put(result2, :derived_execute_called, true)}
+          end
+        end
+      end
+
+      {:ok, result} = Test.DerivedOperation.call(%{params: %{}})
+
+      assert result.custom_step_called == true
+      assert result.helper_called == true
+      assert result.derived_execute_called == true
+    end
   end
 
   describe "basic operations" do
     operation :command do
-      @impl true
-      def execute(%{params: params}) do
-        if params[:name] == nil do
-          {:error, "name is required"}
-        else
-          {:ok, params}
+      steps do
+        @impl true
+        def execute(%{params: params}) do
+          if params[:name] == nil do
+            {:error, "name is required"}
+          else
+            {:ok, params}
+          end
         end
       end
     end
@@ -52,12 +94,14 @@ defmodule Drops.OperationsTest do
         }
       end
 
-      @impl true
-      def execute(%{params: params}) do
-        if params[:name] != "Jane Doe" do
-          {:error, "name is not expected"}
-        else
-          {:ok, params}
+      steps do
+        @impl true
+        def execute(%{params: params}) do
+          if params[:name] != "Jane Doe" do
+            {:error, "name is not expected"}
+          else
+            {:ok, params}
+          end
         end
       end
     end
@@ -82,15 +126,17 @@ defmodule Drops.OperationsTest do
         }
       end
 
-      @impl true
-      def prepare(%{params: %{template: true} = params} = context) do
-        updated_params = Map.put(params, :name, params.name <> ".template")
-        {:ok, Map.put(context, :params, updated_params)}
-      end
+      steps do
+        @impl true
+        def prepare(%{params: %{template: true} = params} = context) do
+          updated_params = Map.put(params, :name, params.name <> ".template")
+          {:ok, Map.put(context, :params, updated_params)}
+        end
 
-      @impl true
-      def execute(%{params: params}) do
-        {:ok, params}
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, params}
+        end
       end
     end
 
@@ -109,9 +155,11 @@ defmodule Drops.OperationsTest do
         }
       end
 
-      @impl true
-      def execute(%{params: params}) do
-        {:ok, Map.merge(params, %{id: :rand.uniform(1000)})}
+      steps do
+        @impl true
+        def execute(%{params: params}) do
+          {:ok, Map.merge(params, %{id: :rand.uniform(1000)})}
+        end
       end
     end
 
@@ -122,9 +170,11 @@ defmodule Drops.OperationsTest do
         }
       end
 
-      @impl true
-      def execute(%{execute_result: user, params: params}) do
-        {:ok, Map.merge(user, params)}
+      steps do
+        @impl true
+        def execute(%{execute_result: user, params: params}) do
+          {:ok, Map.merge(user, params)}
+        end
       end
     end
 

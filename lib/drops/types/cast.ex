@@ -53,7 +53,7 @@ defmodule Drops.Types.Cast do
             Validator.validate(output_type, casted_value)
           rescue
             exception ->
-              {:error, {:cast, [predicate: :cast, args: [exception.message]]}}
+              {:error, {:cast, [predicate: :cast, args: [Exception.message(exception)]]}}
           end
 
         {:error, error} ->
