@@ -354,46 +354,30 @@ defmodule Drops.Schema.Inference.EctoTest do
     test "generates casting schema when cast: true" do
       result = Inference.infer_schema(Test.Ecto.TestSchemas.CastingTestSchema, cast: true)
 
-      # Check that all fields are cast specifications
+      # Check that all fields are EctoCaster types
       name_spec = Map.get(result, required(:name))
       admin_spec = Map.get(result, required(:admin))
       age_spec = Map.get(result, required(:age))
       score_spec = Map.get(result, required(:score))
 
-      # Verify structure: {:cast, {input_type, output_type, cast_opts}}
-      assert {:cast, {input_type_name, output_type_name, cast_opts_name}} = name_spec
-      assert {:cast, {input_type_admin, output_type_admin, cast_opts_admin}} = admin_spec
-      assert {:cast, {input_type_age, output_type_age, cast_opts_age}} = age_spec
-      assert {:cast, {input_type_score, output_type_score, cast_opts_score}} = score_spec
+      # Verify structure: EctoCaster types
+      assert %Drops.Types.EctoCaster{} = name_spec
+      assert %Drops.Types.EctoCaster{} = admin_spec
+      assert %Drops.Types.EctoCaster{} = age_spec
+      assert %Drops.Types.EctoCaster{} = score_spec
 
-      # Verify input types are any()
-      assert input_type_name == any()
-      assert input_type_admin == any()
-      assert input_type_age == any()
-      assert input_type_score == any()
+      # Verify ecto_type and ecto_schema are set correctly
+      assert name_spec.ecto_type == :string
+      assert name_spec.ecto_schema == Test.Ecto.TestSchemas.CastingTestSchema
 
-      # Verify output types
-      assert output_type_name == string()
-      assert output_type_admin == boolean()
-      assert output_type_age == integer()
-      assert output_type_score == float()
+      assert admin_spec.ecto_type == :boolean
+      assert admin_spec.ecto_schema == Test.Ecto.TestSchemas.CastingTestSchema
 
-      # Verify cast options contain the EctoCaster and type information
-      assert cast_opts_name[:caster] == Drops.Types.EctoCaster
-      assert cast_opts_name[:ecto_type] == :string
-      assert cast_opts_name[:ecto_schema] == Test.Ecto.TestSchemas.CastingTestSchema
+      assert age_spec.ecto_type == :integer
+      assert age_spec.ecto_schema == Test.Ecto.TestSchemas.CastingTestSchema
 
-      assert cast_opts_admin[:caster] == Drops.Types.EctoCaster
-      assert cast_opts_admin[:ecto_type] == :boolean
-      assert cast_opts_admin[:ecto_schema] == Test.Ecto.TestSchemas.CastingTestSchema
-
-      assert cast_opts_age[:caster] == Drops.Types.EctoCaster
-      assert cast_opts_age[:ecto_type] == :integer
-      assert cast_opts_age[:ecto_schema] == Test.Ecto.TestSchemas.CastingTestSchema
-
-      assert cast_opts_score[:caster] == Drops.Types.EctoCaster
-      assert cast_opts_score[:ecto_type] == :float
-      assert cast_opts_score[:ecto_schema] == Test.Ecto.TestSchemas.CastingTestSchema
+      assert score_spec.ecto_type == :float
+      assert score_spec.ecto_schema == Test.Ecto.TestSchemas.CastingTestSchema
     end
 
     test "casting works with field presence options" do
@@ -425,85 +409,44 @@ defmodule Drops.Schema.Inference.EctoTest do
       refute Map.has_key?(result, required(:score))
     end
 
-    test "EctoCaster delegates to Ecto.Type.cast correctly" do
-      caster = Drops.Types.EctoCaster
+    test "EctoCaster validates and casts correctly" do
+      alias Drops.Type.Validator
 
       # Test boolean casting
-      result =
-        caster.cast(
-          :any,
-          :boolean,
-          "true",
-          {:caster, caster},
-          {:ecto_type, :boolean},
-          {:ecto_schema, Test.Ecto.TestSchemas.CastingTestSchema}
-        )
+      caster =
+        Drops.Types.EctoCaster.new(:boolean, Test.Ecto.TestSchemas.CastingTestSchema)
 
-      assert result == true
-
-      result =
-        caster.cast(
-          :any,
-          :boolean,
-          "false",
-          {:caster, caster},
-          {:ecto_type, :boolean},
-          {:ecto_schema, Test.Ecto.TestSchemas.CastingTestSchema}
-        )
-
-      assert result == false
+      assert {:ok, true} = Validator.validate(caster, "true")
+      assert {:ok, false} = Validator.validate(caster, "false")
 
       # Test integer casting
-      result =
-        caster.cast(
-          :any,
-          :integer,
-          "42",
-          {:caster, caster},
-          {:ecto_type, :integer},
-          {:ecto_schema, Test.Ecto.TestSchemas.CastingTestSchema}
-        )
+      caster =
+        Drops.Types.EctoCaster.new(:integer, Test.Ecto.TestSchemas.CastingTestSchema)
 
-      assert result == 42
+      assert {:ok, 42} = Validator.validate(caster, "42")
 
       # Test float casting
-      result =
-        caster.cast(
-          :any,
-          :float,
-          "3.14",
-          {:caster, caster},
-          {:ecto_type, :float},
-          {:ecto_schema, Test.Ecto.TestSchemas.CastingTestSchema}
-        )
+      caster = Drops.Types.EctoCaster.new(:float, Test.Ecto.TestSchemas.CastingTestSchema)
 
-      assert result == 3.14
+      assert {:ok, 3.14} = Validator.validate(caster, "3.14")
     end
 
-    test "EctoCaster raises error for invalid values" do
-      caster = Drops.Types.EctoCaster
+    test "EctoCaster returns error for invalid values" do
+      alias Drops.Type.Validator
 
-      assert_raise ArgumentError, ~r/cannot cast "invalid" to :boolean/, fn ->
-        caster.cast(
-          :any,
-          :boolean,
-          "invalid",
-          {:caster, caster},
-          {:ecto_type, :boolean},
-          {:ecto_schema, Test.Ecto.TestSchemas.CastingTestSchema}
-        )
-      end
+      # Test invalid boolean value
+      caster =
+        Drops.Types.EctoCaster.new(:boolean, Test.Ecto.TestSchemas.CastingTestSchema)
 
-      assert_raise ArgumentError, ~r/cannot cast "not_a_number" to :integer/, fn ->
-        caster.cast(
-          :any,
-          :integer,
-          "not_a_number",
-          {:caster, caster},
-          {:ecto_type, :integer},
-          {:ecto_schema, Test.Ecto.TestSchemas.CastingTestSchema}
-        )
-      end
+      assert {:error, {:cast, [predicate: :cast, args: ["has unexpected value"]]}} =
+               Validator.validate(caster, "invalid")
+
+      # Test invalid integer value
+      caster =
+        Drops.Types.EctoCaster.new(:integer, Test.Ecto.TestSchemas.CastingTestSchema)
+
+      assert {:error, {:cast, [predicate: :cast, args: ["has unexpected value"]]}} =
+               Validator.validate(caster, "not_a_number")
     end
 
     test "casting schema validates and casts values correctly" do
@@ -609,10 +552,11 @@ defmodule Drops.Schema.Inference.EctoTest do
         end)
 
       assert admin_error != nil
-      {:error, {[:admin], {:cast, cast_error}}} = admin_error
+      {:error, {[:admin], cast_error}} = admin_error
       # The error should be related to casting failure
-      assert cast_error[:predicate] == :cast
-      assert cast_error[:args] != nil
+      assert {:cast, error_details} = cast_error
+      assert error_details[:predicate] == :cast
+      assert error_details[:args] != nil
 
       # Test invalid integer value
       input2 = %{
@@ -631,10 +575,11 @@ defmodule Drops.Schema.Inference.EctoTest do
         end)
 
       assert age_error != nil
-      {:error, {[:age], {:cast, cast_error2}}} = age_error
+      {:error, {[:age], cast_error2}} = age_error
       # The error should be related to casting failure
-      assert cast_error2[:predicate] == :cast
-      assert cast_error2[:args] != nil
+      assert {:cast, error_details2} = cast_error2
+      assert error_details2[:predicate] == :cast
+      assert error_details2[:args] != nil
 
       # Test missing required field
       input3 = %{

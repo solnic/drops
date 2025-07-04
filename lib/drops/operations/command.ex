@@ -38,6 +38,7 @@ defmodule Drops.Operations.Command do
     type: :command,
     extensions: [
       Drops.Operations.Extensions.Command,
-      Drops.Operations.Extensions.Params
+      Drops.Operations.Extensions.Params,
+      Drops.Operations.Extensions.Ecto
     ]
 end
