@@ -108,6 +108,7 @@ defmodule Drops.MixProject do
   defp deps do
     [
       {:nimble_options, "~> 1.0"},
+      {:telemetry, "~> 1.0"},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:doctor, "~> 0.21.0", only: :dev},

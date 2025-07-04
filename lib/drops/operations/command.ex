@@ -39,6 +39,7 @@ defmodule Drops.Operations.Command do
     extensions: [
       Drops.Operations.Extensions.Command,
       Drops.Operations.Extensions.Params,
-      Drops.Operations.Extensions.Ecto
+      Drops.Operations.Extensions.Ecto,
+      Drops.Operations.Extensions.Telemetry
     ]
 end
