@@ -35,11 +35,11 @@ defmodule Drops.OperationCase do
 
         if needs_repo do
           defmodule unquote(app_module_name) do
-            use Drops.Operations, repo: Drops.TestRepo
+            use Drops.Operations.Command, repo: Drops.TestRepo
           end
         else
           defmodule unquote(app_module_name) do
-            use Drops.Operations
+            use Drops.Operations.Command
           end
         end
 

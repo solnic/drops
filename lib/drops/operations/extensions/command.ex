@@ -15,12 +15,11 @@ defmodule Drops.Operations.Extensions.Command do
   ## Usage
 
       defmodule CreateUser do
-        use MyOperations, type: :command
+        use Drops.Operations.Command
 
         steps do
           @impl true
           def execute(%{params: params}) do
-            # Implementation required
             {:ok, create_user(params)}
           end
         end

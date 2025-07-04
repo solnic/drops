@@ -45,7 +45,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       test_pid = self()
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -84,7 +84,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
 
     test "after_step/3 raises when existing step not found" do
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -119,7 +119,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       test_pid = self()
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -156,7 +156,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
 
     test "before_step/3 raises when existing step not found" do
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -204,7 +204,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -255,7 +255,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -307,7 +307,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -357,7 +357,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -411,7 +411,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -475,7 +475,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -568,7 +568,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       end
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -616,7 +616,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
       test_pid = self()
 
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -686,7 +686,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
 
     test "processes without adding module to context" do
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -714,7 +714,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
 
     test "handles errors in pipeline" do
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperation do
@@ -739,7 +739,7 @@ defmodule Drops.Operations.UnitOfWorkTest do
 
     test "processes correctly without conform step" do
       defmodule TestOperations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
       end
 
       defmodule TestOperationNoConform do

@@ -79,7 +79,7 @@ defmodule Drops.Operations.ExtensionTest do
   describe "extension registration" do
     test "operations inherit extensions from base module" do
       defmodule Test.MyOperationsWithExtensions do
-        use Drops.Operations
+        use Drops.Operations.Command
       end
 
       defmodule Test.MyOperation do
@@ -103,7 +103,7 @@ defmodule Drops.Operations.ExtensionTest do
   describe "extension behavior verification" do
     test "PrepareExtension modifies params in prepare step" do
       defmodule Test.PrepareOperations do
-        use Drops.Operations, extensions: [Exts.PrepareExtension]
+        use Drops.Operations.Command, extensions: [Exts.PrepareExtension]
       end
 
       defmodule Test.PrepareOperation do
@@ -129,7 +129,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "ValidateExtension adds custom validation" do
       defmodule Test.ValidateOperations do
-        use Drops.Operations, extensions: [Exts.ValidateExtension]
+        use Drops.Operations.Command, extensions: [Exts.ValidateExtension]
       end
 
       defmodule Test.ValidateOperation do
@@ -158,7 +158,8 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "multiple extensions work together" do
       defmodule Test.MultiExtensionOperations do
-        use Drops.Operations, extensions: [Exts.PrepareExtension, Exts.ValidateExtension]
+        use Drops.Operations.Command,
+          extensions: [Exts.PrepareExtension, Exts.ValidateExtension]
       end
 
       defmodule Test.MultiExtensionOperation do
@@ -187,7 +188,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "StepExtension adds steps before and after prepare" do
       defmodule Test.StepOperations do
-        use Drops.Operations, extensions: [Exts.StepExtension]
+        use Drops.Operations.Command, extensions: [Exts.StepExtension]
       end
 
       defmodule Test.StepOperation do
@@ -225,7 +226,7 @@ defmodule Drops.Operations.ExtensionTest do
 
     test "StepExtension demonstrates step execution order" do
       defmodule Test.StepTestOperations do
-        use Drops.Operations, extensions: [Exts.StepExtension]
+        use Drops.Operations.Command, extensions: [Exts.StepExtension]
       end
 
       defmodule Test.StepTestOperation do

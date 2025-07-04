@@ -9,7 +9,7 @@ defmodule Drops.Operations do
   ## Basic Usage
 
       defmodule CreateUser do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
 
         schema do
           %{
@@ -74,13 +74,7 @@ defmodule Drops.Operations do
       end
   """
 
-  @opts [
-    type: :abstract,
-    extensions: [
-      Drops.Operations.Extensions.Command,
-      Drops.Operations.Extensions.Params
-    ]
-  ]
+  @opts [type: :abstract]
   @spec __opts__() :: keyword()
   def __opts__, do: @opts
 

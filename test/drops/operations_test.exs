@@ -4,7 +4,7 @@ defmodule Drops.OperationsTest do
   describe "defining shared functions" do
     test "imports functions from a base module" do
       defmodule Test.Operations do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
 
         def build_user do
           %{name: "Jane Doe"}
@@ -30,7 +30,7 @@ defmodule Drops.OperationsTest do
 
     test "inherits steps from source module" do
       defmodule Test.BaseOperationWithSteps do
-        use Drops.Operations, type: :command
+        use Drops.Operations.Command
 
         steps do
           def custom_step(context) do
