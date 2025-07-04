@@ -5,6 +5,7 @@ defmodule Drops.Operations.ExtensionTest do
     defmodule PrepareExtension do
       use Drops.Operations.Extension
 
+      @impl true
       def using do
         quote do
           def prepare(%{params: params} = context) do
@@ -33,6 +34,7 @@ defmodule Drops.Operations.ExtensionTest do
     defmodule ValidateExtension do
       use Drops.Operations.Extension
 
+      @impl true
       def using do
         quote do
           def validate(%{params: params} = context) do
@@ -49,6 +51,7 @@ defmodule Drops.Operations.ExtensionTest do
     defmodule StepExtension do
       use Drops.Operations.Extension
 
+      @impl true
       def using do
         quote do
           def log_before_prepare(context) do

@@ -1,4 +1,79 @@
 defmodule Drops.Operations do
+  @moduledoc """
+  Operations framework for building composable business logic.
+
+  Operations provide a structured way to implement business logic with
+  a consistent pipeline of steps. They support extensions for adding
+  functionality like parameter validation, database operations, and more.
+
+  ## Basic Usage
+
+      defmodule CreateUser do
+        use Drops.Operations, type: :command
+
+        schema do
+          %{
+            required(:name) => string(:filled?),
+            required(:email) => string(:email?)
+          }
+        end
+
+        steps do
+          @impl true
+          def execute(%{params: params}) do
+            case MyApp.create_user(params) do
+              {:ok, user} -> {:ok, user}
+              {:error, reason} -> {:error, reason}
+            end
+          end
+        end
+      end
+
+      # Usage
+      {:ok, user} = CreateUser.call(%{params: %{name: "John", email: "john@example.com"}})
+
+  ## Extensions
+
+  Operations can be extended with additional functionality:
+
+  - `Drops.Operations.Extensions.Command` - Basic command pattern with prepare/validate/execute steps
+  - `Drops.Operations.Extensions.Params` - Parameter validation using Drops contracts
+  - `Drops.Operations.Extensions.Ecto` - Database operations with Ecto integration
+
+  ## Pipeline
+
+  Operations execute through a pipeline of steps defined by enabled extensions:
+
+  1. `conform` - Parameter validation (Params extension)
+  2. `prepare` - Context preparation (Command extension)
+  3. `changeset` - Changeset creation (Ecto extension)
+  4. `validate` - Business logic validation (Command/Ecto extensions)
+  5. `execute` - Main operation logic (Command extension)
+
+  ## Composition
+
+  Operations can be composed together:
+
+      {:ok, user} = CreateUser.call(%{params: user_params})
+      {:ok, profile} = CreateProfile.call({:ok, user}, %{params: profile_params})
+
+  ## Configuration
+
+  Operations can be configured with options:
+
+      defmodule MyOperations do
+        use Drops.Operations,
+          type: :command,
+          extensions: [MyCustomExtension],
+          repo: MyApp.Repo
+      end
+
+      defmodule CreateUser do
+        use MyOperations
+        # inherits configuration from MyOperations
+      end
+  """
+
   @opts [
     type: :abstract,
     extensions: [
@@ -6,6 +81,7 @@ defmodule Drops.Operations do
       Drops.Operations.Extensions.Params
     ]
   ]
+  @spec __opts__() :: keyword()
   def __opts__, do: @opts
 
   alias Drops.Operations.UnitOfWork
@@ -24,6 +100,7 @@ defmodule Drops.Operations do
     define(merged_opts)
   end
 
+  @spec define(keyword()) :: Macro.t()
   def define(opts) do
     use_extensions =
       Enum.map(opts[:extensions], &quote(do: use(unquote(&1), unquote(opts))))
@@ -124,12 +201,15 @@ defmodule Drops.Operations do
     end
   end
 
+  @spec merge_opts(nil | module() | keyword(), keyword()) :: keyword()
   def merge_opts(nil, new_opts), do: new_opts
 
+  @spec merge_opts(module(), keyword()) :: keyword()
   def merge_opts(module, new_opts) when is_atom(module) and is_list(new_opts) do
     merge_opts(module.__opts__(), new_opts)
   end
 
+  @spec merge_opts(keyword(), keyword()) :: keyword()
   def merge_opts(parent_opts, new_opts) when is_list(parent_opts) and is_list(new_opts) do
     extensions =
       Keyword.get(parent_opts, :extensions, []) ++ Keyword.get(new_opts, :extensions, [])

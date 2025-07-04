@@ -93,6 +93,7 @@ defmodule Drops.Operations.UnitOfWork do
 
   Returns the modified UnitOfWork with updated step order.
   """
+  @spec add_step(t(), step()) :: t()
   def add_step(%__MODULE__{} = uow, step_name) do
     updated_steps = Map.put(uow.steps, step_name, {uow.module, step_name})
     updated_step_order = uow.step_order ++ [step_name]
