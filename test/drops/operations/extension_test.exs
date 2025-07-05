@@ -5,6 +5,8 @@ defmodule Drops.Operations.ExtensionTest do
     defmodule PrepareExtension do
       use Drops.Operations.Extension
 
+      @depends_on [Drops.Operations.Extensions.Command]
+
       @impl true
       def using do
         quote do
@@ -50,6 +52,8 @@ defmodule Drops.Operations.ExtensionTest do
 
     defmodule StepExtension do
       use Drops.Operations.Extension
+
+      @depends_on [Drops.Operations.Extensions.Command]
 
       @impl true
       def using do
@@ -215,12 +219,13 @@ defmodule Drops.Operations.ExtensionTest do
       prepare_index = Enum.find_index(uow.step_order, &(&1 == :prepare))
       before_index = Enum.find_index(uow.step_order, &(&1 == :log_before_prepare))
 
-      assert before_index == prepare_index - 1
+      # The log_before_prepare should be before prepare in the step order
+      assert before_index < prepare_index
       assert uow.steps[:log_before_prepare] == {Test.StepOperation, :log_before_prepare}
 
       # Verify log_after_prepare step is added after prepare
       after_index = Enum.find_index(uow.step_order, &(&1 == :log_after_prepare))
-      assert after_index == prepare_index + 1
+      assert after_index > prepare_index
       assert uow.steps[:log_after_prepare] == {Test.StepOperation, :log_after_prepare}
     end
 

@@ -205,6 +205,8 @@ defmodule Drops.Operations.Extension do
       @opts unquote(opts)
       def __opts__, do: @opts
 
+      Module.register_attribute(__MODULE__, :depends_on, persist: true)
+
       @default_opts []
       def default_opts(_opts), do: @default_opts
       defoverridable default_opts: 1
@@ -224,17 +226,14 @@ defmodule Drops.Operations.Extension do
       def steps, do: []
       defoverridable steps: 0
 
+      @depends_on []
+
       defmacro __using__(opts) do
         extension = __MODULE__
 
         if extension.enable?(opts) do
           quote location: :keep do
             @enabled_extensions unquote(extension)
-
-            merged_opts =
-              Keyword.merge(@opts, unquote(extension).default_opts(@opts))
-
-            @opts merged_opts
 
             unquote(extension.using())
           end
