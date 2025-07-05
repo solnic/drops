@@ -41,6 +41,8 @@ defmodule Drops.Operations.Extensions.Params do
   """
   use Drops.Operations.Extension
 
+  @depends_on [Drops.Operations.Extensions.Command]
+
   @impl true
   @spec using() :: Macro.t()
   def using do

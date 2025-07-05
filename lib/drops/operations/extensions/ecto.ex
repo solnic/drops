@@ -54,6 +54,8 @@ defmodule Drops.Operations.Extensions.Ecto do
   """
   use Drops.Operations.Extension
 
+  @depends_on [Drops.Operations.Extensions.Command, Drops.Operations.Extensions.Params]
+
   @doc """
   Creates a struct for changeset creation.
 
@@ -122,8 +124,8 @@ defmodule Drops.Operations.Extensions.Ecto do
 
   @impl true
   @spec default_opts(keyword()) :: keyword()
-  def default_opts(opts) do
-    [schema: [cast: true, atomize: opts[:type] == :form]]
+  def default_opts(_opts) do
+    [schema: [cast: true, atomize: true]]
   end
 
   @impl true

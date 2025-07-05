@@ -96,14 +96,16 @@ defmodule Drops.Operations do
 
   @spec define(keyword()) :: Macro.t()
   def define(opts) do
+    {ordered_extensions, set_opts} =
+      resolve_extension_dependencies(opts[:extensions], opts)
+
     use_extensions =
-      Enum.map(opts[:extensions], &quote(do: use(unquote(&1), unquote(opts))))
-      |> Enum.reverse()
+      Enum.map(ordered_extensions, &quote(do: use(unquote(&1), unquote(set_opts))))
 
     quote location: :keep do
       import Drops.Operations
 
-      @opts unquote(opts)
+      @opts unquote(set_opts)
 
       @unit_of_work Drops.Operations.UnitOfWork.new(__MODULE__, [])
 
@@ -149,7 +151,7 @@ defmodule Drops.Operations do
     module = env.module
 
     opts = Module.get_attribute(module, :opts)
-    enabled_extensions = Module.get_attribute(module, :enabled_extensions)
+    enabled_extensions = Enum.reverse(Module.get_attribute(module, :enabled_extensions))
     custom_steps = Module.get_attribute(module, :steps, [])
 
     extension_steps = Enum.map(enabled_extensions, fn extension -> extension.steps() end)
@@ -351,5 +353,110 @@ defmodule Drops.Operations do
       Keyword.get(parent_opts, :extensions, []) ++ Keyword.get(new_opts, :extensions, [])
 
     Keyword.merge(parent_opts, new_opts) |> Keyword.put(:extensions, extensions)
+  end
+
+  @spec resolve_extension_dependencies([module()], keyword()) :: {[module()], keyword()}
+  defp resolve_extension_dependencies(extensions, opts) do
+    # Build dependency graph
+    all_extensions = collect_all_extensions(extensions, [])
+    ordered_extensions = topological_sort(all_extensions)
+
+    # Collect and merge default options from all extensions
+    extension_opts =
+      Enum.reduce(ordered_extensions, [], fn extension, acc ->
+        if function_exported?(extension, :default_opts, 1) do
+          extension_defaults = extension.default_opts(opts)
+          merge_opts(acc, extension_defaults)
+        else
+          acc
+        end
+      end)
+
+    # Merge extension options with user-provided options
+    merged_opts = merge_opts(extension_opts, opts)
+
+    {ordered_extensions, merged_opts}
+  end
+
+  @spec get_extension_dependencies(module()) :: [module()]
+  defp get_extension_dependencies(extension) when is_atom(extension) do
+    # Get the @depends_on module attribute from the extension
+    case extension.__info__(:attributes)[:depends_on] do
+      dependencies when is_list(dependencies) -> dependencies
+      _ -> []
+    end
+  end
+
+  # Handle AST nodes (during compilation) - they don't have dependencies yet
+  defp get_extension_dependencies(_extension), do: []
+
+  @spec collect_all_extensions([module()], [module()]) :: [module()]
+  defp collect_all_extensions([], acc), do: Enum.reverse(acc)
+
+  defp collect_all_extensions([extension | rest], acc) do
+    if extension in acc do
+      collect_all_extensions(rest, acc)
+    else
+      dependencies = get_extension_dependencies(extension)
+      acc_with_deps = collect_all_extensions(dependencies, [extension | acc])
+      collect_all_extensions(rest, acc_with_deps)
+    end
+  end
+
+  @spec topological_sort([module()]) :: [module()]
+  defp topological_sort(extensions) do
+    # Simple topological sort using Kahn's algorithm
+    # Build adjacency list and in-degree count
+    {graph, in_degree} = build_dependency_graph(extensions)
+
+    # Find nodes with no incoming edges
+    queue = Enum.filter(extensions, fn ext -> Map.get(in_degree, ext, 0) == 0 end)
+
+    sort_extensions(queue, graph, in_degree, [])
+  end
+
+  @spec build_dependency_graph([module()]) ::
+          {%{module() => [module()]}, %{module() => integer()}}
+  defp build_dependency_graph(extensions) do
+    graph = Map.new(extensions, fn ext -> {ext, []} end)
+    in_degree = Map.new(extensions, fn ext -> {ext, 0} end)
+
+    Enum.reduce(extensions, {graph, in_degree}, fn ext, {g, deg} ->
+      dependencies = get_extension_dependencies(ext)
+
+      Enum.reduce(dependencies, {g, deg}, fn dep, {graph_acc, degree_acc} ->
+        # dep -> ext (dependency points to dependent)
+        graph_acc = Map.update(graph_acc, dep, [ext], fn deps -> [ext | deps] end)
+        degree_acc = Map.update(degree_acc, ext, 1, fn count -> count + 1 end)
+        {graph_acc, degree_acc}
+      end)
+    end)
+  end
+
+  @spec sort_extensions([module()], %{module() => [module()]}, %{module() => integer()}, [
+          module()
+        ]) :: [module()]
+  defp sort_extensions([], _graph, _in_degree, result), do: Enum.reverse(result)
+
+  defp sort_extensions([current | queue], graph, in_degree, result) do
+    # Add current to result
+    new_result = [current | result]
+
+    # For each dependent of current, decrease in-degree
+    dependents = Map.get(graph, current, [])
+
+    {new_queue, new_in_degree} =
+      Enum.reduce(dependents, {queue, in_degree}, fn dependent, {q, deg} ->
+        new_degree = Map.get(deg, dependent) - 1
+        new_deg = Map.put(deg, dependent, new_degree)
+
+        if new_degree == 0 do
+          {[dependent | q], new_deg}
+        else
+          {q, new_deg}
+        end
+      end)
+
+    sort_extensions(new_queue, graph, new_in_degree, new_result)
   end
 end
