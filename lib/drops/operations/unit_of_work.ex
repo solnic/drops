@@ -34,6 +34,8 @@ defmodule Drops.Operations.UnitOfWork do
 
   """
 
+  alias Drops.Operations.Trace
+
   @type step :: atom()
   @type step_definition :: {module(), atom()}
   @type callback_type :: :before | :after
@@ -42,13 +44,15 @@ defmodule Drops.Operations.UnitOfWork do
           steps: %{step() => step_definition()},
           step_order: [step()],
           module: module(),
-          callbacks: %{callback_type() => %{step() => [callback_definition()]}}
+          callbacks: %{callback_type() => %{step() => [callback_definition()]}},
+          trace: Trace.t()
         }
 
   defstruct [
     :steps,
     :step_order,
     :module,
+    :trace,
     callbacks: %{before: %{}, after: %{}}
   ]
 
@@ -75,7 +79,8 @@ defmodule Drops.Operations.UnitOfWork do
     %__MODULE__{
       module: module,
       steps: steps,
-      step_order: step_names
+      step_order: step_names,
+      trace: Trace.new(module)
     }
   end
 
@@ -301,19 +306,19 @@ defmodule Drops.Operations.UnitOfWork do
     before_callbacks = Map.get(uow.callbacks.before, step, [])
     after_callbacks = Map.get(uow.callbacks.after, step, [])
 
+    # Update trace to track step start
+    uow = update_trace_step_start(uow, step)
+
     execute_before_callbacks(uow, step, context, before_callbacks)
 
     {module, function} = Map.get(uow.steps, step)
     result = apply(module, function, [context])
 
-    # Only execute after callbacks if the step succeeded
-    case result do
-      {:ok, _} ->
-        execute_after_callbacks(uow, step, context, result, after_callbacks)
+    # Update trace to track step completion
+    uow = update_trace_step_finish(uow, step, result)
 
-      {:error, _} ->
-        :ok
-    end
+    # Execute after callbacks regardless of step success or failure
+    execute_after_callbacks(uow, step, context, result, after_callbacks)
 
     result
   end
@@ -321,7 +326,9 @@ defmodule Drops.Operations.UnitOfWork do
   defp execute_before_callbacks(_uow, _step, _context, []), do: :ok
 
   defp execute_before_callbacks(uow, step, context, [{module, function, config} | rest]) do
-    apply(module, function, [uow.module, step, context, config])
+    # Pass trace as part of the config if available
+    enhanced_config = enhance_config_with_trace(config, uow.trace)
+    apply(module, function, [uow.module, step, context, enhanced_config])
     execute_before_callbacks(uow, step, context, rest)
   end
 
@@ -330,7 +337,30 @@ defmodule Drops.Operations.UnitOfWork do
   defp execute_after_callbacks(uow, step, context, result, [
          {module, function, config} | rest
        ]) do
-    apply(module, function, [uow.module, step, context, result, config])
+    # Pass trace as part of the config if available
+    enhanced_config = enhance_config_with_trace(config, uow.trace)
+    apply(module, function, [uow.module, step, context, result, enhanced_config])
     execute_after_callbacks(uow, step, context, result, rest)
+  end
+
+  # Trace helper functions
+
+  defp enhance_config_with_trace(config, trace) when is_map(config) do
+    Map.put(config, :trace, trace)
+  end
+
+  defp enhance_config_with_trace(config, trace) do
+    # If config is not a map (e.g., an atom), create a map with trace
+    %{original_config: config, trace: trace}
+  end
+
+  defp update_trace_step_start(%__MODULE__{trace: trace} = uow, step) do
+    updated_trace = Trace.start_step(trace, step)
+    %{uow | trace: updated_trace}
+  end
+
+  defp update_trace_step_finish(%__MODULE__{trace: trace} = uow, step, result) do
+    updated_trace = Trace.finish_step(trace, step, result)
+    %{uow | trace: updated_trace}
   end
 end
