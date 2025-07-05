@@ -21,12 +21,21 @@ defmodule Drops.MixProject do
       docs: docs(),
       source_url: @source_url,
       consolidate_protocols: Mix.env() == :prod,
-      elixir_paths: elixir_paths(Mix.env())
+      elixir_paths: elixir_paths(Mix.env()),
+      preferred_cli_env: [
+        "drops.example": :dev,
+        "drops.examples": :dev,
+        drops: :dev
+      ]
     ]
   end
 
-  def elixir_paths(:examples) do
-    elixir_paths("dev") ++ ["examples"]
+  def elixir_paths(:test) do
+    ["lib", "test/support"]
+  end
+
+  def elixir_paths(:dev) do
+    ["lib", "test/support", "examples"]
   end
 
   def elixir_paths(_) do
@@ -45,7 +54,7 @@ defmodule Drops.MixProject do
   defp package() do
     [
       name: "drops",
-      files: ~w(lib .formatter.exs mix.exs README* LICENSE CHANGELOG.md),
+      files: ~w(lib/drops .formatter.exs mix.exs README* LICENSE CHANGELOG.md),
       licenses: [@license],
       links: %{"GitHub" => "https://github.com/solnic/drops"}
     ]
