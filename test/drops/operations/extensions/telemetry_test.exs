@@ -96,8 +96,11 @@ defmodule Drops.Operations.Extensions.TelemetryTest do
 
       assert %{duration: _} = measurements
 
-      assert %{operation: TestOperationDefault, step: :execute, context: ^context} =
+      # Context should contain the updated result from execute step
+      assert %{operation: TestOperationDefault, step: :execute, context: updated_context} =
                metadata
+
+      assert updated_context == %{executed: true, name: "test"}
     end
 
     test "emits events for specific steps when configured" do
@@ -616,8 +619,11 @@ defmodule Drops.Operations.Extensions.TelemetryTest do
 
       assert %{duration: _} = measurements
 
-      assert %{operation: TestOperationCustomId, step: :execute, context: ^context} =
+      # Context should contain the updated result from execute step
+      assert %{operation: TestOperationCustomId, step: :execute, context: updated_context} =
                metadata
+
+      assert updated_context == %{executed: true, name: "test"}
     end
 
     test "emits events with custom identifier for specific steps" do
@@ -1025,6 +1031,145 @@ defmodule Drops.Operations.Extensions.TelemetryTest do
       refute_receive {:telemetry_event, [:drops, :operation, :stop], _, _}
       refute_receive {:telemetry_event, [:drops, :operation, :exception], _, _}
       refute_receive {:telemetry_event, [:drops, :operation, :step, :exception], _, _}
+    end
+
+    test "telemetry events contain updated context for successful steps" do
+      defmodule TestOperationSuccessContext do
+        use Drops.Operations.Command, telemetry: [steps: [:prepare]]
+
+        steps do
+          def prepare(context) do
+            {:ok, Map.put(context, :prepared, true)}
+          end
+
+          @impl true
+          def execute(context) do
+            {:ok, context}
+          end
+        end
+      end
+
+      context = %{params: %{name: "test"}}
+      {:ok, _result} = TestOperationSuccessContext.call(context)
+
+      # Should receive step stop event with updated context
+      assert_receive {:telemetry_event, [:drops, :operation, :step, :stop], _,
+                      %{step: :prepare, context: received_context}}
+
+      # Context should contain the update from the prepare step
+      assert received_context.prepared == true
+      assert received_context.params == %{name: "test"}
+    end
+
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.UserSchema]
+    test "telemetry events contain invalid changeset context for validation failures" do
+      defmodule TestOperationChangesetValidation do
+        use Drops.Operations.Command,
+          repo: Drops.TestRepo,
+          telemetry: [steps: [:validate]],
+          telemetry_step_errors: [:validate]
+
+        schema(Test.Ecto.TestSchemas.UserSchema)
+
+        steps do
+          @impl true
+          def execute(%{changeset: changeset}) do
+            case insert(changeset) do
+              {:ok, user} -> {:ok, %{name: user.name}}
+              {:error, changeset} -> {:error, changeset}
+            end
+          end
+        end
+
+        @impl true
+        def validate_changeset(%{changeset: changeset}) do
+          changeset
+          |> Ecto.Changeset.validate_required([:email])
+          |> Ecto.Changeset.validate_length(:email, min: 1, message: "can't be blank")
+        end
+      end
+
+      # Use empty email to trigger validation failure
+      context = %{params: %{name: "Jane Doe", email: ""}}
+      {:error, _changeset} = TestOperationChangesetValidation.call(context)
+
+      # Should receive step exception event with invalid changeset in context
+      assert_receive {:telemetry_event, [:drops, :operation, :step, :exception], _,
+                      %{step: :validate, context: received_context}}
+
+      # Context should contain the invalid changeset with errors
+      assert %Ecto.Changeset{} = received_context.changeset
+      assert received_context.changeset.valid? == false
+      assert received_context.changeset.errors[:email]
+    end
+
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.UserSchema]
+    test "telemetry events preserve original context for non-changeset errors" do
+      defmodule TestOperationSimpleError do
+        use Drops.Operations.Command,
+          telemetry: [steps: [:validate]],
+          telemetry_step_errors: [:validate]
+
+        steps do
+          def validate(_context) do
+            {:error, "simple validation error"}
+          end
+
+          @impl true
+          def execute(context) do
+            {:ok, context}
+          end
+        end
+      end
+
+      context = %{params: %{name: "test"}, original_data: "preserved"}
+      {:error, _reason} = TestOperationSimpleError.call(context)
+
+      # Should receive step exception event with original context preserved
+      assert_receive {:telemetry_event, [:drops, :operation, :step, :exception], _,
+                      %{step: :validate, context: received_context}}
+
+      # Context should be the original input context
+      assert received_context.params == %{name: "test"}
+      assert received_context.original_data == "preserved"
+    end
+
+    @tag ecto_schemas: [Test.Ecto.TestSchemas.UserSchema]
+    test "step exception events contain updated context for changeset failures" do
+      defmodule TestOperationExceptionContext do
+        use Drops.Operations.Command, repo: Drops.TestRepo, telemetry: true
+
+        schema(Test.Ecto.TestSchemas.UserSchema)
+
+        steps do
+          @impl true
+          def execute(%{changeset: changeset}) do
+            case insert(changeset) do
+              {:ok, user} -> {:ok, %{name: user.name}}
+              {:error, changeset} -> {:error, changeset}
+            end
+          end
+        end
+
+        @impl true
+        def validate_changeset(%{changeset: changeset}) do
+          changeset
+          |> Ecto.Changeset.validate_required([:email])
+          |> Ecto.Changeset.validate_length(:email, min: 1, message: "can't be blank")
+        end
+      end
+
+      context = %{params: %{name: "Jane Doe", email: ""}}
+      {:error, _reason} = TestOperationExceptionContext.call(context)
+
+      # Should receive operation exception event with invalid changeset in context
+      assert_receive {:telemetry_event, [:drops, :operation, :exception], _,
+                      %{step: :validate, context: received_context}}
+
+      # Context should contain the invalid changeset
+      assert %Ecto.Changeset{} = received_context.changeset
+      assert received_context.changeset.valid? == false
+      assert received_context.changeset.errors[:email]
     end
   end
 end

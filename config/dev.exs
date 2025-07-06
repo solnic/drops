@@ -12,3 +12,22 @@ config :drops, Drops.TestRepo,
 
 # Configure Ecto repos
 config :drops, :ecto_repos, [Drops.TestRepo]
+
+# Configure debug logging for development
+config :drops, :logger,
+  handler: :console,
+  level: :debug,
+  metadata: [
+    :operation,
+    :step,
+    :context,
+    :duration_us,
+    :kind,
+    :reason,
+    :error_type,
+    :errors
+  ],
+  formatter: %{
+    format: :string,
+    colorize: true
+  }

@@ -398,6 +398,7 @@ defmodule Drops.Operations.Extensions.Telemetry do
   def emit_operation_stop(operation_module, step, context, result, config) do
     {actual_step, identifier} = config.original_config
     duration = Drops.Operations.Trace.total_duration(config.trace) || 0
+    current_context = extract_current_context(context, result, actual_step)
 
     case result do
       {:ok, _} ->
@@ -406,7 +407,7 @@ defmodule Drops.Operations.Extensions.Telemetry do
           :telemetry.execute(
             [identifier, :operation, :stop],
             %{duration: duration},
-            %{operation: operation_module, step: actual_step, context: context}
+            %{operation: operation_module, step: actual_step, context: current_context}
           )
         end
 
@@ -418,7 +419,7 @@ defmodule Drops.Operations.Extensions.Telemetry do
           %{
             operation: operation_module,
             step: actual_step,
-            context: context,
+            context: current_context,
             kind: :error,
             reason: reason,
             stacktrace: []
@@ -431,6 +432,25 @@ defmodule Drops.Operations.Extensions.Telemetry do
 
   defp is_last_step?(operation_module, step) do
     List.last(operation_module.__unit_of_work__().step_order) == step
+  end
+
+  # Extracts the most current context from step results for telemetry
+  # This ensures telemetry events show the actual state after step execution
+  defp extract_current_context(input_context, result, _step) do
+    case result do
+      {:ok, new_context} when is_map(new_context) ->
+        # For successful steps, use the updated context
+        new_context
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        # For validation failures with changesets, use context with the invalid changeset
+        # This shows the actual validation errors instead of the pre-validation state
+        Map.put(input_context, :changeset, changeset)
+
+      {:error, _reason} ->
+        # For other errors, use the original input context
+        input_context
+    end
   end
 
   @doc false
@@ -451,15 +471,15 @@ defmodule Drops.Operations.Extensions.Telemetry do
   @doc false
   def emit_step_stop(operation_module, _step, context, result, config) do
     {actual_step, identifier} = config.original_config
-
     duration = config.trace.step_timings[actual_step][:duration]
+    current_context = extract_current_context(context, result, actual_step)
 
     case result do
       {:ok, _} ->
         :telemetry.execute(
           [identifier, :operation, :step, :stop],
           %{duration: duration},
-          %{operation: operation_module, step: actual_step, context: context}
+          %{operation: operation_module, step: actual_step, context: current_context}
         )
 
       {:error, reason} ->
@@ -469,7 +489,7 @@ defmodule Drops.Operations.Extensions.Telemetry do
           %{
             operation: operation_module,
             step: actual_step,
-            context: context,
+            context: current_context,
             kind: :error,
             reason: reason,
             stacktrace: []
@@ -483,8 +503,8 @@ defmodule Drops.Operations.Extensions.Telemetry do
   @doc false
   def emit_step_error(operation_module, _step, context, result, config) do
     {actual_step, identifier} = config.original_config
-
     duration = config.trace.step_timings[actual_step][:duration]
+    current_context = extract_current_context(context, result, actual_step)
 
     case result do
       {:error, reason} ->
@@ -494,7 +514,7 @@ defmodule Drops.Operations.Extensions.Telemetry do
           %{
             operation: operation_module,
             step: actual_step,
-            context: context,
+            context: current_context,
             kind: :error,
             reason: reason,
             stacktrace: []
