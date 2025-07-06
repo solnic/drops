@@ -11,6 +11,7 @@ defmodule Drops.Application do
     :ok = Config.persist(config)
 
     register_builtin_types()
+    initialize_logger()
 
     children = []
 
@@ -29,5 +30,9 @@ defmodule Drops.Application do
     ]
 
     Enum.each(builtin_types, &Drops.Type.register_type/1)
+  end
+
+  defp initialize_logger do
+    Drops.Logger.init()
   end
 end

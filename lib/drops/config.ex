@@ -63,6 +63,40 @@ defmodule Drops.Config do
           config :drops,
             registered_types: [MyApp.Types.CustomString, MyApp.Types.Email]
       """
+    ],
+    logger: [
+      type: :keyword_list,
+      default: [],
+      type_doc: "keyword list",
+      doc: """
+      Configuration for the Drops debug logger handler.
+
+      ## Options
+
+      * `:handler` - The handler type to use. Can be `:file`, `:memory`, or `:console`. Defaults to `:console`.
+      * `:file` - When handler is `:file`, specifies the file path to log to. Defaults to "log/drops_debug.log".
+      * `:level` - The minimum log level for the handler. Defaults to `:debug`.
+      * `:format` - The log format string. Defaults to "[$level] $message $metadata\\n".
+      * `:metadata` - List of metadata keys to include in logs. Defaults to `[:operation, :step]`.
+
+      ## Examples
+
+          # Log to file
+          config :drops, :logger,
+            handler: :file,
+            file: "log/operations.log",
+            level: :debug
+
+          # Log to memory (useful for testing)
+          config :drops, :logger,
+            handler: :memory,
+            level: :debug
+
+          # Log to console (default)
+          config :drops, :logger,
+            handler: :console,
+            level: :info
+      """
     ]
   ]
 
