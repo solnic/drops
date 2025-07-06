@@ -11,7 +11,7 @@ Code.require_file("examples/setup.exs")
 _pid = ExampleSetup.setup_database([Test.Ecto.TestSchemas.UserSchema])
 
 defmodule SaveUser do
-  use Drops.Operations.Command, repo: Drops.TestRepo
+  use Drops.Operations.Command, repo: Drops.TestRepo, debug: true
 
   schema(Test.Ecto.TestSchemas.UserSchema)
 

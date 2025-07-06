@@ -198,7 +198,10 @@ defmodule Drops.Operations.Extensions.Ecto do
     end
 
     def validate(%{changeset: changeset} = context) do
-      case validate_changeset(%{context | changeset: %{changeset | action: :validate}}) do
+      validated_changeset =
+        validate_changeset(%{context | changeset: %{changeset | action: :validate}})
+
+      case validated_changeset do
         %{valid?: true} = changeset ->
           {:ok, %{context | changeset: %{changeset | action: nil}}}
 
