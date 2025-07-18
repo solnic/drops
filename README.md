@@ -3,6 +3,12 @@
 
 Elixir `Drops` is a collection of small modules that provide useful extensions and functions that can be used to work with data effectively.
 
+## Links
+
+- [Documentation](https://hexdocs.pm/drops)
+- [drops_inflector](https://github.com/solnic/drops_inflector)
+- [drops_relation](https://github.com/solnic/drops_relation)
+
 ## Installation
 
 This package can be installed by adding `drops` to your list of dependencies in `mix.exs`:
