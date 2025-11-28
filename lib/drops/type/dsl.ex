@@ -73,9 +73,9 @@ defmodule Drops.Type.DSL do
   """
   @doc since: "0.1.0"
 
-  @spec type({atom(), []}) :: type()
+  @spec type({atom(), list()}) :: type()
   @spec type(list: atom()) :: type()
-  @spec type(list: []) :: type()
+  @spec type(list: list()) :: type()
   @spec type([atom()]) :: [type()]
   @spec type(atom()) :: type()
 
@@ -113,8 +113,8 @@ defmodule Drops.Type.DSL do
   """
   @doc since: "0.1.0"
 
-  @spec type(atom(), []) :: type()
-  @spec type({:cast, {atom(), []}}, type()) :: type()
+  @spec type(atom(), list()) :: type()
+  @spec type({:cast, {atom(), list()}}, type()) :: type()
 
   def type([type | rest], predicates) do
     union([type | rest], predicates)
@@ -251,7 +251,7 @@ defmodule Drops.Type.DSL do
   """
   @doc since: "0.1.0"
 
-  @spec maybe(atom(), []) :: type()
+  @spec maybe(atom(), list()) :: type()
 
   def maybe(type, predicates \\ []) do
     type([nil, {type, predicates}])
@@ -289,7 +289,7 @@ defmodule Drops.Type.DSL do
   @doc since: "0.1.0"
 
   @spec string(atom()) :: type()
-  @spec string([]) :: type()
+  @spec string(list()) :: type()
 
   def string(predicate) when is_atom(predicate) do
     string([predicate])
@@ -335,7 +335,7 @@ defmodule Drops.Type.DSL do
   @doc since: "0.1.0"
 
   @spec integer(atom()) :: type()
-  @spec integer([]) :: type()
+  @spec integer(list()) :: type()
 
   def integer(predicate) when is_atom(predicate) do
     integer([predicate])
@@ -377,7 +377,7 @@ defmodule Drops.Type.DSL do
   """
   @doc since: "0.1.0"
 
-  @spec float([]) :: type()
+  @spec float(list()) :: type()
 
   def float(predicates) when is_list(predicates) do
     type(:float, predicates)
@@ -460,7 +460,7 @@ defmodule Drops.Type.DSL do
   @doc since: "0.1.0"
 
   @spec map(atom()) :: type()
-  @spec map([]) :: type()
+  @spec map(list()) :: type()
 
   def map(predicate) when is_atom(predicate) do
     map([predicate])

@@ -101,9 +101,27 @@ defmodule Drops.Types.Union do
         })
       end
 
-      defp constrain(type, predicates) do
+      defp constrain(%Drops.Types.Cast{input_type: input_type} = type, predicates) do
         Map.merge(type, %{
-          constraints: type.constraints ++ infer_constraints(predicates)
+          input_type: constrain(input_type, predicates)
+        })
+      end
+
+      defp constrain(%Drops.Types.Union{left: left, right: right} = type, predicates) do
+        Map.merge(type, %{
+          left: constrain(left, predicates),
+          right: constrain(right, predicates)
+        })
+      end
+
+      defp constrain(type, predicates) do
+        constraints =
+          case type.constraints do
+            {:and, constraints} -> {:and, constraints ++ infer_constraints(predicates)}
+            constraints when is_list(constraints) -> constraints ++ infer_constraints(predicates)
+          end
+        Map.merge(type, %{
+          constraints: constraints
         })
       end
     end
