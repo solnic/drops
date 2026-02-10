@@ -82,6 +82,18 @@ defmodule Drops.Type.Compiler do
     List.new(visit({:type, {:any, []}}, opts), predicates)
   end
 
+  def visit({:type, {:map, predicates}} = spec, _opts) do
+    if Enum.any?(predicates, fn
+      {:keys, _} -> true
+      {:values, _} -> true
+      _ -> false
+    end) do
+      Drops.Types.TypedMap.new(predicates)
+    else
+      Primitive.new(spec)
+    end
+  end
+
   def visit({:cast, {input_type, output_type, cast_opts}}, opts) do
     Cast.new(visit(input_type, opts), visit(output_type, opts), cast_opts)
   end

@@ -76,6 +76,26 @@ defmodule Drops.Contract do
         end
       end
 
+      def conform(data, %Types.TypedMap{} = schema, path: path) do
+        case Drops.Type.Validator.validate(schema, data) do
+          {outcome, {:map, items}} = result ->
+            output = to_output(result)
+            errors = if outcome == :ok, do: [], else: Enum.reject(items, &ok?/1)
+
+            all_errors =
+              if Enum.empty?(path), do: errors ++ apply_rules(output), else: errors
+
+            if length(all_errors) > 0 do
+              {:error, @message_backend.errors(all_errors)}
+            else
+              {:ok, output}
+            end
+
+          {:error, meta} ->
+            {:error, @message_backend.errors({:error, {path, meta}})}
+        end
+      end
+
       def conform(data, %Types.Union{} = type, path: path) do
         case conform(data, type.left, path: path) do
           {:ok, output} = success ->

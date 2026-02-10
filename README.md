@@ -128,7 +128,7 @@ defmodule UserContract do
       age: integer(),
       active: boolean(),
       tags: list(:string),
-      settings: map(:string),
+      settings: map(values: :string),
       address: maybe(:string)
     }
   end

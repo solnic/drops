@@ -125,6 +125,18 @@ defmodule Drops.Type.DSL do
     {:type, {type, predicates ++ more_predicates}}
   end
 
+  def type(:map, predicates) when is_list(predicates) do
+    if Enum.any?(predicates, fn
+      {:keys, _} -> true
+      {:values, _} -> true
+      _ -> false
+    end) do
+      Drops.Types.TypedMap.new(predicates)
+    else
+      {:type, {:map, predicates}}
+    end
+  end
+
   def type(type, predicates) when is_atom(type) and is_list(predicates) do
     {:type, {type, predicates}}
   end

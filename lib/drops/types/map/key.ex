@@ -42,29 +42,30 @@ defmodule Drops.Types.Map.Key do
     Map.has_key?(map, key) and present?(map[key], tail)
   end
 
-  defp nest_result({:error, {:or, {left, right, opts}}}, root) do
+  @doc false
+  def nest_result({:error, {:or, {left, right, opts}}}, root) do
     {:error,
      {:or,
       {nest_result(left, root), nest_result(right, root), Keyword.merge(opts, path: root)}}}
   end
 
-  defp nest_result({:error, {:list, results}}, root) when is_list(results) do
+  def nest_result({:error, {:list, results}}, root) when is_list(results) do
     {:error, {root, {:list, Enum.with_index(results, &nest_result(&1, root ++ [&2]))}}}
   end
 
-  defp nest_result({:error, {:list, result}}, root) when is_tuple(result) do
+  def nest_result({:error, {:list, result}}, root) when is_tuple(result) do
     {:error, {root, result}}
   end
 
-  defp nest_result(results, root) when is_list(results) do
+  def nest_result(results, root) when is_list(results) do
     Enum.map(results, &nest_result(&1, root))
   end
 
-  defp nest_result({outcome, {path, result}}, root) when is_list(path) do
+  def nest_result({outcome, {path, result}}, root) when is_list(path) do
     {outcome, {root ++ path, result}}
   end
 
-  defp nest_result({outcome, value}, root) do
+  def nest_result({outcome, value}, root) do
     {outcome, {root, value}}
   end
 end
